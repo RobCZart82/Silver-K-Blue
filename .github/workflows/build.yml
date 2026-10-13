@@ -1,5 +1,8 @@
 name: Desktop build
 on: [push, pull_request, workflow_dispatch]
+concurrency:
+  group: desktop-build-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   windows-x64:
     runs-on: windows-latest
@@ -11,11 +14,11 @@ jobs:
       - name: Configure Win64
         run: cmake -S . -B build -A x64 -DCMAKE_BUILD_TYPE=Release
       - name: Build Standalone, VST3 and checks
-        run: cmake --build build --config Release --target silverK_Standalone silverK_VST3 silver_check --parallel 4
-      - name: Run patch, browser and editor checks without ROMs
+        run: cmake --build build --config Release --target silverK_Standalone silverK_VST3 silver_check dsp56kTestRunner --parallel 4
+      - name: Run DSP JIT, patch, browser and editor checks without ROMs
         env:
           SILVER_K_DATA: '${{ runner.temp }}/silver-k-tests'
-        run: ctest --test-dir build -C Release --output-on-failure -R '^silver_conversion$'
+        run: ctest --test-dir build -C Release --output-on-failure -R '^(silver_conversion|dsp56300_unitTests)$'
       - name: Verify synthetic flash
         shell: pwsh
         run: |

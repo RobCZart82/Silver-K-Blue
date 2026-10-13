@@ -2,7 +2,7 @@
   "origin": "Silver-K synthetic init data",
   "generator": "tools/create_init_flash.cpp",
   "size": 524288,
-  "sha256": "7a8b72f7d22cbd728bf0ac4eb93f1c6d164dbd09e079e6ba24dfc108a07ac5d2",
+  "sha256": "9a960a260afdef411d421c703cbd1950ce9082b675e7ee9a3a92be8c087a0e07",
   "contains_firmware": false,
   "contains_factory_patches": false,
   "contains_sampled_waves": false

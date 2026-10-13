@@ -1,6 +1,6 @@
 # Silver-K
 
-Silver-K combines **K-Station** and **KS** firmware emulation in one desktop synthesizer. The selected firmware determines the engine, available controls, parts and automatic skin. The build supports **Windows x64 Standalone/VST3** and **macOS Standalone/VST3/AU**. Windows builds and ROM-free checks run in GitHub Actions; macOS arm64 is also verified locally.
+Silver-K combines **K-Station** and **KS** firmware emulation in one desktop synthesizer. The selected firmware determines the engine, available controls, parts and automatic skin. The build supports **Windows x64 Standalone/VST3** and **macOS Standalone/VST3/AU**. Windows builds, DSP JIT tests and ROM-free checks run in GitHub Actions; macOS arm64 is also verified locally.
 
 - K-Station: one part, stereo output; tabs 2–4 are dimmed.
 - KS: four parts and four output channels; routing and MIDI settings on **Perf**.
