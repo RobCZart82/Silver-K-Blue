@@ -1,6 +1,6 @@
 #include "ksRom.h"
 
-#include <fstream>
+#include "baseLib/filesystem.h"
 #include "baseLib/sha256.h"
 
 
@@ -125,8 +125,9 @@ namespace ks
 
     Rom::Rom(const std::string& filename) : m_filename(filename)
     {
-        std::ifstream f(filename,std::ios::binary);
-        Bytes bytes((std::istreambuf_iterator<char>(f)),{});
+        if(baseLib::filesystem::getFileSize(filename)>131072){m_error="Firmware file is too large.";return;}
+        Bytes bytes;
+        if(!baseLib::filesystem::readFile(bytes,filename)){m_error="Could not read the KS firmware file.";return;}
         decode(bytes);
     }
 

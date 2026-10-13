@@ -14,7 +14,7 @@ Dependencies fetched at build time:
 
 Their original license files are downloaded with the source. JUCE is used under its GPLv3 option. AsmJit's source contains its own permissive license. DSP56300's original notices apply. The build-local JUCE patch replaces an unavailable macOS window snapshot API with NSView bitmap caching; it does not change synthesizer DSP.
 
-The build-local MSVC patch adds the explicit third template argument to one `writeMem` call. This selects the overload Clang/GCC already select and resolves MSVC ambiguity; it does not change the operation or memory value.
+The build-local MSVC patch adds the explicit third template argument to the `readMem` and `writeMem` calls. This selects the overload Clang/GCC already select and resolves MSVC ambiguity; it does not change the operation or memory value.
 
 Bundled source dependencies retain their notices:
 
