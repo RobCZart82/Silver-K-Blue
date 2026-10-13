@@ -27,9 +27,14 @@ int main(int argc,char** argv) {
     }
     std::copy_n(flash.begin()+0x20000,256,flash.begin()+0x39000);
     flash[0x39000+128]=31;
+    flash[0x1ff02]=1;flash[0x1ff03]=0;flash[0x1ff04]=0;
     ks::Board b(os,bank,flash);
+    require(b.read(0x820000+37)==0 && b.read(0x839000+37)==0,"Sampled Flash must be muted before reset");
+    require(b.saveUserFlash()[0x20000-0x1fc00+37]==127,"Prepared Flash lost desired level");
     require(b.boot(),"Original reset did not boot");
     require(b.zeroBank(),"Expected placeholder adapter");
+    require(b.midiReceived<512,"Boot rewrote the stored bank over MIDI");
+    require(b.state().parts[0][37]==127,"Sampled startup program lost desired level");
     auto midi=[&](std::initializer_list<uint8_t> m){std::vector<uint8_t> v(m);require(b.enqueueMidi(v.data(),v.size()),"MIDI queue overflow");};
     auto settle=[&](unsigned n=8192){for(unsigned i=0;i<n;++i)b.renderSample();};
     int voicePeak=0;auto peak=[&](){int p=0;voicePeak=0;for(unsigned i=0;i<8192;++i){auto a=b.renderSample();voicePeak=std::max(voicePeak,std::abs(a[19]));p=std::max(p,std::max(std::abs(a[0]),std::abs(a[1])));}return p;};

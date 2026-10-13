@@ -47,6 +47,9 @@ public:
 
 bool isKStation()const{return kMode.load();}
  bool loadFirmware(const juce::File&,juce::String&);
+ bool beginFirmwareLoad(const juce::File&); // Message thread: boot off the UI/audio threads.
+ bool finishFirmwareLoad(juce::String& error); // Message thread: consume a completed load.
+ bool isFirmwareLoading()const{return firmwareLoading.load();}
  bool setRomFolder(const juce::File&,juce::String&);
  struct FirmwareChoice {juce::File file;bool kStation;};
  std::vector<FirmwareChoice> firmwares;
@@ -63,6 +66,9 @@ bool isKStation()const{return kMode.load();}
  uint8_t editorChannel()const{return isKStation()?controlChannel.load():midiChannel();}
  void setEditorChannel(uint8_t c){controlChannel.store(c&15);}
 private:
+ std::thread firmwareLoader;
+ std::atomic<bool> firmwareLoading{false},firmwareLoadDone{false};
+ juce::String firmwareLoadError;
  std::atomic<bool> kMode{false};
  std::atomic<KEngine*> kDevice{nullptr};
  std::unique_ptr<KEngine> ownedK;

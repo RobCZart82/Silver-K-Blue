@@ -34,6 +34,10 @@ Board::Board(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,con
     placeholder.enabled=std::all_of(waves.begin(),waves.end(),[](uint8_t v){return v==0;});
     for(unsigned n=0;n<600;++n)std::copy_n(flash.data()+0x20000+n*256,256,programDesired[n].begin());
     for(unsigned n=0;n<100;++n)std::copy_n(flash.data()+0x45800+n*1024,1024,performanceDesired[n].begin());
+    // Prepare the private Flash image before reset. Rewriting every sampled
+    // preset over the guest UART used millions of emulated audio samples at
+    // each activation. Keep the desired bytes for snapshots and state saves.
+    if(placeholder.enabled)muteStoredPrograms();
     h8->boot();
 }
 uint8_t Board::read(uint32_t a){
@@ -112,9 +116,14 @@ bool Board::enqueueMidi(const uint8_t* bytes,size_t count){
     },[this](uint8_t* message,size_t length){adaptStoredProgram(message,length);}))return false;return true;
 }
 bool Board::boot(){while(h8->cycles<ControllerClockHz*10ull && !ready){advance();audio.reset();}if(!ready)return false;
-    std::array<uint8_t,256> p{};for(unsigned n=0;n<256;++n)p[n]=read(0x168fc+n);for(uint8_t ch=0;ch<16;++ch){placeholder.seed(ch,p.data());placeholder.bank[ch]=placeholder.activeBank[ch]=flash[0x1ff02];}
+    std::array<uint8_t,256> p{};for(unsigned n=0;n<256;++n)p[n]=read(0x168fc+n);
+    const unsigned bank=flash[0x1ff02],program=flash[0x1ff03];
+    if(placeholder.enabled && bank>=1 && bank<=8 && program<(bank<=4?100u:50u)){
+        const unsigned index=bank<=4?(bank-1)*100+program:400+(bank-5)*50+program;
+        PlaceholderMidi::restoreProgram(p.data(),programDesired[index].data());
+    }
+    for(uint8_t ch=0;ch<16;++ch){placeholder.seed(ch,p.data());placeholder.bank[ch]=placeholder.activeBank[ch]=flash[0x1ff02];}
     placeholder.globalChannel=flash[0x1ff08]&15;
-    if(placeholder.enabled)muteStoredPrograms();
     if(placeholder.enabled && read(0x167ba)){
         State current;current.performance=true;const auto index=flash[0x1ff01];
         if(index<100)for(unsigned part=0;part<4;++part)std::copy_n(performanceDesired[index].data()+part*256,256,current.parts[part].begin());
@@ -137,18 +146,16 @@ void Board::adaptStoredProgram(uint8_t* message,size_t length) {
     std::copy_n(message+13,256,original.begin());PlaceholderMidi::muteProgram(message+13);
 }
 void Board::muteStoredPrograms() {
-    // Program Changes and drum keys read Flash. Use the original librarian
-    // protocol to apply muted parameters before a stored preset can play.
-    std::array<uint8_t,270> message{0xf0,0,0x20,0x29,1,0x42,0x7f,1,1,0x11,2,5,0};message.back()=0xf7;
-    const auto send=[&]{enqueueMidi(message.data(),message.size());for(unsigned n=0;n<8192;++n)renderSample();};
-    for(unsigned n=0;n<600;++n){const auto& p=programDesired[n];if(std::any_of(p.begin(),p.end(),[](uint8_t v){return v>=128;}))continue;if(std::none_of(p.begin()+128,p.begin()+131,[](uint8_t wave){return wave>=8;}))continue;
-        message[7]=1;message[11]=n<400?1+n/100:5+(n-400)/50;message[12]=n<400?n%100:(n-400)%50;std::copy(p.begin(),p.end(),message.begin()+13);send();}
-    std::array<uint8_t,1038> performance{0xf0,0,0x20,0x29,1,0x42,0x7f,3,1,0x11,2,1,0};performance.back()=0xf7;
+    // Program Changes and drum keys still load through the original firmware.
+    // Only its private zero-bank Flash has the same muted modulation fields
+    // that live MIDI loads receive; the input Flash and wave ROM stay intact.
+    for(unsigned n=0;n<600;++n){const auto& p=programDesired[n];
+        if(std::any_of(p.begin(),p.end(),[](uint8_t v){return v>=128;}))continue;
+        PlaceholderMidi::muteProgram(flash.data()+0x20000+n*256);
+    }
     for(unsigned n=0;n<100;++n){const auto& p=performanceDesired[n];
         if(std::any_of(p.begin(),p.end(),[](uint8_t v){return v>=128;}))continue;
-        bool sampled=false;for(unsigned part=0;part<4;++part)for(unsigned osc=0;osc<3;++osc)sampled|=p[part*256+128+osc]>=8;
-        if(!sampled)continue;performance[12]=uint8_t(n);std::copy(p.begin(),p.end(),performance.begin()+13);
-        enqueueMidi(performance.data(),performance.size());for(unsigned sample=0;sample<20000;++sample)renderSample();
+        for(unsigned part=0;part<4;++part)PlaceholderMidi::muteProgram(flash.data()+0x45800+n*1024+part*256);
     }
 }
 std::vector<uint8_t> Board::saveUserFlash() const {

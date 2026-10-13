@@ -25,7 +25,7 @@ std::vector<Processor::Performance> Processor::performances()const{std::lock_gua
 bool Processor::queueUiMidi(const uint8_t* data,size_t n){std::lock_guard guard(uiMidiMutex);return uiMidi.push(data,n);}
 bool Processor::sendShortMidi(uint8_t status,uint8_t a,uint8_t b){const uint8_t bytes[]{status,a,b};return queueUiMidi(bytes,(status&0xf0)==0xc0?2:3);}
 void Processor::resetPending(){for(auto& v:pending)v.store(-1);for(auto& v:awaiting)v.store(-1);resetWire.store(true);}
-juce::String Processor::currentName()const{std::lock_guard guard(controlMutex);if(ownedK)return currentPatch.isEmpty()?"K-Station program":currentPatch;if(!ownedDevice)return {};const auto state=ownedDevice->fullSnapshot();return state.performance?nameAt(state.parts[0].data(),192)+" / Part "+juce::String(currentPart()+1)+": "+patchName(state.parts[currentPart()].data()):patchName(state.parts[0].data());}
+juce::String Processor::currentName()const{if(isFirmwareLoading())return "Loading firmware...";std::lock_guard guard(controlMutex);if(ownedK)return currentPatch.isEmpty()?"K-Station program":currentPatch;if(!ownedDevice)return {};const auto state=ownedDevice->fullSnapshot();return state.performance?nameAt(state.parts[0].data(),192)+" / Part "+juce::String(currentPart()+1)+": "+patchName(state.parts[currentPart()].data()):patchName(state.parts[0].data());}
 bool Processor::queueState(const ks::State& state,bool selectMode,juce::String& error){
  std::vector<uint8_t> bytes;
  if(selectMode){for(unsigned ch=0;ch<16;++ch)for(uint8_t cc:{uint8_t(64),uint8_t(123),uint8_t(120)})bytes.insert(bytes.end(),{uint8_t(0xb0|ch),cc,0});

@@ -334,6 +334,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
     std::unique_ptr<juce::FileChooser> chooser;
     int page=0,osc=1,lfo=1,effect=0;
     bool displayHeld=false;
+    int firmwareLoadPage=0;
     double displayUntil=0;
     explicit Surface(Processor& p):processor(p),skin(skinData(p)),browser(p)
     {
@@ -344,7 +345,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         viewport.setViewedComponent(&content,false);viewport.setScrollBarsShown(true,false);viewport.setComponentID("controlViewport");
         for(auto* c:std::initializer_list<juce::Component*>{&firmwareSelect,&skinSelect,&waveRom,&factory,&customSkin,&performanceMode,&partActive,&browser})addAndMakeVisible(*c);
         firmwareSelect.setBounds(300,28,240,34);firmwareSelect.setComponentID("firmwareSelect");refreshFirmwares();
-        firmwareSelect.onChange=[this]{int n=firmwareSelect.getSelectedId()-1;if(n<0 || n>=int(processor.firmwares.size()))return;juce::String error;if(!processor.loadFirmware(processor.firmwares[n].file,error)){status.setText(error,juce::dontSendNotification);showPage(4);}else{refreshModel();showPage(0);}};
+        firmwareSelect.onChange=[this]{int n=firmwareSelect.getSelectedId()-1;if(n<0 || n>=int(processor.firmwares.size()))return;startFirmwareLoad(processor.firmwares[n].file,0);};
         for(int i=0;i<4;++i){auto& b=parts[i];addAndMakeVisible(b);b.setButtonText(juce::String(i+1));b.getProperties().set("partTab",true);b.setComponentID("partTab"+juce::String(i+1));b.setBounds(555+i*62,28,56,34);b.onClick=[this,i]{processor.selectPart(unsigned(i));refreshModel();};}
         performanceMode.setBounds(52,96,250,34);performanceMode.onClick=[this]{juce::String error;if(!processor.setPerformanceMode(performanceMode.getToggleState(),error))status.setText(error,juce::dontSendNotification);};
         partActive.setBounds(330,96,200,34);partActive.onClick=[this]{juce::String error;processor.setPartActive(processor.currentPart(),partActive.getToggleState(),error);};
@@ -534,6 +535,12 @@ struct Editor::Surface final : juce::Component, private juce::Timer
     }
     void timerCallback() override
     {
+        if(processor.isFirmwareLoading()){
+            juce::String error;
+            if(!processor.finishFirmwareLoad(error)){setEnabled(false);lcd.setText("Loading firmware...",juce::dontSendNotification);status.setText("Loading firmware...",juce::dontSendNotification);return;}
+            setEnabled(true);refreshModel();showPage(error.isEmpty()?firmwareLoadPage:4);
+            if(!error.isEmpty())status.setText(error,juce::dontSendNotification);
+        }
         if(!displayHeld&&juce::Time::getMillisecondCounterHiRes()>=displayUntil)showProgram();
         processor.refreshControls();
         if(displayedK!=processor.isKStation() || displayedPart!=processor.currentPart() || displayedPerformance!=processor.performanceMode())refreshModel();
@@ -545,11 +552,16 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         const auto rate=processor.getSampleRate();latency.setText(rate>0?"Host latency: "+juce::String(1000.*processor.getLatencySamples()/rate,1)+" ms":"",juce::dontSendNotification);
     }
     bool greyLower()const{return processor.skinChoice=="KS Grey" || (processor.skinChoice=="Auto"&&!processor.isKStation());}
-    void refreshFirmwares(){firmwareSelect.clear(juce::dontSendNotification);for(size_t i=0;i<processor.firmwares.size();++i){const auto& f=processor.firmwares[i];firmwareSelect.addItem(juce::String(f.kStation?"K-Station: ":"KS: ")+f.file.getFileName(),int(i)+1);if(f.file==processor.osFile)firmwareSelect.setSelectedId(int(i)+1,juce::dontSendNotification);}if(!firmwareSelect.getSelectedId())firmwareSelect.setText(processor.osFile.existsAsFile()?juce::String(processor.isKStation()?"K-Station: ":"KS: ")+processor.osFile.getFileName():"Choose firmware",juce::dontSendNotification);}
+    void refreshFirmwares(){if(processor.isFirmwareLoading())return;firmwareSelect.clear(juce::dontSendNotification);for(size_t i=0;i<processor.firmwares.size();++i){const auto& f=processor.firmwares[i];firmwareSelect.addItem(juce::String(f.kStation?"K-Station: ":"KS: ")+f.file.getFileName(),int(i)+1);if(f.file==processor.osFile)firmwareSelect.setSelectedId(int(i)+1,juce::dontSendNotification);}if(!firmwareSelect.getSelectedId())firmwareSelect.setText(processor.osFile.existsAsFile()?juce::String(processor.isKStation()?"K-Station: ":"KS: ")+processor.osFile.getFileName():"Choose firmware",juce::dontSendNotification);}
+    void startFirmwareLoad(const juce::File& file,int targetPage){
+        if(!processor.beginFirmwareLoad(file))return;
+        firmwareLoadPage=targetPage;setEnabled(false);
+        lcd.setText("Loading firmware...",juce::dontSendNotification);status.setText("Loading firmware...",juce::dontSendNotification);
+    }
     void refreshModel(){displayedK=processor.isKStation();displayedPart=processor.currentPart();displayedPerformance=processor.performanceMode();group.clear(juce::dontSendNotification);juce::StringArray names;for(const auto& c:processor.visibleControls())if(juce::String(c.group)!="Part")names.addIfNotAlreadyThere(c.group);for(int i=0;i<names.size();++i)group.addItem(names[i],i+1);group.setSelectedId(2,juce::dontSendNotification);status.setText(processor.status(),juce::dontSendNotification);rebuildMain();rebuildSections();refreshFirmwares();repaint();}
     void selectFile(bool){chooseAsset(4);}
-    void chooseAsset(int role){const bool directory=role==0;chooser=std::make_unique<juce::FileChooser>(directory?"Select ROM folder":role==1?"Select KS wave ROM":role==2?"Select KS factory data":role==3?"Select skin JSON":"Load firmware",processor.romFolder,directory?"*":role==3?"*.json":role==2?"*.bin;*.mid;*.midi":"*.bin;*.syx;*.zip;*.os;*.OS");const juce::Component::SafePointer<Surface> self(this);chooser->launchAsync(juce::FileBrowserComponent::openMode|(directory?juce::FileBrowserComponent::canSelectDirectories:juce::FileBrowserComponent::canSelectFiles),[self,role](const juce::FileChooser& c){if(!self)return;auto file=c.getResult();if(file==juce::File{})return;juce::String error;bool ok=true;if(role==0)ok=self->processor.setRomFolder(file,error);else if(role==1){if(file.getSize()!=129024){ok=false;error="Wave ROM must contain exactly 129024 bytes";}else self->processor.bankFile=file;}else if(role==2)self->processor.flashFile=file;else if(role==3){auto data=juce::JSON::parse(file);if(!data.isObject() || !data["controls"].isArray() || !data["effects"].isArray() || int(data["width"])!=1280 || int(data["height"])!=752){ok=false;error="Expected a Silver-K 1280 x 752 JSON skin";}else{self->processor.customSkin=file.getFullPathName();self->processor.skinChoice="Custom";self->skin=skinData(self->processor);self->skinSelect.setText("Custom",juce::dontSendNotification);self->rebuildMain();self->rebuildAdvanced();self->repaint();}}else ok=self->processor.loadFirmware(file,error);
-        if(ok&&(role==1||role==2)&&self->processor.osFile.existsAsFile()&&!self->processor.isKStation())ok=self->processor.loadFirmware(self->processor.osFile,error);
+    void chooseAsset(int role){const bool directory=role==0;chooser=std::make_unique<juce::FileChooser>(directory?"Select ROM folder":role==1?"Select KS wave ROM":role==2?"Select KS factory data":role==3?"Select skin JSON":"Load firmware",processor.romFolder,directory?"*":role==3?"*.json":role==2?"*.bin;*.mid;*.midi":"*.bin;*.syx;*.zip;*.os;*.OS");const juce::Component::SafePointer<Surface> self(this);chooser->launchAsync(juce::FileBrowserComponent::openMode|(directory?juce::FileBrowserComponent::canSelectDirectories:juce::FileBrowserComponent::canSelectFiles),[self,role](const juce::FileChooser& c){if(!self || self->processor.isFirmwareLoading())return;auto file=c.getResult();if(file==juce::File{})return;juce::String error;bool ok=true;if(role==0)ok=self->processor.setRomFolder(file,error);else if(role==1){if(file.getSize()!=129024){ok=false;error="Wave ROM must contain exactly 129024 bytes";}else self->processor.bankFile=file;}else if(role==2)self->processor.flashFile=file;else if(role==3){auto data=juce::JSON::parse(file);if(!data.isObject() || !data["controls"].isArray() || !data["effects"].isArray() || int(data["width"])!=1280 || int(data["height"])!=752){ok=false;error="Expected a Silver-K 1280 x 752 JSON skin";}else{self->processor.customSkin=file.getFullPathName();self->processor.skinChoice="Custom";self->skin=skinData(self->processor);self->skinSelect.setText("Custom",juce::dontSendNotification);self->rebuildMain();self->rebuildAdvanced();self->repaint();}}else{self->startFirmwareLoad(file,0);return;}
+        if(ok&&(role==1||role==2)&&self->processor.osFile.existsAsFile()&&!self->processor.isKStation()){self->startFirmwareLoad(self->processor.osFile,4);return;}
         self->status.setText(ok?self->processor.status():error,juce::dontSendNotification);self->refreshFirmwares();if(ok&&role==4){self->refreshModel();self->showPage(0);}else self->showPage(4);});}
 
 };

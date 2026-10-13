@@ -9,7 +9,11 @@ int main(int argc,char** argv){if(argc!=4)return 2;try{
  std::fill(flash.begin()+0x20000,flash.begin()+0x60000,0xff);std::copy(init.begin(),init.end(),flash.begin()+0x2c800);
  ks::State state;state.performance=true;state.activeMask=15;
  for(unsigned part=0;part<4;++part){auto& p=state.parts[part];p=init;for(unsigned n:{38,39,40,41,62,65,100,107,110})p[n]=0;p[37]=127;p[128]=part&1?31:27;p[179]=127;p[180]=uint8_t(2+part);p[181]=uint8_t(part);p[182]=0;p[183]=127;p[184]=p[185]=64;std::copy(p.begin(),p.end(),flash.begin()+0x45800+part*256);}flash[0x45800+189]=1;flash[0x45800+190]=15;
+ flash[0x1ff01]=0;flash[0x1ff04]=1;
  ks::Board board(bytes(argv[1]),bytes(argv[2]),flash);require(board.boot(),"Original reset failed");require(board.zeroBank(),"Expected zero bank");
+ const auto startup=board.state();require(startup.performance,"Startup Performance mode lost");
+ for(unsigned part=0;part<4;++part)require(startup.parts[part][37]==127,"Startup Performance lost desired level");
+ require(board.midiReceived<2048,"Boot rewrote stored Performances over MIDI");
  auto send=[&](std::initializer_list<uint8_t> data){std::vector<uint8_t> v(data);require(board.enqueueMidi(v.data(),v.size()),"MIDI overflow");};
  auto settle=[&](unsigned n=20000){for(unsigned i=0;i<n;++i)board.renderSample();};
  send({0xb0,32,65,0xc0,0});settle();require(board.read(0x167ba)==1,"Stored Performance did not select native mode");
