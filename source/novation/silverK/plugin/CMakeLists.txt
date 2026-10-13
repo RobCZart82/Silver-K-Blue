@@ -8,6 +8,12 @@ juce_add_plugin(silverK VERSION 0.1.0 COMPANY_NAME "The Usual Suspects" BUNDLE_I
 target_sources(silverK PRIVATE silverProcessor.cpp silverProcessor.h silverPresets.cpp silverEditor.cpp silverEditor.h silverLibrary.cpp silverLibrary.h silverPatch.cpp silverPatch.h silverKEngine.cpp silverKEngine.h silverBrowser.cpp silverBrowser.h)
 target_compile_definitions(silverK PUBLIC JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_VST3_CAN_REPLACE_VST2=0 JUCE_DISPLAY_SPLASH_SCREEN=0 JUCE_REPORT_APP_USAGE=0)
 target_link_libraries(silverK PRIVATE kstationLib ksLib silverData jucePluginLib juce::juce_audio_utils juce::juce_audio_plugin_client)
+# Standalone's own JUCE module objects must use the same optional ASIO setting
+# as the shared juce_plugin_modules target.
+if(WIN32 AND SilverK_ASIO_SDK_PATH AND EXISTS "${SilverK_ASIO_SDK_PATH}/common/iasiodrv.h")
+ target_compile_definitions(silverK PUBLIC JUCE_ASIO=1)
+ target_include_directories(silverK PUBLIC "${SilverK_ASIO_SDK_PATH}/common")
+endif()
 if(APPLE)
 foreach(format IN LISTS SILVER_FORMATS)
  target_sources(silverK_${format} PRIVATE "${ROOT}/LICENSE.md")
