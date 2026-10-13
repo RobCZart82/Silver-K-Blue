@@ -128,7 +128,7 @@ void Processor::processBlock(juce::AudioBuffer<float>& audio,juce::MidiBuffer& m
     if(c.mapping==Mapping::CC && c.number==70)wire=uint8_t(value);
    }
    const auto status=uint8_t(0xb0|channel);
-   if(c.mapping==Mapping::NRPN){uint8_t b[]{status,99,0,status,98,uint8_t(c.number),status,6,wire};d->midi(b,9);}else{uint8_t b[]{status,uint8_t(c.number),wire};d->midi(b,3);}
+   if(c.mapping==Mapping::NRPN){uint8_t b[]{status,99,0,status,98,uint8_t(c.number),status,6,wire};if(state.performance)d->partMidi(part,b,9);else d->midi(b,9);}else{uint8_t b[]{status,uint8_t(c.number),wire};if(state.performance)d->partMidi(part,b,3);else d->midi(b,3);}
    if(state.performance && c.patchOffset==181)channel=uint8_t(value&15);
   }
  }

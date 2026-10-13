@@ -10,7 +10,7 @@ Device::Device(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,c
  worker=std::thread([this,os,bank,flash,program]{
   dsp56k::ThreadTools::setCurrentThreadName("KS H8S / dual DSP");
   dsp56k::ThreadTools::setCurrentThreadPriority(dsp56k::ThreadPriority::High);
-  try{board=std::make_unique<Board>(os,bank,flash);if(!board->boot())throw std::runtime_error("KS controller boot timeout");
+  try{board=std::make_unique<Board>(os,bank,flash,true);if(!board->boot())throw std::runtime_error("KS controller boot timeout");
    if(program.size()==270 || program.size()==1038){
     const uint8_t select[]{uint8_t(0xb0|(flash[0x1ff08]&15)),32,uint8_t(program.size()==1038?65:33),uint8_t(0xc0|(flash[0x1ff08]&15)),0};
     board->enqueueMidi(select,sizeof(select));board->enqueueMidi(program.data(),program.size());
@@ -57,7 +57,14 @@ Device::Device(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,c
    while(!stopping.load()){
     if(pause.load()){paused.store(true);while(pause.load() && !stopping.load())std::this_thread::sleep_for(std::chrono::microseconds(50));paused.store(false);continue;}
     if(produced>=consumed.load()+lead){std::this_thread::sleep_for(std::chrono::microseconds(50));continue;}
-    Event e{};while(events.peek(e) && e.due<=produced){if(!board->enqueueMidi(&e.value,1))break;events.pop(e);}
+    Event e{};while(events.peek(e) && e.due<=produced){
+     if(e.part<PartCount){
+      std::array<uint8_t,9> packet{};const auto part=e.part,length=e.length;
+      for(unsigned n=0;n<length;++n){events.peekAt(n,e);packet[n]=e.value;}
+      if(!board->enqueuePartMidi(part,packet.data(),length))break;
+      for(unsigned n=0;n<length;++n)events.pop(e);
+     }else{if(!board->enqueueMidi(&e.value,1))break;events.pop(e);}
+    }
     Frame f{produced,nextSample()};if(produced>=consumed.load())output.push(f);++produced;
     if(!(produced&1023))publish();
    }
@@ -77,6 +84,11 @@ std::array<float,OutputCount> Device::nextSample(){
 bool Device::midi(const uint8_t* b,size_t n,uint64_t offset){
  const auto due=consumed.load()+lead+offset;
  if(!events.pushGenerated(n,[&](size_t i){return Event{due,b[i]};})){++overflow;return false;}return true;
+}
+bool Device::partMidi(unsigned part,const uint8_t* b,size_t n){
+ if(part>=PartCount || (n!=3 && n!=9))return false;
+ const auto due=consumed.load()+lead;
+ if(!events.pushGenerated(n,[&](size_t i){return Event{due,b[i],uint8_t(part),uint8_t(n)};})){++overflow;return false;}return true;
 }
 void Device::process(float* l,float* r,size_t n,bool offline){
  process({l,r,nullptr,nullptr},n,offline);

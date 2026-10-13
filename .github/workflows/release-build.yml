@@ -1,0 +1,35 @@
+name: Release build
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows-x64:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Audit source-only repository
+        run: python tools/check_repository.py
+      - name: Configure release
+        run: cmake -S . -B build -A x64
+      - name: Build Windows release and checks
+        run: cmake --build build --config Release --target silverK_Standalone silverK_VST3 silver_check ksPartMidi_test dsp56kTestRunner silver_create_init_flash --parallel 4
+      - name: Validate without private firmware
+        env:
+          SILVER_K_DATA: '${{ runner.temp }}/silver-release-tests'
+        run: ctest --test-dir build -C Release --output-on-failure -R '^(silver_conversion|ks_part_midi|dsp56300_unitTests)$'
+      - name: Verify synthetic KS Data
+        shell: pwsh
+        run: |
+          & build/Release/silver_create_init_flash.exe "$env:RUNNER_TEMP/ks-init-flash.bin"
+          if ($LASTEXITCODE -ne 0) { throw 'Init Flash generation failed' }
+          if ((Get-FileHash assets/ks-init-flash.bin).Hash -ne (Get-FileHash "$env:RUNNER_TEMP/ks-init-flash.bin").Hash) { throw 'Init Flash is not reproducible' }
+      - name: Package binaries, test Data, zero Wave ROM and instructions
+        run: python tools/package_release.py --products build/source/novation/silverK/buildStandalone/silverPlugin/silverK_artefacts/Release --dependencies build/_deps --platform Windows-x64 --output release-output
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Silver-K-Windows-x64-release
+          path: release-output/*
+          if-no-files-found: error
+          retention-days: 14

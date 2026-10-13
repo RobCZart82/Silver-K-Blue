@@ -72,7 +72,9 @@ namespace ksPlugin
         {"chorus", "Send level", "Effects", "Chorus / Phaser", Mapping::CC, 93, 0, 127, 0, 110, 127, 0, 127, 0, nullptr, 0, 0},
         {"modulation", "Mod wheel", "Voice", "Performance", Mapping::CC, 1, 0, 127, 0, -1, 127, 0, 127, 0, nullptr, 0, 0},
         {"breath", "Breath", "Voice", "Performance", Mapping::CC, 2, 0, 127, 0, -1, 127, 0, 127, 0, nullptr, 0, 0},
-        {"voice_level", "Voice level", "Voice", "Performance", Mapping::CC, 119, 0, 127, 64, 125, 127, 0, 127, 0, nullptr, 0, 0},
+        // OS 2.1.02 menu at 0x1043a and manual p.39: program boost,
+        // not the K-Station's biased level. CC119 and patch125 are 0..30 dB.
+        {"voice_level", "Program boost (dB)", "Voice", "Performance", Mapping::CC, 119, 0, 30, 0, 125, 127, 0, 127, 0, nullptr, 0, 0},
         {"portamento_time", "Portamento time", "Voice", "Glide", Mapping::CC, 5, 0, 127, 0, 3, 127, 0, 127, 0, nullptr, 0, 0},
         {"preglide", "Preglide", "Voice", "Glide", Mapping::CC, 8, 52, 76, 64, 4, 127, 0, 127, 0, nullptr, 0, -64},
         {"portamento_mode", "Glide curve", "Voice", "Glide", Mapping::CC, 70, 0, 1, 0, 5, 64, 6, 1, 0, Portamento, 2, 0},

@@ -40,6 +40,9 @@ public:
         setColour(juce::Slider::textBoxOutlineColourId,juce::Colours::transparentBlack);
         setColour(juce::Slider::textBoxBackgroundColourId,juce::Colours::transparentBlack);
         setColour(juce::ComboBox::textColourId,light);
+        setColour(juce::ToggleButton::textColourId,ink);
+        setColour(juce::ToggleButton::tickColourId,blue);
+        setColour(juce::ToggleButton::tickDisabledColourId,ink.withAlpha(.4f));
     }
     juce::Label* createSliderTextBox(juce::Slider& slider) override
     {
@@ -347,8 +350,8 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         firmwareSelect.setBounds(300,28,240,34);firmwareSelect.setComponentID("firmwareSelect");refreshFirmwares();
         firmwareSelect.onChange=[this]{int n=firmwareSelect.getSelectedId()-1;if(n<0 || n>=int(processor.firmwares.size()))return;startFirmwareLoad(processor.firmwares[n].file,0);};
         for(int i=0;i<4;++i){auto& b=parts[i];addAndMakeVisible(b);b.setButtonText(juce::String(i+1));b.getProperties().set("partTab",true);b.setComponentID("partTab"+juce::String(i+1));b.setBounds(555+i*62,28,56,34);b.onClick=[this,i]{processor.selectPart(unsigned(i));refreshModel();};}
-        performanceMode.setBounds(52,96,250,34);performanceMode.onClick=[this]{juce::String error;if(!processor.setPerformanceMode(performanceMode.getToggleState(),error))status.setText(error,juce::dontSendNotification);};
-        partActive.setBounds(330,96,200,34);partActive.onClick=[this]{juce::String error;processor.setPartActive(processor.currentPart(),partActive.getToggleState(),error);};
+        performanceMode.setBounds(52,96,250,34);performanceMode.setComponentID("performanceMode");performanceMode.onClick=[this]{juce::String error;if(!processor.setPerformanceMode(performanceMode.getToggleState(),error))status.setText(error,juce::dontSendNotification);};
+        partActive.setBounds(330,96,200,34);partActive.setComponentID("partActive");partActive.onClick=[this]{juce::String error;processor.setPartActive(processor.currentPart(),partActive.getToggleState(),error);};
         browser.setBounds(24,86,1232,642);
         skinSelect.setBounds(52,353,230,34);for(const auto& name:juce::StringArray{"Auto","Silver-K","KS Grey","Classic","Custom"})skinSelect.addItem(name,skinSelect.getNumItems()+1);skinSelect.setText(processor.skinChoice,juce::dontSendNotification);skinSelect.onChange=[this]{processor.skinChoice=skinSelect.getText();skin=skinData(processor);rebuildMain();rebuildAdvanced();repaint();};
         customSkin.setBounds(298,353,190,34);customSkin.onClick=[this]{chooseAsset(3);};
@@ -502,7 +505,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         const auto layout=skin["advanced"];const int rowHeight=int(layout["rowHeight"]),columnWidth=int(layout["columnWidth"]),gap=int(layout["gap"]);
         for(const auto& s:processor.visibleControls())
         {
-            if(page==2){if(juce::String(s.group)!="Part")continue;}else if(juce::String(s.group)=="Part" || group.getText()!=s.group||(mode.getSelectedId()==2&&section.getText()!=s.section))continue;
+            if(page==2){if(juce::String(s.group)!="Part" && juce::String(s.id)!="volume")continue;}else if(juce::String(s.group)=="Part" || group.getText()!=s.group||(mode.getSelectedId()==2&&section.getText()!=s.section))continue;
             Panel* panel=nullptr;for(auto& p:panels)if(p->title==s.section){panel=p.get();break;}
             if(!panel){auto p=std::make_unique<Panel>();p->title=s.section;p->rowHeight=rowHeight;panel=p.get();content.addAndMakeVisible(*p);panels.push_back(std::move(p));}
             addControl(panel->controls,*panel,s.id,s.label,"row",false,{});

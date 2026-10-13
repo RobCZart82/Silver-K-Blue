@@ -13,6 +13,7 @@ public:
     bool valid() const{return running.load();}
     const std::string& error()const{return failure;}
     bool midi(const uint8_t*,size_t,uint64_t offset=0);
+    bool partMidi(unsigned part,const uint8_t*,size_t);
     void process(float* left,float* right,size_t n,bool offline=false);
     void process(const std::array<float*,OutputCount>&,size_t n,bool offline=false);
     std::vector<uint8_t> dumpProgram(); // Control thread, original UART dump.
@@ -24,7 +25,7 @@ public:
     uint64_t overflows()const{return overflow.load();}
     unsigned latency()const{return lead;}
 private:
-    struct Event{uint64_t due;uint8_t value;};
+    struct Event{uint64_t due;uint8_t value;uint8_t part=255,length=0;};
     struct Frame{uint64_t due;std::array<float,OutputCount> value;};
     std::unique_ptr<Board> board;
     kstation::Queue<Event,65536> events;

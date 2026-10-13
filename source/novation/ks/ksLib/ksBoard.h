@@ -2,6 +2,7 @@
 #include "ksDSP.h"
 #include "ksPlaceholderMidi.h"
 #include "ksState.h"
+#include "ksPartMidi.h"
 #include "h8s/h8s.hpp"
 #include <vector>
 #include <array>
@@ -17,9 +18,10 @@ public:
     // Quotient/remainder avoids an overflowing cycles*Hz intermediate in long sessions.
     static constexpr uint64_t dspTime(uint64_t cycles){return (cycles/ControllerClockHz)*DSP::ClockHz+(cycles%ControllerClockHz)*DSP::ClockHz/ControllerClockHz;}
     static constexpr uint32_t WaveBase=0x860000, WaveSize=129024;
-    Board(const std::vector<uint8_t>& os, const std::vector<uint8_t>& bank,const std::vector<uint8_t>& storage={});
+    Board(const std::vector<uint8_t>& os, const std::vector<uint8_t>& bank,const std::vector<uint8_t>& storage={},bool isolateParts=false);
     void advance(uint32_t budget=128);
     bool enqueueMidi(const uint8_t* b,size_t n);
+    bool enqueuePartMidi(unsigned part,const uint8_t* b,size_t n);
     bool zeroBank()const{return placeholder.enabled;}
     void restoreDesiredLevels(uint8_t* p)const{placeholder.restoreDesired(placeholder.globalChannel,p);}
     bool popMidiOut(uint8_t& b){return midiOut.pop(b);}
@@ -43,6 +45,7 @@ private:
     void tick(uint64_t previous);
     void adaptStoredProgram(uint8_t*,size_t);
     void muteStoredPrograms();
+    bool enqueueNativeMidi(const uint8_t*,size_t);
     std::unique_ptr<H8SEmulator> h8;
     std::array<std::unique_ptr<DSP>,2> dsps;
     std::vector<uint8_t> rom,flash,waves;
@@ -53,6 +56,7 @@ private:
     uint64_t adcDue=0, rxDue=0,txDue=0;
     kstation::Queue<uint8_t,65536> midiIn,midiOut;
     PlaceholderMidi placeholder;
+    PartMidi partMidi;
     std::array<std::array<uint8_t,256>,600> programDesired{};
     std::array<std::array<uint8_t,1024>,100> performanceDesired{};
     kstation::Queue<AudioFrame,8192> audio;

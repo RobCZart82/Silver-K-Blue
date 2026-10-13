@@ -3,7 +3,7 @@
 #include <stdexcept>
 #include <sstream>
 namespace ks {
-Board::Board(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,const std::vector<uint8_t>& storage)
+Board::Board(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,const std::vector<uint8_t>& storage,bool isolateParts)
  : h8(std::make_unique<H8SEmulator>()),rom(os),flash(0x80000,0xff),waves(bank) {
     if(os.size()!=87360 || bank.size()!=WaveSize)throw std::invalid_argument("KS OS/bank size mismatch");
     // Update excludes container checksum. Rebuild its transport field, which
@@ -34,6 +34,11 @@ Board::Board(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,con
     placeholder.enabled=std::all_of(waves.begin(),waves.end(),[](uint8_t v){return v==0;});
     for(unsigned n=0;n<600;++n)std::copy_n(flash.data()+0x20000+n*256,256,programDesired[n].begin());
     for(unsigned n=0;n<100;++n)std::copy_n(flash.data()+0x45800+n*1024,1024,performanceDesired[n].begin());
+    partMidi.enabled=isolateParts;
+    partMidi.globalChannel=flash[0x1ff08]&15;
+    if(isolateParts)for(unsigned n=0;n<600;++n){auto* p=flash.data()+0x20000+n*256;if(p[125]>30 && p[125]<128)p[125]=0;}
+    if(isolateParts)for(unsigned n=0;n<100;++n)for(unsigned p=0;p<PartCount;++p)
+    {auto* program=flash.data()+0x45800+n*1024+p*256;program[181]=uint8_t(p);if(program[125]>30 && program[125]<128)program[125]=0;}
     // Prepare the private Flash image before reset. Rewriting every sampled
     // preset over the guest UART used millions of emulated audio samples at
     // each activation. Keep the desired bytes for snapshots and state saves.
@@ -104,10 +109,30 @@ void Board::tick(uint64_t previous){
     }
 }
 bool Board::enqueueMidi(const uint8_t* bytes,size_t count){
+    // Leave enough UART space for a complete routed packet and the zero-bank
+    // adapter's injected controls. A rejected byte has not entered either parser.
+    for(size_t n=0;n<count;++n){if(midiIn.size()>65536-4096)return false;if(!partMidi.accept(bytes[n],
+        [this](const uint8_t* b,size_t len){return enqueueNativeMidi(b,len);},
+        [this](uint8_t program){return performanceDesired[program].data();},
+        [this](const uint8_t* message,size_t){if(message[12]<100)std::copy_n(message+13,1024,performanceDesired[message[12]].begin());}))return false;}
+    return true;
+}
+bool Board::enqueuePartMidi(unsigned part,const uint8_t* bytes,size_t count){
+    if(!partMidi.enabled || !partMidi.performance)return enqueueMidi(bytes,count);
+    if(part>=PartCount || (count!=3 && count!=9))return false;
+    if(midiIn.size()>65536-4096)return false;
+    if(count==9 && bytes[4]==98 && bytes[5]==86 && bytes[7]==6){partMidi.channels[part]=bytes[8]&15;return true;}
+    std::array<uint8_t,9> routed{};std::copy_n(bytes,count,routed.begin());
+    for(size_t n=0;n<count;n+=3)routed[n]=uint8_t((routed[n]&0xf0)|part);
+    return enqueueNativeMidi(routed.data(),count);
+}
+bool Board::enqueueNativeMidi(const uint8_t* bytes,size_t count){
     for(size_t n=0;n<count;++n)if(!placeholder.accept(bytes[n], [this](const uint8_t* b,size_t len){return midiIn.push(b,len);}, [this](uint8_t ch,uint8_t bank,uint8_t program)->uint16_t {
         if(bank==65 && program<100){
-            placeholder.seedPerformance(performanceDesired[program].data());
-            uint16_t channels=0;for(unsigned part=0;part<4;++part)channels|=1u<<(performanceDesired[program][part*256+181]&15);return channels;
+            auto programs=performanceDesired[program];
+            if(partMidi.enabled)for(unsigned p=0;p<PartCount;++p)programs[p*256+181]=uint8_t(p);
+            placeholder.seedPerformance(programs.data());
+            uint16_t channels=0;for(unsigned part=0;part<4;++part)channels|=1u<<(programs[part*256+181]&15);return channels;
         }
         if(bank>=33 && bank<=40){bank-=32;ch=placeholder.globalChannel;}
         if(bank<1 || bank>8 || program>=(bank<=4?100:50))return 0;
@@ -124,6 +149,7 @@ bool Board::boot(){while(h8->cycles<ControllerClockHz*10ull && !ready){advance()
     }
     for(uint8_t ch=0;ch<16;++ch){placeholder.seed(ch,p.data());placeholder.bank[ch]=placeholder.activeBank[ch]=flash[0x1ff02];}
     placeholder.globalChannel=flash[0x1ff08]&15;
+    if(partMidi.enabled && read(0x167ba) && flash[0x1ff01]<100)partMidi.seed(performanceDesired[flash[0x1ff01]].data());
     if(placeholder.enabled && read(0x167ba)){
         State current;current.performance=true;const auto index=flash[0x1ff01];
         if(index<100)for(unsigned part=0;part<4;++part)std::copy_n(performanceDesired[index].data()+part*256,256,current.parts[part].begin());
@@ -135,7 +161,7 @@ void Board::adaptStoredProgram(uint8_t* message,size_t length) {
     constexpr uint8_t prefix[]{0xf0,0,0x20,0x29,1,0x42};
     if(length<14 || !std::equal(std::begin(prefix),std::end(prefix),message))return;
     if(length==1038 && message[7]==3 && message[12]<100){
-        std::copy_n(message+13,1024,performanceDesired[message[12]].begin());
+        if(!partMidi.enabled)std::copy_n(message+13,1024,performanceDesired[message[12]].begin());
         for(unsigned part=0;part<4;++part)PlaceholderMidi::muteProgram(message+13+part*256);return;
     }
     if(length!=270 || message[7]!=1)return;
@@ -163,6 +189,8 @@ std::vector<uint8_t> Board::saveUserFlash() const {
     if(placeholder.enabled)for(unsigned n=0;n<600;++n)PlaceholderMidi::restoreProgram(saved.data()+0x20000-0x1fc00+n*256,programDesired[n].data());
     if(placeholder.enabled)for(unsigned n=0;n<100;++n)for(unsigned part=0;part<4;++part)
         PlaceholderMidi::restoreProgram(saved.data()+0x45800-0x1fc00+n*1024+part*256,performanceDesired[n].data()+part*256);
+    if(partMidi.enabled)for(unsigned n=0;n<100;++n)for(unsigned part=0;part<PartCount;++part)
+        saved[0x45800-0x1fc00+n*1024+part*256+181]=performanceDesired[n][part*256+181];
     return saved;
 }
 State Board::state() {
@@ -172,6 +200,7 @@ State Board::state() {
         for(unsigned n=0;n<256;++n)p[n]=read(0x168fc+index*256+n);
         for(unsigned n=0;n<8;++n)p[179+n]=read(0x174ae + 20*index+9+n);
         packMirrors(p);if(result.performance)placeholder.restorePart(part,p.data());else restoreDesiredLevels(p.data());
+        if(partMidi.enabled && result.performance)p[181]=partMidi.channels[part];
     }
     if(result.performance){auto& first=result.parts[0];first[189]=read(0x167d2)&15;first[190]=result.activeMask;
         first[191]=read(0x168fc+191);first[208]=read(0x168fc+208);}

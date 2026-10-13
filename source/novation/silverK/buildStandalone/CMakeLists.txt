@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(SilverK VERSION 0.1.0 LANGUAGES C CXX)
+project(SilverK VERSION 0.2.0 LANGUAGES C CXX)
 set(CMAKE_OSX_DEPLOYMENT_TARGET 12.0 CACHE STRING "Deployment target")
 enable_testing()
 set(CMAKE_CXX_STANDARD 17)
@@ -59,6 +59,9 @@ add_library(ksLib STATIC "${ROOT}/source/novation/ks/ksLib/ksBoard.cpp" "${ROOT}
 target_include_directories(ksLib PUBLIC "${ROOT}/source/novation/ks" "${ROOT}/source/cpu" "${ROOT}/source/framework")
 target_link_libraries(ksLib PUBLIC baseLib dsp56kEmu h8s)
 # Opt-in checks require user-supplied KS OS, zero wave bank and Flash paths.
+add_executable(ksPartMidi_test "${ROOT}/source/novation/ks/ksLib/ksPartMidi_test.cpp")
+target_compile_features(ksPartMidi_test PRIVATE cxx_std_17)
+add_test(NAME ks_part_midi COMMAND ksPartMidi_test)
 foreach(check ksBoardSilence ksPerformanceSilence)
     add_executable(${check}_test EXCLUDE_FROM_ALL "${ROOT}/source/novation/ks/ksLib/${check}_test.cpp")
     target_link_libraries(${check}_test PRIVATE ksLib)

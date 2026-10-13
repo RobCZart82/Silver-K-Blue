@@ -17,7 +17,7 @@ int main(int argc,char** argv) {
     init[37]=100;init[38]=init[39]=init[40]=init[41]=init[42]=0;
     init[62]=2;init[63]=80;init[64]=100;init[65]=30;
     init[100]=init[107]=init[110]=0;
-    // Native KS stored voice level is rebased from MIDI 64 to zero.
+    // KS program boost is 0..30 dB; zero is the normal unboosted level.
     init[125]=0;
     init[179]=100;init[180]=0;init[181]=0;
     init[182]=0;init[183]=127;init[184]=init[185]=64;init[186]=0;
