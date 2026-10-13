@@ -13,6 +13,7 @@ get_filename_component(GEARMULATOR_ROOT "${CMAKE_CURRENT_LIST_DIR}/../../../.." 
 set(ROOT "${GEARMULATOR_ROOT}")
 include("${ROOT}/cmake/Dependencies.cmake")
 include("${ROOT}/cmake/JuceCompatibility.cmake")
+include("${ROOT}/cmake/DspCompatibility.cmake")
 add_subdirectory("${JUCE_SOURCE}" juce EXCLUDE_FROM_ALL)
 set(JUCE_MODULES_DIR "${JUCE_SOURCE}/modules")
 set(ASMJIT_STATIC TRUE CACHE BOOL "Static AsmJit" FORCE)
