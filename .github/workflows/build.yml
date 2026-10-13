@@ -12,16 +12,16 @@ jobs:
       - name: Audit source-only repository
         run: python tools/check_repository.py
       - name: Configure Win64
-        run: cmake -S . -B build -A x64 -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S . -B build -A x64 -DCMAKE_BUILD_TYPE=RelWithDebInfo
       - name: Build Standalone, VST3 and checks
-        run: cmake --build build --config Release --target silverK_Standalone silverK_VST3 silver_check dsp56kTestRunner --parallel 4
+        run: cmake --build build --config RelWithDebInfo --target silverK_Standalone silverK_VST3 silver_check dsp56kTestRunner --parallel 4
       - name: Run DSP JIT, patch, browser and editor checks without ROMs
         env:
           SILVER_K_DATA: '${{ runner.temp }}/silver-k-tests'
-        run: ctest --test-dir build -C Release --output-on-failure -R '^(silver_conversion|dsp56300_unitTests)$'
+        run: ctest --test-dir build -C RelWithDebInfo --output-on-failure -R '^(silver_conversion|dsp56300_unitTests)$'
       - name: Verify synthetic flash
         shell: pwsh
         run: |
-          cmake --build build --config Release --target silver_create_init_flash
-          & build/Release/silver_create_init_flash.exe "$env:RUNNER_TEMP/ks-init-flash.bin"
+          cmake --build build --config RelWithDebInfo --target silver_create_init_flash
+          & build/RelWithDebInfo/silver_create_init_flash.exe "$env:RUNNER_TEMP/ks-init-flash.bin"
           if ((Get-FileHash assets/ks-init-flash.bin).Hash -ne (Get-FileHash "$env:RUNNER_TEMP/ks-init-flash.bin").Hash) { throw 'Init flash is not reproducible' }
