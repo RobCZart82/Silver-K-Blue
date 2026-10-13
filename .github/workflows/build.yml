@@ -1,0 +1,24 @@
+name: Desktop build
+on: [push, pull_request, workflow_dispatch]
+jobs:
+  windows-x64:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      SILVER_K_DATA: '${{ runner.temp }}/silver-k-tests'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Audit source-only repository
+        run: python tools/check_repository.py
+      - name: Configure Win64
+        run: cmake -S . -B build -A x64 -DCMAKE_BUILD_TYPE=Release
+      - name: Build Standalone, VST3 and checks
+        run: cmake --build build --config Release --target silverK_Standalone silverK_VST3 silver_check --parallel 4
+      - name: Run patch, browser and editor checks without ROMs
+        run: ctest --test-dir build -C Release --output-on-failure -R '^silver_conversion$'
+      - name: Verify synthetic flash
+        shell: pwsh
+        run: |
+          cmake --build build --config Release --target silver_create_init_flash
+          & build/Release/silver_create_init_flash.exe "$env:RUNNER_TEMP/ks-init-flash.bin"
+          if ((Get-FileHash assets/ks-init-flash.bin).Hash -ne (Get-FileHash "$env:RUNNER_TEMP/ks-init-flash.bin").Hash) { throw 'Init flash is not reproducible' }

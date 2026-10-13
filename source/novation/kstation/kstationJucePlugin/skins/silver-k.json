@@ -1,0 +1,853 @@
+{
+  "name": "Silver-K",
+  "width": 1280,
+  "height": 752,
+  "split": 514,
+  "header": [
+    18,
+    16,
+    1244,
+    58
+  ],
+  "title": [
+    40,
+    21,
+    600,
+    45
+  ],
+  "pages": [
+    "Main",
+    "Extra",
+    "Controls",
+    "Setup"
+  ],
+  "pageButtons": [
+    868,
+    28,
+    92,
+    34
+  ],
+  "sections": [
+    [
+      24,
+      86,
+      328,
+      426,
+      "OSCILLATOR"
+    ],
+    [
+      364,
+      86,
+      142,
+      426,
+      "MIXER"
+    ],
+    [
+      520,
+      86,
+      310,
+      426,
+      "FILTER"
+    ],
+    [
+      844,
+      86,
+      126,
+      426,
+      "LFO"
+    ],
+    [
+      984,
+      86,
+      272,
+      204,
+      "MOD ENV"
+    ],
+    [
+      984,
+      300,
+      272,
+      206,
+      "AMP ENV"
+    ],
+    [
+      24,
+      528,
+      134,
+      200,
+      "MASTER"
+    ],
+    [
+      172,
+      528,
+      260,
+      200,
+      "ARPEGGIATOR"
+    ],
+    [
+      444,
+      528,
+      286,
+      200,
+      "PROGRAM"
+    ],
+    [
+      742,
+      528,
+      106,
+      200,
+      "GLIDE"
+    ],
+    [
+      862,
+      528,
+      394,
+      200,
+      "EFFECTS"
+    ]
+  ],
+  "selectors": {
+    "osc": [
+      32,
+      117,
+      312,
+      32
+    ],
+    "lfo": [
+      852,
+      116,
+      108,
+      28
+    ],
+    "pw": [
+      240,
+      476,
+      104,
+      26
+    ],
+    "fx": [
+      870,
+      555,
+      378,
+      25
+    ],
+    "lfoIndicators": [
+      [
+        857,
+        150,
+        36,
+        22
+      ],
+      [
+        918,
+        150,
+        36,
+        22
+      ]
+    ]
+  },
+  "lcd": [
+    458,
+    562,
+    260,
+    66
+  ],
+  "actions": {
+    "loadProgram": [
+      458,
+      644,
+      146,
+      30
+    ],
+    "panic": [
+      612,
+      644,
+      106,
+      30
+    ]
+  },
+  "advanced": {
+    "mode": [
+      32,
+      94,
+      140,
+      30
+    ],
+    "group": [
+      186,
+      94,
+      222,
+      30
+    ],
+    "section": [
+      422,
+      94,
+      264,
+      30
+    ],
+    "viewport": [
+      24,
+      142,
+      1232,
+      586
+    ],
+    "columnWidth": 382,
+    "rowHeight": 40,
+    "gap": 20
+  },
+  "setup": {
+    "status": [
+      52,
+      144,
+      1120,
+      72
+    ],
+    "latency": [
+      52,
+      225,
+      1100,
+      30
+    ],
+    "firmware": [
+      52,
+      295,
+      200,
+      38
+    ],
+    "folder": [
+      266,
+      295,
+      170,
+      38
+    ],
+    "channel": [
+      52,
+      393,
+      240,
+      34
+    ]
+  },
+  "controls": [
+    {
+      "id": "osc{osc}_wave",
+      "rect": [
+        36,
+        165,
+        144,
+        58
+      ],
+      "label": "Waveform",
+      "kind": "menu",
+      "dark": false
+    },
+    {
+      "id": "osc{osc}_octave",
+      "rect": [
+        204,
+        165,
+        132,
+        58
+      ],
+      "label": "Octave",
+      "kind": "menu",
+      "dark": false
+    },
+    {
+      "id": "osc{osc}_semitone",
+      "rect": [
+        32,
+        235,
+        100,
+        116
+      ],
+      "label": "Semitone",
+      "kind": "knob",
+      "dark": false
+    },
+    {
+      "id": "osc{osc}_fine",
+      "rect": [
+        136,
+        235,
+        100,
+        116
+      ],
+      "label": "Detune",
+      "kind": "knob",
+      "dark": false
+    },
+    {
+      "id": "osc{osc}_{pw}",
+      "rect": [
+        240,
+        235,
+        100,
+        116
+      ],
+      "label": "PW position",
+      "kind": "knob",
+      "dark": false
+    },
+    {
+      "id": "osc{osc}_env_pitch",
+      "rect": [
+        32,
+        355,
+        100,
+        116
+      ],
+      "label": "Mod env pitch",
+      "kind": "knob",
+      "dark": false
+    },
+    {
+      "id": "osc{osc}_lfo1_pitch",
+      "rect": [
+        136,
+        355,
+        100,
+        116
+      ],
+      "label": "LFO 1 pitch",
+      "kind": "knob",
+      "dark": false
+    },
+    {
+      "id": "osc{osc}_bend_depth",
+      "rect": [
+        240,
+        355,
+        100,
+        116
+      ],
+      "label": "Pitch bend",
+      "kind": "knob",
+      "dark": false
+    },
+    {
+      "id": "osc1_level",
+      "rect": [
+        368,
+        119,
+        136,
+        76
+      ],
+      "label": "OSC 1",
+      "kind": "mixer",
+      "dark": false
+    },
+    {
+      "id": "osc2_level",
+      "rect": [
+        368,
+        195,
+        136,
+        76
+      ],
+      "label": "OSC 2",
+      "kind": "mixer",
+      "dark": false
+    },
+    {
+      "id": "osc3_level",
+      "rect": [
+        368,
+        271,
+        136,
+        76
+      ],
+      "label": "OSC 3",
+      "kind": "mixer",
+      "dark": false
+    },
+    {
+      "id": "noise_level",
+      "rect": [
+        368,
+        347,
+        136,
+        76
+      ],
+      "label": "Noise",
+      "kind": "mixer",
+      "dark": false
+    },
+    {
+      "id": "ring_level",
+      "rect": [
+        368,
+        423,
+        136,
+        76
+      ],
+      "label": "Ring 1 x 2",
+      "kind": "mixer",
+      "dark": false
+    },
+    {
+      "id": "cutoff",
+      "rect": [
+        530,
+        132,
+        150,
+        180
+      ],
+      "label": "Cutoff",
+      "kind": "knob",
+      "dark": false
+    },
+    {
+      "id": "resonance",
+      "rect": [
+        724,
+        155,
+        100,
+        116
+      ],
+      "label": "Resonance",
+      "kind": "knob",
+      "dark": false
+    },
+    {
+      "id": "filter_drive",
+      "rect": [
+        522,
+        330,
+        76,
+        116
+      ],
+      "label": "Overdrive",
+      "kind": "knob",
+      "dark": false
+    },
+    {
+      "id": "filter_env",
+      "rect": [
+        600,
+        330,
+        76,
+        116
+      ],
+      "label": "Env depth",
+      "kind": "knob",
+      "dark": false
+    },
+    {
+      "id": "filter_lfo2",
+      "rect": [
+        678,
+        330,
+        76,
+        116
+      ],
+      "label": "LFO 2 depth",
+      "kind": "knob",
+      "dark": false
+    },
+    {
+      "id": "filter_keytrack",
+      "rect": [
+        756,
+        330,
+        76,
+        116
+      ],
+      "label": "Key track",
+      "kind": "knob",
+      "dark": false
+    },
+    {
+      "id": "filter_slope",
+      "rect": [
+        560,
+        466,
+        234,
+        44
+      ],
+      "label": "Slope",
+      "kind": "menu",
+      "dark": false
+    },
+    {
+      "id": "lfo{lfo}_rate",
+      "rect": [
+        852,
+        180,
+        108,
+        116
+      ],
+      "label": "Rate",
+      "kind": "knob",
+      "dark": false
+    },
+    {
+      "id": "lfo{lfo}_delay",
+      "rect": [
+        852,
+        308,
+        108,
+        116
+      ],
+      "label": "Delay",
+      "kind": "knob",
+      "dark": false
+    },
+    {
+      "id": "lfo{lfo}_wave",
+      "rect": [
+        852,
+        448,
+        108,
+        58
+      ],
+      "label": "Waveform",
+      "kind": "menu",
+      "dark": false
+    },
+    {
+      "id": "mod_attack",
+      "rect": [
+        988,
+        128,
+        64,
+        162
+      ],
+      "label": "Attack",
+      "kind": "fader",
+      "dark": false
+    },
+    {
+      "id": "amp_attack",
+      "rect": [
+        988,
+        336,
+        64,
+        162
+      ],
+      "label": "Attack",
+      "kind": "fader",
+      "dark": false
+    },
+    {
+      "id": "mod_decay",
+      "rect": [
+        1054,
+        128,
+        64,
+        162
+      ],
+      "label": "Decay",
+      "kind": "fader",
+      "dark": false
+    },
+    {
+      "id": "amp_decay",
+      "rect": [
+        1054,
+        336,
+        64,
+        162
+      ],
+      "label": "Decay",
+      "kind": "fader",
+      "dark": false
+    },
+    {
+      "id": "mod_sustain",
+      "rect": [
+        1120,
+        128,
+        64,
+        162
+      ],
+      "label": "Sustain",
+      "kind": "fader",
+      "dark": false
+    },
+    {
+      "id": "amp_sustain",
+      "rect": [
+        1120,
+        336,
+        64,
+        162
+      ],
+      "label": "Sustain",
+      "kind": "fader",
+      "dark": false
+    },
+    {
+      "id": "mod_release",
+      "rect": [
+        1186,
+        128,
+        64,
+        162
+      ],
+      "label": "Release",
+      "kind": "fader",
+      "dark": false
+    },
+    {
+      "id": "amp_release",
+      "rect": [
+        1186,
+        336,
+        64,
+        162
+      ],
+      "label": "Release",
+      "kind": "fader",
+      "dark": false
+    },
+    {
+      "id": "volume",
+      "rect": [
+        36,
+        568,
+        104,
+        116
+      ],
+      "label": "Volume",
+      "kind": "knob",
+      "dark": true
+    },
+    {
+      "id": "arp_rate",
+      "rect": [
+        176,
+        568,
+        90,
+        116
+      ],
+      "label": "Tempo",
+      "kind": "knob",
+      "dark": true
+    },
+    {
+      "id": "arp_on",
+      "rect": [
+        270,
+        578,
+        66,
+        34
+      ],
+      "label": "On",
+      "kind": "led",
+      "dark": true
+    },
+    {
+      "id": "arp_latch",
+      "rect": [
+        270,
+        621,
+        66,
+        34
+      ],
+      "label": "Latch",
+      "kind": "led",
+      "dark": true
+    },
+    {
+      "id": "arp_pattern",
+      "rect": [
+        340,
+        566,
+        82,
+        50
+      ],
+      "label": "Pattern",
+      "kind": "menu",
+      "dark": true
+    },
+    {
+      "id": "arp_octaves",
+      "rect": [
+        340,
+        627,
+        82,
+        50
+      ],
+      "label": "Octaves",
+      "kind": "menu",
+      "dark": true
+    },
+    {
+      "id": "portamento_time",
+      "rect": [
+        746,
+        576,
+        96,
+        116
+      ],
+      "label": "Time",
+      "kind": "knob",
+      "dark": true
+    }
+  ],
+  "effectSlots": [
+    [
+      870,
+      590,
+      88,
+      106
+    ],
+    [
+      964,
+      590,
+      88,
+      106
+    ],
+    [
+      1058,
+      590,
+      88,
+      106
+    ],
+    [
+      1152,
+      590,
+      88,
+      106
+    ]
+  ],
+  "effectMenus": [
+    [
+      870,
+      704,
+      180,
+      24
+    ],
+    [
+      1062,
+      704,
+      180,
+      24
+    ]
+  ],
+  "effects": [
+    {
+      "name": "Delay",
+      "controls": [
+        "delay_level",
+        "delay_time",
+        "delay_feedback",
+        "delay_width"
+      ],
+      "labels": [
+        "Level",
+        "Time",
+        "Feedback",
+        "Width"
+      ],
+      "menus": [
+        "delay_ratio",
+        "delay_sync"
+      ]
+    },
+    {
+      "name": "Reverb",
+      "controls": [
+        "reverb_level",
+        "reverb_decay",
+        "reverb_wheel"
+      ],
+      "labels": [
+        "Level",
+        "Decay",
+        "Wheel send"
+      ],
+      "menus": [
+        "reverb_type"
+      ]
+    },
+    {
+      "name": "Chorus",
+      "controls": [
+        "chorus_level",
+        "chorus_rate",
+        "chorus_depth",
+        "chorus_feedback"
+      ],
+      "labels": [
+        "Level",
+        "Rate",
+        "Depth",
+        "Feedback"
+      ],
+      "menus": [
+        "chorus_type",
+        "chorus_sync"
+      ]
+    },
+    {
+      "name": "Distortion",
+      "controls": [
+        "distortion_level",
+        "distortion_compensation",
+        "distortion_wheel"
+      ],
+      "labels": [
+        "Drive",
+        "Compensation",
+        "Wheel depth"
+      ],
+      "menus": []
+    },
+    {
+      "name": "EQ",
+      "controls": [
+        "eq_level",
+        "eq_frequency",
+        "eq_rate",
+        "eq_depth"
+      ],
+      "labels": [
+        "Shape",
+        "Frequency",
+        "Rate",
+        "Depth"
+      ],
+      "menus": [
+        "eq_sync",
+        "eq_start"
+      ]
+    },
+    {
+      "name": "Panning",
+      "controls": [
+        "pan_position",
+        "pan_rate",
+        "pan_depth"
+      ],
+      "labels": [
+        "Position",
+        "Rate",
+        "Depth"
+      ],
+      "menus": [
+        "pan_sync",
+        "pan_start"
+      ]
+    },
+    {
+      "name": "Vocoder",
+      "controls": [
+        "vocoder_balance",
+        "vocoder_width",
+        "vocoder_sibilance"
+      ],
+      "labels": [
+        "Balance",
+        "Width",
+        "Sibilance"
+      ],
+      "menus": [
+        "vocoder_sibilance_type"
+      ]
+    }
+  ],
+  "knobDiameter": 70,
+  "cutoffDiameter": 130,
+  "classicDiameter": 56
+}

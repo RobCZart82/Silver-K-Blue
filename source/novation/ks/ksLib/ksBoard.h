@@ -1,0 +1,62 @@
+#pragma once
+#include "ksDSP.h"
+#include "ksPlaceholderMidi.h"
+#include "ksState.h"
+#include "h8s/h8s.hpp"
+#include <vector>
+#include <array>
+#include <memory>
+#include <string>
+#include "../../kstation/kstationLib/kstationQueue.h"
+
+namespace ks {
+// Owns the controller and both DSPs; accessed only by the emulation worker.
+class Board final : public H8SDevice {
+public:
+    static constexpr uint32_t ControllerClockHz=25000000;
+    // Quotient/remainder avoids an overflowing cycles*Hz intermediate in long sessions.
+    static constexpr uint64_t dspTime(uint64_t cycles){return (cycles/ControllerClockHz)*DSP::ClockHz+(cycles%ControllerClockHz)*DSP::ClockHz/ControllerClockHz;}
+    static constexpr uint32_t WaveBase=0x860000, WaveSize=129024;
+    Board(const std::vector<uint8_t>& os, const std::vector<uint8_t>& bank,const std::vector<uint8_t>& storage={});
+    void advance(uint32_t budget=128);
+    bool enqueueMidi(const uint8_t* b,size_t n);
+    bool zeroBank()const{return placeholder.enabled;}
+    void restoreDesiredLevels(uint8_t* p)const{placeholder.restoreDesired(placeholder.globalChannel,p);}
+    bool popMidiOut(uint8_t& b){return midiOut.pop(b);}
+    using AudioFrame=std::array<int32_t,24>;
+    AudioFrame renderSample();
+    uint64_t midiReceived=0;
+    std::array<uint64_t,2> serialUnderruns{},serialOverflows{};
+    std::array<size_t,2> serialDepth()const{return {aToB.size(),bToA.size()};}
+    uint8_t read(uint32_t address) override;
+    void write(uint32_t address,uint8_t value) override;
+    H8SEmulator& cpu(){return *h8;}
+    DSP& dsp(unsigned i){return *dsps.at(i);}
+    uint64_t waveReads=0, hostWrites[2]{}, bankLow=0xffffff, bankHigh=0;
+    bool overlay=false, mainEntered=false, ready=false;
+    bool boot();
+    std::vector<uint8_t> saveUserFlash() const;
+    State state(); // Worker only: read controller state, never execute guest helpers.
+    void discardAudio(){audio.reset();}
+    std::string lcd;
+private:
+    void tick(uint64_t previous);
+    void adaptStoredProgram(uint8_t*,size_t);
+    void muteStoredPrograms();
+    std::unique_ptr<H8SEmulator> h8;
+    std::array<std::unique_ptr<DSP>,2> dsps;
+    std::vector<uint8_t> rom,flash,waves;
+    std::array<uint8_t,512> io{};
+    int64_t epochs[2]{};
+    bool started[2]{};
+    uint64_t serialNext=0,serialSlot=0;bool serialSlaveStarted=false;
+    uint64_t adcDue=0, rxDue=0,txDue=0;
+    kstation::Queue<uint8_t,65536> midiIn,midiOut;
+    PlaceholderMidi placeholder;
+    std::array<std::array<uint8_t,256>,600> programDesired{};
+    std::array<std::array<uint8_t,1024>,100> performanceDesired{};
+    kstation::Queue<AudioFrame,8192> audio;
+    kstation::Queue<DSP::SerialFrame,8192> aToB,bToA;
+    uint32_t flashCommand=0,pageRemaining=0;
+};
+}

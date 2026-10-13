@@ -1,0 +1,11 @@
+cmake_minimum_required(VERSION 3.22)
+add_library(ksLib STATIC ksBoard.cpp ksBoard.h ksDSP.cpp ksDSP.h ksDevice.cpp ksDevice.h ksRom.cpp ksRom.h ksPlaceholderMidi.h)
+target_compile_features(ksLib PUBLIC cxx_std_17)
+target_include_directories(ksLib PUBLIC ${CMAKE_CURRENT_LIST_DIR}/..)
+target_link_libraries(ksLib PUBLIC baseLib dsp56kEmu h8s)
+
+if(BUILD_TESTING)
+ add_executable(ksPlaceholderMidi_test ksPlaceholderMidi_test.cpp)
+ target_compile_features(ksPlaceholderMidi_test PRIVATE cxx_std_17)
+ add_test(NAME ksPlaceholderMidi COMMAND ksPlaceholderMidi_test)
+endif()
