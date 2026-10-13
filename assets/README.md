@@ -6,7 +6,7 @@ No OS code, DSP firmware, sampled wave data or factory patches are included. Res
 
 Select this file in Setup's KS data field when using KS firmware. Sample-dependent oscillators remain silent without the user's external wave bank.
 
-Release archives also contain a separate `ks-wave-zero.bin`, generated as 129024 zero bytes by `tools/package_release.py`. Select that file in **Wave ROM**, and select this Init Flash in **KS factory data**. The zero Wave ROM and test KS Data serve different purposes; neither is the original OS. See [installation instructions](../doc/INSTALL_RU.md).
+Release archives also contain a separate `ks-wave-zero.bin`, generated as 129024 zero bytes by `tools/package_release.py`. Select that file in **Wave ROM**, and select this Init Flash in **KS factory data**. The zero Wave ROM and test KS Data serve different purposes; neither is the original OS. See [English installation instructions](../README.md#ks-data-and-wave-rom).
 
 Regenerate without any ROM or factory MIDI:
 

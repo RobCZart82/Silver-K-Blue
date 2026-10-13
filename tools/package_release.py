@@ -74,8 +74,8 @@ def main():
                              contains_sampled_waves=False, mapped_base='0x860000',
                              generator='tools/package_release.py')
         (stage / 'KS-Data/ks-wave-zero.manifest.json').write_text(json.dumps(wave_manifest, indent=2)+'\n')
-        for src, dest in [('doc/INSTALL_RU.md', 'INSTALL_RU.md'),
-                          ('doc/releases/0.2.0-alpha.1.md', 'RELEASE_NOTES_RU.md'),
+        for src, dest in [('doc/INSTALL.md', 'INSTALL.md'),
+                          ('doc/releases/0.2.0-alpha.1.md', 'RELEASE_NOTES.md'),
                           ('LICENSE.md', 'LICENSE.md'), ('THIRD_PARTY.md', 'THIRD_PARTY.md')]:
             copy(ROOT / src, dest)
         for dep in ['juce', 'dsp', 'asmjit']:
