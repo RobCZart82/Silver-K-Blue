@@ -86,7 +86,7 @@ static void vStationProgramChecks(Library& library){
  check(std::equal(patch->sysex.begin()+13,patch->sysex.end()-1,file.begin()+60),"FXP sound bytes changed");
  for(int damage=0;damage<7;++damage){auto invalid=file;if(damage==0)invalid.pop_back();if(damage==1)invalid[16]='X';if(damage==2)invalid[15]=2;if(damage==3)invalid[60]=128;if(damage==4)invalid[59]=148;if(damage==5)invalid[188]=128;if(damage==6)invalid[27]=2;DataList rejected;check(!library.parseFileData(rejected,invalid,"bad.fxp") && rejected.empty(),"Malformed FXP accepted");}
  patch->tags.erase(TagType::Tag,"V-Station");check(patchModel(*patch)==Model::VStation,"User tags must not determine new V-Station type");
- auto legacy=library.createPatch(Data(program(Model::KStation)),{});legacy->tags.add(TagType::Tag,"V-Station");check(patchModel(*legacy)==Model::VStation,"Legacy V-Station bank classification");
+ const auto legacyBytes=program(Model::KStation);auto legacy=library.createPatch(Data(legacyBytes.begin(),legacyBytes.end()),{});legacy->tags.add(TagType::Tag,"V-Station");check(patchModel(*legacy)==Model::VStation,"Legacy V-Station bank classification");
  const auto folder=juce::SystemStats::getEnvironmentVariable("SILVER_TEST_VSTATION_FOLDER",{});
  if(folder.isNotEmpty()){
   const auto files=juce::File(folder).findChildFiles(juce::File::findFiles,true,"*.fxp");check(!files.isEmpty(),"No private FXP files");std::set<PatchHash> unique;
@@ -97,10 +97,10 @@ static void vStationProgramChecks(Library& library){
 }
 static void namingChecks(Library& library){
  for(auto model:{Model::KStation,Model::AStation}){
-  const auto bytes=program(model);DataList frames;check(library.parseFileData(frames,Data(bytes),"Readable patch.syx"),"Named single import");auto named=library.createPatch(Data(frames[0]),{});check(named && named->name=="Readable patch" && std::equal(named->sysex.begin(),named->sysex.end(),bytes.begin(),bytes.end()),"SysEx filename and original bytes");
-  Data batch(bytes);batch.insert(batch.end(),bytes.begin(),bytes.end());frames.clear();check(library.parseFileData(frames,batch,"bank.syx") && frames.size()==2,"Unnamed batch import");
+  const auto bytes=program(model);DataList frames;check(library.parseFileData(frames,Data(bytes.begin(),bytes.end()),"Readable patch.syx"),"Named single import");auto named=library.createPatch(Data(frames[0]),{});check(named && named->name=="Readable patch" && std::equal(named->sysex.begin(),named->sysex.end(),bytes.begin(),bytes.end()),"SysEx filename and original bytes");
+  Data batch(bytes.begin(),bytes.end());batch.insert(batch.end(),bytes.begin(),bytes.end());frames.clear();check(library.parseFileData(frames,batch,"bank.syx") && frames.size()==2,"Unnamed batch import");
   for(unsigned n=0;n<2;++n){auto patch=library.createPatch(Data(frames[n]),{});check(patch && patch->name==modelName(model).toStdString()+" 00"+std::to_string(n+1) && std::equal(patch->sysex.begin(),patch->sysex.end(),bytes.begin(),bytes.end()),"Sequential names for edit-buffer dumps");}
-  auto old=library.createPatch(Data(bytes),{});old->name=" 0";old->program=9;check(patchName(*old)==modelName(model)+" 010","Cached zero name fallback");
+  auto old=library.createPatch(Data(bytes.begin(),bytes.end()),{});old->name=" 0";old->program=9;check(patchName(*old)==modelName(model)+" 010","Cached zero name fallback");
  }
  std::cout<<"PASS: K/A filename names, sequential unnamed bank programs, cached-zero fallback, unchanged sound bytes\n";
 }
