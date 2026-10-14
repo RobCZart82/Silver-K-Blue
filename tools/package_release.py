@@ -10,7 +10,7 @@ import tempfile
 import zipfile
 from pathlib import Path
 
-VERSION = '0.2.4-alpha.1'
+VERSION = '0.2.4'
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -76,7 +76,7 @@ def main():
                              generator='tools/package_release.py')
         (stage / 'Silver-K/ROMs/ks-wave-zero.manifest.json').write_text(json.dumps(wave_manifest, indent=2)+'\n')
         for src, dest in [('doc/INSTALL.md', 'INSTALL.md'),
-                          ('doc/releases/0.2.4-alpha.1.md', 'RELEASE_NOTES.md'),
+                          ('doc/releases/0.2.4.md', 'RELEASE_NOTES.md'),
                           ('LICENSE.md', 'LICENSE.md'), ('THIRD_PARTY.md', 'THIRD_PARTY.md')]:
             copy(ROOT / src, dest)
         for dep in ['juce', 'dsp', 'asmjit']:
@@ -87,13 +87,13 @@ def main():
         # Original user assets and unrelated editor work are outside these roots.
         source_files = subprocess.check_output(['git','ls-files','--cached','--others','--exclude-standard'],cwd=ROOT,text=True).splitlines()
         source_archive = stage / 'Silver-K-source.zip'
-        roots = ('source/','assets/','tools/','doc/','.github/')
+        roots = ('source/','cmake/','assets/','tools/','doc/','.github/')
         top = {'CMakeLists.txt','README.md','LICENSE.md','THIRD_PARTY.md','.gitignore'}
         with zipfile.ZipFile(source_archive,'w',zipfile.ZIP_DEFLATED) as source_zip:
             for relative in sorted(set(source_files)):
                 path = ROOT / relative
                 if (relative.startswith(roots) or relative in top) and path.is_file():
-                    if path.suffix.lower() in {'.bin','.syx','.mid','.midi','.os','.fxb','.wav'} and relative!='assets/ks-init-flash.bin':
+                    if path.suffix.lower() in {'.bin','.syx','.mid','.midi','.os','.fxb','.fxp','.wav'} and relative!='assets/ks-init-flash.bin':
                         raise RuntimeError(f'Private/binary asset in source snapshot: {relative}')
                     source_zip.write(path,relative)
         dirty = bool(subprocess.check_output(['git','status','--porcelain'],cwd=ROOT,text=True).strip())
@@ -114,7 +114,7 @@ Bundled framework, H8S, libresample and ptypes source/notices are in Silver-K's 
 No original firmware or factory sounds are included in this binary archive.
 '''
         (stage / 'SOURCES.txt').write_text(sources, encoding='utf-8')
-        manifest = dict(version=VERSION, plugin_version='0.2.4', platform=args.platform,
+        manifest = dict(version=VERSION, channel='beta', plugin_version='0.2.4', platform=args.platform,
                         source_commit=commit, source_dirty=dirty, source_snapshot_sha256=digest(source_archive), firmware_included=False, factory_presets_included=False,
                         synthetic_ks_data=expected, synthetic_wave_rom=wave_manifest,
                         macos_signing='ad-hoc; not notarized' if args.platform.startswith('macOS') else None)

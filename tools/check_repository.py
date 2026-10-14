@@ -11,7 +11,7 @@ for name in filter(None,files):
         if len(data)!=524288 or any(v!=255 for v in data[:0x1fc00]) or any(v!=255 for v in data[0x5e800:]):
             errors.append(name+': unexpected flash size or data in reserved/firmware regions')
         continue
-    if p.suffix.lower() in {'.wav','.aif','.aiff','.mp3','.flac','.bin','.rom','.os','.syx','.mid','.midi','.state','.zip','.gz','.7z','.dmg','.pkg','.o','.obj','.a','.lib','.so','.dylib','.dll','.exe'}:
+    if p.suffix.lower() in {'.wav','.aif','.aiff','.mp3','.flac','.bin','.rom','.os','.syx','.mid','.midi','.fxb','.fxp','.state','.zip','.gz','.7z','.dmg','.pkg','.o','.obj','.a','.lib','.so','.dylib','.dll','.exe'}:
         errors.append(name+': forbidden artifact/data extension')
     if any(s.lower() in {'output','artifacts','temp','roms','_deps','cmakefiles'} or s.lower()=='build' or s.lower().startswith(('build-','cmake-build')) or s.lower().endswith(('.app','.vst3','.component','.dsym')) for s in p.parts[:-1]):
         errors.append(name+': forbidden artifact directory')

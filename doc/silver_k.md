@@ -1,4 +1,4 @@
-# Silver-K 0.2 Alpha
+# Silver-K 0.2.4 Beta
 
 A combined Windows x64 Standalone/VST3 and macOS arm64 Standalone/VST3/AU instrument for original K-Station OS 2.1.01 and KS OS 2.1.02 firmware. The project was extracted from ungeermoolator and uses Gearmulator components. See the [installation guide](INSTALL.md) for platform installation and ROM/Data setup.
 
@@ -82,7 +82,7 @@ KST100 conversion was compared with original KS UART import: all 151 synthesizer
 
 The local compatibility run imported 158 A-Station and 200 X-Station programs, including bank messages, and compared their synthesizer bytes with original KS UART import. All 358 matched. KS CC70 was also verified to store the glide curve in program byte 5 bit 0, correcting the prior bit-6 descriptor and preserving K/KS glide conversion in both directions.
 
-Earlier hosted VST3/AU checks used 48 kHz, 256-sample buffers and four seconds of real-time playback. KS output peaks were 0.0359975 / 0.0359963 / 0.0474905 / 0.0475713 with zero underruns. K-Station stereo peak was 0.105694 with zero underruns. Maximum callbacks on the test machine were: VST3 KS 0.113 ms, AU KS 0.065 ms, VST3 K-Station 0.192 ms and AU K-Station 0.159 ms. These checks exclude physical MIDI/audio-driver latency. See the [release notes](releases/0.2.0-alpha.1.md) for final release validation.
+Earlier hosted VST3/AU checks used 48 kHz, 256-sample buffers and four seconds of real-time playback. KS output peaks were 0.0359975 / 0.0359963 / 0.0474905 / 0.0475713 with zero underruns. K-Station stereo peak was 0.105694 with zero underruns. Maximum callbacks on the test machine were: VST3 KS 0.113 ms, AU KS 0.065 ms, VST3 K-Station 0.192 ms and AU K-Station 0.159 ms. These checks exclude physical MIDI/audio-driver latency. See the [release notes](releases/0.2.4.md) for final release validation.
 
 ## Realtime buffering and external data (0.2.1)
 

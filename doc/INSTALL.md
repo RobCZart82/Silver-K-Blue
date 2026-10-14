@@ -1,6 +1,6 @@
-# Silver-K 0.2 Alpha — installation and first startup
+# Silver-K 0.2.4 Beta — installation and first startup
 
-Silver-K combines K-Station and four-part KS emulation. This early alpha still needs work on patch management, CPU performance, latency and optimization.
+Silver-K combines K-Station and four-part KS emulation. This beta includes patch-manager, clock, buffering and data-folder improvements. CPU performance, latency and optimization are still being refined.
 
 ## 1. Archive contents
 

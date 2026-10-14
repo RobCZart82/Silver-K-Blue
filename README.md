@@ -1,17 +1,17 @@
-# Silver-K 0.2 Alpha
+# Silver-K 0.2.4 Beta
 
-An early alpha release for continued development. CPU performance, latency and optimization are still being refined.
+A beta release for continued development. CPU performance, latency and optimization are still being refined.
 
-[Download 0.2 Alpha](https://github.com/temaniak/Silver-K/releases/tag/v0.2.0-alpha.1). Installation and first-run instructions are provided below in English. See the [detailed installation guide](doc/INSTALL.md) and [release notes](doc/releases/0.2.0-alpha.1.md).
+[Download 0.2.4 Beta](https://github.com/temaniak/Silver-K/releases/tag/v0.2.4). Installation and first-run instructions are provided below in English. See the [detailed installation guide](doc/INSTALL.md) and [release notes](doc/releases/0.2.4.md).
 
-Current source and local builds include single-selection patch loading, A/X bank import and host-clock fixes. The alpha.1 download predates these changes.
+This beta includes the patch-manager, V-Station import, host-clock, audio scheduling and data-folder fixes since 0.2 Alpha.
 
 Silver-K combines **K-Station** and **KS** firmware emulation in one desktop synthesizer. The selected firmware determines the engine, available controls, parts and automatic skin. The build supports **Windows x64 Standalone/VST3** and **macOS Standalone/VST3/AU**. Windows builds, DSP JIT tests and ROM-free checks run in GitHub Actions; macOS arm64 is also verified locally.
 
 - K-Station: one part, stereo output; tabs 2–4 are dimmed.
 - KS: four parts and four output channels; routing and MIDI settings on **Perf**.
 - Shared patch browser: single-selection loading, sortable columns, recursive folders, tags, favourites, source model and compatibility reports.
-- A-Station and X-Station programs and banks import through SYX/MIDI/ZIP. A/K bank pairs are expanded into individual sounds.
+- A-Station and X-Station programs and banks import through SYX/MIDI/ZIP. A/K bank pairs are expanded into individual sounds. V-Station FXB/FXP import works directly, through folders and ZIP; V-Station is a distinct source model.
 - Host tempo and transport drive the original firmware MIDI clock; realtime clock bytes take priority over queued parameter edits.
 - K-Station ↔ KS patch conversion. KS-only oscillator waves become sine on K-Station, filters become LP 12, and unsupported features use target defaults.
 - Automatic KS grey lower panel, built-in skins and custom JSON skins.
@@ -22,8 +22,8 @@ A-Station uses the compatible K-Station sound format; X-Station uses the compati
 
 | Platform | Included formats |
 | --- | --- |
-| [Windows x64](https://github.com/temaniak/Silver-K/releases/download/v0.2.0-alpha.1/Silver-K-0.2.0-alpha.1-Windows-x64.zip) | Standalone, VST3 |
-| [macOS Apple Silicon / arm64](https://github.com/temaniak/Silver-K/releases/download/v0.2.0-alpha.1/Silver-K-0.2.0-alpha.1-macOS-arm64.zip) | Standalone, VST3, AU |
+| [Windows x64](https://github.com/temaniak/Silver-K/releases/download/v0.2.4/Silver-K-0.2.4-Windows-x64.zip) | Standalone, VST3 |
+| [macOS Apple Silicon / arm64](https://github.com/temaniak/Silver-K/releases/download/v0.2.4/Silver-K-0.2.4-macOS-arm64.zip) | Standalone, VST3, AU |
 
 The Mac package is an arm64 build. Use an Apple Silicon Mac and a native arm64 DAW; Intel and Universal builds are not included in this release.
 
@@ -116,14 +116,14 @@ Loaded Data is represented by the `KS Factory` browser source. With the test Ini
 
 K-Station uses its own firmware and does not require KS Init Flash or KS Wave ROM. Add its factory patches through Patches in the same way. Cross-model conversion can replace unsupported functions; review the compatibility report when loading a converted patch.
 
-## Alpha limitations
+## Beta limitations
 
 - Keep original banks and allow queued edits to reach the engine before saving the current sound or DAW state.
 - **Performance and optimization are unfinished.** CPU load, loading/warm-up and multitimbral operation at small audio buffers need further work.
 - **Latency needs further improvement.** Setup's Plugin latency reports the internal delay; audio-driver, physical MIDI and DAW-chain delays are additional. Increasing the audio buffer can reduce dropouts but increases overall latency.
 - KS external audio input is not implemented. Sound accuracy against physical instruments has not been established. X-Station-to-K conversion replaces unsupported oscillator/filter and modulation features; review the adaptation report.
 
-This alpha is a starting point for continued plugin development.
+This beta remains under development; test it with your projects before relying on it in a session.
 
 ## Source-only repository
 
