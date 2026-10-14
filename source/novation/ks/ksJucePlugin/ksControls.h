@@ -77,7 +77,7 @@ namespace ksPlugin
         {"voice_level", "Program boost (dB)", "Voice", "Performance", Mapping::CC, 119, 0, 30, 0, 125, 127, 0, 127, 0, nullptr, 0, 0},
         {"portamento_time", "Portamento time", "Voice", "Glide", Mapping::CC, 5, 0, 127, 0, 3, 127, 0, 127, 0, nullptr, 0, 0},
         {"preglide", "Preglide", "Voice", "Glide", Mapping::CC, 8, 52, 76, 64, 4, 127, 0, 127, 0, nullptr, 0, -64},
-        {"portamento_mode", "Glide curve", "Voice", "Glide", Mapping::CC, 70, 0, 1, 0, 5, 64, 6, 1, 0, Portamento, 2, 0},
+        {"portamento_mode", "Glide curve", "Voice", "Glide", Mapping::CC, 70, 0, 1, 0, 5, 1, 0, 1, 0, Portamento, 2, 0},
         {"voice_mode", "Voice mode", "Voice", "Polyphony", Mapping::CC, 67, 0, 3, 2, 0, 24, 3, 24, 3, VoiceMode, 4, 0},
         {"unison", "Unison voices", "Voice", "Polyphony", Mapping::CC, 67, 0, 7, 0, 0, 7, 0, 7, 0, Unison, 8, 0},
         {"unison_detune", "Unison detune", "Voice", "Polyphony", Mapping::CC, 68, 0, 127, 25, 1, 127, 0, 127, 0, nullptr, 0, 0},

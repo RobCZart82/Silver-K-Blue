@@ -9,7 +9,7 @@ struct KEngine {
  synthLib::ResamplerInOut::TMidiVec emptyMidi,outputMidi;
  std::array<float,256> silence{};
  double rate;
- KEngine(const std::vector<uint8_t>&,double,int,const std::vector<uint8_t>&);
+ KEngine(const std::vector<uint8_t>&,double,int,const std::vector<uint8_t>&,unsigned bufferFloor=0);
  void process(float*,float*,int,bool,const float* input=nullptr);
  bool midi(const uint8_t* p,size_t n,uint32_t offset=0){return device.enqueueMidiBytes(p,n,uint32_t(offset*device.getSamplerate()/rate));}
  unsigned latency()const;

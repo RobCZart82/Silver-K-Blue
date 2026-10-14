@@ -19,8 +19,8 @@ namespace kstation
     namespace
     {
         constexpr size_t DefaultLeadFrames = 1024;
-        constexpr size_t MinimumLeadFrames = 512;
-        constexpr size_t LeadMarginFrames = 256;
+        constexpr size_t MinimumLeadFrames = 256;
+        constexpr size_t LeadMarginFrames = 128;
         constexpr uint8_t StateHeader[]{'K','S','T','S','T',1,0,0};
         constexpr size_t UserFlashStart = 0x1fc00;
         constexpr size_t UserFlashSize = H8::FlashSize - UserFlashStart;
@@ -48,7 +48,13 @@ namespace kstation
         std::atomic<uint64_t> snapshotVersion{0};
         std::atomic<bool> snapshotRequested{true};
         std::atomic<size_t> leadFrames{DefaultLeadFrames};
+        std::atomic<size_t> baseLeadFrames{DefaultLeadFrames};
         uint64_t lastSnapshotFrame = 0;
+        std::mutex flashSnapshotMutex;
+        std::vector<uint8_t> flashSnapshot;
+        uint64_t publishedFlashRevision=~uint64_t(0);
+        std::atomic<unsigned> realtimeBlock{256};
+        std::atomic<uint8_t> snapshotBank{1},snapshotProgram{0};
         std::atomic<uint64_t> consumed{0}, underruns{0}, midiOverflows{0};
         std::atomic<bool> stop{false}, valid{false}, pauseRequested{false}, paused{false};
         std::atomic<bool> nonRealtime{false};
@@ -66,7 +72,7 @@ namespace kstation
             worker = std::thread([this, image = rom.data()]
             {
                 dsp56k::ThreadTools::setCurrentThreadName("K-Station H8/DSP");
-                dsp56k::ThreadTools::setCurrentThreadPriority(dsp56k::ThreadPriority::Highest);
+                dsp56k::ThreadTools::setCurrentThreadPriority(dsp56k::ThreadPriority::High);
                 try
                 {
                     hardware = std::make_unique<Hardware>(image);
@@ -75,6 +81,17 @@ namespace kstation
                         const auto debug = hardware->controller().debugState();
                         throw std::runtime_error("K-Station H8 boot timed out at PC " + std::to_string(debug.pc));
                     }
+                    // Compile common polyphonic voice paths before opening audio.
+                    // Restore the original sound through its native edit-buffer dump.
+                    std::array<uint8_t,128> original{};hardware->controller().copyCurrentPatch(original.data());
+                    const uint8_t dry[]{0xb0,91,0,0xb0,92,0,0xb0,93,0};hardware->enqueueMidi(dry,sizeof(dry));
+                    for(uint8_t note:{36,43,48,55,60,67,72,79}){const uint8_t on[]{0x90,note,64};hardware->enqueueMidi(on,sizeof(on));}
+                    for(unsigned n=0;n<8192;++n)hardware->renderSample();
+                    for(uint8_t note:{36,43,48,55,60,67,72,79}){const uint8_t off[]{0x80,note,0};hardware->enqueueMidi(off,sizeof(off));}
+                    const uint8_t silence[]{0xb0,120,0};hardware->enqueueMidi(silence,sizeof(silence));
+                    for(unsigned n=0;n<45340;++n)hardware->renderSample();
+                    std::array<uint8_t,142> restore{};std::copy_n(ProgramHeader,13,restore.begin());std::copy(original.begin(),original.end(),restore.begin()+13);restore.back()=0xf7;
+                    hardware->enqueueMidi(restore.data(),restore.size());
                     // Match the plugin's Volume parameter default through the
                     // original MIDI path, without replacing DSP gain handling.
                     const uint8_t volume[]{0xb0, 7, 127};
@@ -93,6 +110,7 @@ namespace kstation
                         started = true;
                     }
                     startCv.notify_one();
+                    dsp56k::ThreadTools::setCurrentThreadPriority(dsp56k::ThreadPriority::Highest);
                     run();
                 }
                 catch (const std::exception& e)
@@ -117,10 +135,18 @@ namespace kstation
 
         void publishSnapshot()
         {
+            if(publishedFlashRevision!=hardware->controller().flashRevision())
+            {
+                std::unique_lock lock(flashSnapshotMutex,std::try_to_lock);
+                if(lock.owns_lock()){hardware->controller().copyFlash(flashSnapshot);publishedFlashRevision=hardware->controller().flashRevision();}
+            }
+            const auto bank=hardware->controller().readMemory(0xcd82);
+            const auto program=hardware->controller().readMemory(0xcd83);
             std::array<uint8_t,128> patch{};
             std::array<uint8_t,16 * 128> cc{};
             hardware->controller().copyCurrentPatch(patch.data());
-            bool changed = snapshotVersion.load(std::memory_order_relaxed) == 0;
+            bool changed = snapshotVersion.load(std::memory_order_relaxed) == 0
+                || bank!=snapshotBank.load(std::memory_order_relaxed) || program!=snapshotProgram.load(std::memory_order_relaxed);
             for (size_t i=0; i<patch.size(); ++i)
                 changed |= patch[i] != snapshotPatch[i].load(std::memory_order_relaxed);
             for (size_t i=0; i<cc.size(); ++i)
@@ -131,6 +157,7 @@ namespace kstation
             lastSnapshotFrame = produced;
             if (!changed) return;
             snapshotVersion.fetch_add(1, std::memory_order_acq_rel);
+            snapshotBank.store(bank,std::memory_order_relaxed);snapshotProgram.store(program,std::memory_order_relaxed);
             for (size_t i=0; i<patch.size(); ++i) snapshotPatch[i].store(patch[i], std::memory_order_relaxed);
             for (size_t i=0; i<cc.size(); ++i) snapshotControllers[i].store(cc[i], std::memory_order_relaxed);
             snapshotVersion.fetch_add(1, std::memory_order_release);
@@ -139,6 +166,7 @@ namespace kstation
         void run()
         {
             dsp56k::AudioWorkgroup::Member audioWorkgroup;
+            unsigned configuredBlock=0;
             while (!stop.load(std::memory_order_acquire))
             {
                 if (pauseRequested.load(std::memory_order_acquire))
@@ -149,6 +177,8 @@ namespace kstation
                     paused.store(false, std::memory_order_release);
                     continue;
                 }
+                const auto block=realtimeBlock.load(std::memory_order_relaxed);
+                if(block!=configuredBlock){dsp56k::ThreadTools::setCurrentThreadRealtimeParameters(int(DSP::SampleRate),int(block));configuredBlock=block;}
                 audioWorkgroup.update();
                 if (snapshotRequested.exchange(false, std::memory_order_acquire)
                     || produced - lastSnapshotFrame >= 1024) publishSnapshot();
@@ -256,6 +286,18 @@ namespace kstation
     uint32_t Device::getInternalLatencyMidiToOutput() const { return static_cast<uint32_t>(m_impl->leadFrames.load(std::memory_order_relaxed)); }
     uint32_t Device::getInternalLatencyInputToOutput() const { return static_cast<uint32_t>(m_impl->leadFrames.load(std::memory_order_relaxed)); }
     uint64_t Device::getUnderrunCount() const { return m_impl->underruns.load(); }
+    void Device::setBufferFloor(unsigned frames){m_impl->leadFrames.store(std::max(m_impl->baseLeadFrames.load(),size_t(std::min(4096u,frames))));}
+    void Device::setAudioBuffer(uint32_t block,float rate,unsigned floor){
+        const auto burst=size_t(std::ceil(double(block)*DSP::SampleRate/rate));
+        const auto lead=std::min(size_t(8064),std::max(MinimumLeadFrames,(burst+LeadMarginFrames+127)&~size_t(127)));
+        m_impl->baseLeadFrames.store(lead);m_impl->realtimeBlock.store(unsigned(std::max(size_t(64),burst)));setBufferFloor(floor);
+    }
+    void Device::ensureAudioBlock(uint32_t block,float rate) noexcept{
+        const auto burst=size_t(std::ceil(double(block)*DSP::SampleRate/rate));
+        const auto needed=std::min(size_t(8064),std::max(MinimumLeadFrames,(burst+LeadMarginFrames+127)&~size_t(127)));
+        auto lead=m_impl->leadFrames.load(std::memory_order_relaxed);
+        for(unsigned attempt=0;attempt<4 && lead<needed;++attempt)if(m_impl->leadFrames.compare_exchange_weak(lead,needed)){m_impl->realtimeBlock.store(unsigned(std::max(size_t(64),burst)));break;}
+    }
     uint64_t Device::getMidiOverflowCount() const { return m_impl->midiOverflows.load(); }
     void Device::setNonRealtime(bool enabled) noexcept { m_impl->nonRealtime.store(enabled, std::memory_order_release); }
 
@@ -266,6 +308,8 @@ namespace kstation
         if (nativeBurst + LeadMarginFrames > 8192) return false;
         const size_t lead = std::max(MinimumLeadFrames,
             (static_cast<size_t>(nativeBurst) + LeadMarginFrames + 127) & ~size_t(127));
+        m_impl->baseLeadFrames.store(lead);
+        m_impl->realtimeBlock.store(unsigned(std::max(64.,nativeBurst)));
         std::lock_guard lock(m_impl->coldMutex);
         if (lead == m_impl->leadFrames.load(std::memory_order_relaxed)) return true;
         if (!m_impl->pause()) return false;
@@ -356,6 +400,8 @@ namespace kstation
                 if (outputs[channel]) outputs[channel][i] = channel < 2 ? float(frame[channel]) / 8388608.0f : 0.0f;
             m_impl->consumed.store(++consumed, std::memory_order_release);
         }
+        // A cold warm-up or bounce must refill before handing audio to a live host.
+        if(offline)while(isValid() && !m_impl->stop.load() && m_impl->audio.size()<lead)std::this_thread::yield();
     }
 
     bool Device::sendMidi(const synthLib::SMidiEvent& event, std::vector<synthLib::SMidiEvent>&)
@@ -436,25 +482,29 @@ namespace kstation
 #if SYNTHLIB_DEMO_MODE == 0
     bool Device::getState(std::vector<uint8_t>& state, synthLib::StateType)
     {
-        std::lock_guard lock(m_impl->coldMutex);
-        if (!m_impl->pause()) return false;
-        try
-        {
+            std::array<uint8_t,128> patch{};
+            std::array<uint8_t,16*128> controllers{};uint64_t revision=0;
+            uint8_t bank=1,program=0;bool captured=false;
+            for(unsigned attempt=0;attempt<64 && !captured;++attempt){
+                if(getControlSnapshot(patch,controllers,revision)){
+                    bank=m_impl->snapshotBank.load(std::memory_order_relaxed);program=m_impl->snapshotProgram.load(std::memory_order_relaxed);
+                    std::atomic_thread_fence(std::memory_order_acquire);
+                    captured=revision*2==m_impl->snapshotVersion.load(std::memory_order_relaxed);
+                }
+                if(!captured)std::this_thread::yield();
+            }
+            if(!captured)return false;
             const auto previousSize = state.size();
             state.insert(state.end(), std::begin(StateHeader), std::end(StateHeader));
-            auto flash = m_impl->hardware->controller().saveFlash();
-            flash[0x1ff00] = m_impl->hardware->controller().readMemory(0xcd82);
-            flash[0x1ff01] = m_impl->hardware->controller().readMemory(0xcd83);
+            std::vector<uint8_t> flash;
+            {std::lock_guard lock(m_impl->flashSnapshotMutex);flash=m_impl->flashSnapshot;}
+            flash[0x1ff00] = bank;
+            flash[0x1ff01] = program;
             // Session state contains presets/settings, never the external OS ROM.
             state.insert(state.end(), flash.begin() + UserFlashStart, flash.end());
-            std::array<uint8_t, 128> patch{};
-            m_impl->hardware->controller().copyCurrentPatch(patch.data());
             state.insert(state.end(), patch.begin(), patch.end());
-            for (const auto& cc : m_impl->controllers) state.push_back(cc.load(std::memory_order_relaxed));
-            m_impl->resume();
+            state.insert(state.end(),controllers.begin(),controllers.end());
             return state.size() - previousSize == StateSize;
-        }
-        catch (...) { m_impl->resume(); throw; }
     }
 
     bool Device::setState(const std::vector<uint8_t>& state, synthLib::StateType)
@@ -513,6 +563,7 @@ namespace kstation
             const auto settle = size_t(std::ceil(restore.size() * 10.0 * DSP::SampleRate / 31250.0)) + 2048;
             for (size_t i = 0; i < settle; ++i) replacement->renderSample();
             m_impl->hardware.swap(replacement);
+            m_impl->publishedFlashRevision=~uint64_t(0);
             m_impl->audio.reset();
             m_impl->midi.reset();
             m_impl->input.reset();

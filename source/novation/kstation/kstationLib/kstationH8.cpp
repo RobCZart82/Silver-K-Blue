@@ -1,4 +1,5 @@
 #include "kstationH8.h"
+#include "kstationMidiQueue.h"
 
 #include <algorithm>
 #include <array>
@@ -49,10 +50,11 @@ namespace kstation
         std::array<uint8_t,64> lcdCharacters{};
         uint8_t lcdAddress=0,lcdData=0;
         bool lcdCgram=false;
-        ByteQueue<8192> midiIn,midiOut;
+        MidiSerialQueue<8192> midiIn;ByteQueue<8192> midiOut;
         uint64_t nextRx=0,txReady=0,adcReady=0,instructions=0,hostReads=0,hostWrites=0,midiReceived=0;
         bool overlay=false,enteredMain=false,ready=false,reconstructedDefaults=false;
         unsigned flashCommand=0,pageRemaining=0;
+        uint64_t flashRevision=0;
 
         Impl(const std::vector<uint8_t>& image,HostCallbacks callbacks,const std::vector<uint8_t>& storage)
         : host(std::move(callbacks)),rom(image)
@@ -134,7 +136,7 @@ namespace kstation
                 // Firmware BC0 issues AA/55/A0 then writes a complete 256-byte
                 // page. Its page-program interface overwrites existing data.
                 flash[offset]=value;
-                if(--pageRemaining==0)flashCommand=0;
+                if(--pageRemaining==0){flashCommand=0;++flashRevision;}
                 return;
             }
             if(flashCommand==6 && value==0x30)
@@ -244,9 +246,7 @@ namespace kstation
     uint64_t H8::exec(uint32_t budget){return m_impl->exec(budget);}
     bool H8::enqueueMidi(const uint8_t* bytes,size_t size)
     {
-        if(size>m_impl->midiIn.available())return false;
-        for(size_t i=0;i<size;++i)m_impl->midiIn.push(bytes[i]);
-        return true;
+        return m_impl->midiIn.push(bytes,size);
     }
     bool H8::popMidiOut(uint8_t& byte){return m_impl->midiOut.pop(byte);}
     bool H8::bootReady() const{return m_impl->ready;}
@@ -282,6 +282,8 @@ namespace kstation
         }
     }
     std::vector<uint8_t> H8::saveFlash() const{return m_impl->flash;}
+    void H8::copyFlash(std::vector<uint8_t>& out) const{out.assign(m_impl->flash.begin(),m_impl->flash.end());}
+    uint64_t H8::flashRevision() const{return m_impl->flashRevision;}
     bool H8::hasProgram(uint8_t bank,uint8_t program) const
     {
         if(bank<1 || bank>4 || program>=100)return false;

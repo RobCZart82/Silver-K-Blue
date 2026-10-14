@@ -67,7 +67,7 @@ void Board::write(uint32_t a,uint8_t v){
     if(a>=0x800000 && a<0x880000){
         auto off=a-0x800000;
         if(a>=WaveBase && a<WaveBase+WaveSize)throw std::runtime_error("KS attempted wave ROM write");
-        if(flashCommand==3){flash[off]=v;if(!--pageRemaining)flashCommand=0;return;}
+        if(flashCommand==3){flash[off]=v;if(!--pageRemaining){flashCommand=0;++flashRevision;}return;}
         if(flashCommand==0 && (off&0x7ffff)==0x5555 && v==0xaa)flashCommand=1;
         else if(flashCommand==1 && (off&0x7ffff)==0x2aaa && v==0x55)flashCommand=2;
         else if(flashCommand==2 && (off&0x7ffff)==0x5555 && v==0xa0){flashCommand=3;pageRemaining=256;}
@@ -104,6 +104,16 @@ void Board::tick(uint64_t previous){
             io[0x1d6]=count>>8;io[0x1d7]=count;
         }
     }
+    // OS 2.1.02 measures incoming MIDI-clock intervals with TPU1 TCNT1
+    // (0xffffe6). It selects TPSC=6, normal mode, no compare clearing:
+    // the H8S/2357 TPU clock table defines this as the CPU clock / 256.
+    // Leaving this counter at zero held the firmware PLL at its initial tempo.
+    if((io[0x1c0]&2) && (io[0x1e1]&15)==0 && io[0x1e0]==6){
+        const uint64_t elapsed=(now>>8)-(previous>>8);
+        const uint64_t count=((uint16_t(io[0x1e6])<<8)|io[0x1e7])+elapsed;
+        io[0x1e6]=uint8_t(count>>8);io[0x1e7]=uint8_t(count);
+        if(count>65535){io[0x1e5]|=4;if(io[0x1e4]&4)h8->interrupt(42);}
+    }
     if(adcDue && now>=adcDue && (io[0x198]&0x20) && !(io[0x198]&0x80)){
         io[0x198]|=0x80;adcDue=now+1064;if(io[0x198]&0x40)h8->interrupt(28);if(!(io[0x198]&0x10))io[0x198]&=~0x20;
     }
@@ -111,7 +121,7 @@ void Board::tick(uint64_t previous){
 bool Board::enqueueMidi(const uint8_t* bytes,size_t count){
     // Leave enough UART space for a complete routed packet and the zero-bank
     // adapter's injected controls. A rejected byte has not entered either parser.
-    for(size_t n=0;n<count;++n){if(midiIn.size()>65536-4096)return false;if(!partMidi.accept(bytes[n],
+    for(size_t n=0;n<count;++n){if(bytes[n]>=0xf8){if(!midiIn.push(bytes[n]))return false;continue;}if(midiIn.size()>65536-4096)return false;if(!partMidi.accept(bytes[n],
         [this](const uint8_t* b,size_t len){return enqueueNativeMidi(b,len);},
         [this](uint8_t program){return performanceDesired[program].data();},
         [this](const uint8_t* message,size_t){if(message[12]<100)std::copy_n(message+13,1024,performanceDesired[message[12]].begin());}))return false;}
@@ -185,13 +195,15 @@ void Board::muteStoredPrograms() {
     }
 }
 std::vector<uint8_t> Board::saveUserFlash() const {
-    std::vector<uint8_t> saved{flash.begin()+0x1fc00,flash.begin()+0x60000};
+    std::vector<uint8_t> saved;copyUserFlash(saved);return saved;
+}
+void Board::copyUserFlash(std::vector<uint8_t>& saved) const {
+    saved.assign(flash.begin()+0x1fc00,flash.begin()+0x60000);
     if(placeholder.enabled)for(unsigned n=0;n<600;++n)PlaceholderMidi::restoreProgram(saved.data()+0x20000-0x1fc00+n*256,programDesired[n].data());
     if(placeholder.enabled)for(unsigned n=0;n<100;++n)for(unsigned part=0;part<4;++part)
         PlaceholderMidi::restoreProgram(saved.data()+0x45800-0x1fc00+n*1024+part*256,performanceDesired[n].data()+part*256);
     if(partMidi.enabled)for(unsigned n=0;n<100;++n)for(unsigned part=0;part<PartCount;++part)
         saved[0x45800-0x1fc00+n*1024+part*256+181]=performanceDesired[n][part*256+181];
-    return saved;
 }
 State Board::state() {
     State result;result.performance=read(0x167ba)!=0;result.globalChannel=placeholder.globalChannel;

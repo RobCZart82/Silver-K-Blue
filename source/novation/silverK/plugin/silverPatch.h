@@ -3,7 +3,7 @@
 #include "../../kstation/kstationJucePlugin/kstationControls.h"
 #include <juce_core/juce_core.h>
 namespace silverK {
-enum class Model {Unknown,KStation,KS,AStation,XStation};
+enum class Model {Unknown,KStation,KS,AStation,XStation,VStation};
 juce::String semanticId(const juce::String&);
 Model modelOf(const uint8_t*,size_t);
 template<class Alloc> Model modelOf(const std::vector<uint8_t,Alloc>& p){return modelOf(p.data(),p.size());}

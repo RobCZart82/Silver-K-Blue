@@ -2,10 +2,11 @@
 #include <array>
 namespace silverK {
 namespace {synthLib::DeviceCreateParams params(const std::vector<uint8_t>& rom){synthLib::DeviceCreateParams p;p.romData=rom;return p;}}
-KEngine::KEngine(const std::vector<uint8_t>& rom,double hostRate,int block,const std::vector<uint8_t>& state):device(params(rom)),rate(hostRate){
+KEngine::KEngine(const std::vector<uint8_t>& rom,double hostRate,int block,const std::vector<uint8_t>& state,unsigned bufferFloor):device(params(rom)),rate(hostRate){
  if(!device.isValid())throw std::runtime_error(device.error());
  if(!state.empty() && !device.setState(state,synthLib::StateTypeGlobal))throw std::runtime_error("Invalid K-Station state");
- if(!device.prepareAudio(std::max(block,256),float(rate)))throw std::runtime_error("Unsupported K-Station host buffer");
+ if(!device.prepareAudio(std::max(block,64),float(rate)))throw std::runtime_error("Unsupported K-Station host buffer");
+ device.setBufferFloor(bufferFloor);
  render=[this](const synthLib::TAudioInputs& in,const synthLib::TAudioOutputs& out,size_t n,const auto& midi,auto& response){device.process(in,out,n,midi,response);};
  // Existing Gearmulator input/output converters are prepared before publication.
  resampler.setSamplerates(float(rate),device.getSamplerate());

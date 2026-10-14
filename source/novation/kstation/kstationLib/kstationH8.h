@@ -50,6 +50,8 @@ namespace kstation
         // does not mutate the guest or invoke its serialization entry points.
         void copyCurrentPatch(uint8_t* destination128) const;
         std::vector<uint8_t> saveFlash() const;
+        void copyFlash(std::vector<uint8_t>&) const;
+        uint64_t flashRevision() const;
         bool hasProgram(uint8_t bank,uint8_t program) const;
         h8state& core(); // Diagnostics only; not a reset/entry-point bypass.
     private:

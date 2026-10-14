@@ -5,10 +5,12 @@
 #include "../../ks/ksJucePlugin/ksControls.h"
 #include "../../kstation/kstationJucePlugin/kstationControls.h"
 #include "silverLibrary.h"
+#include "silverClock.h"
+#include "jucePluginLib/hostAudioWorkgroup.h"
 namespace silverK {
 using namespace ksPlugin;
 struct KEngine;
-class Processor final : public juce::AudioProcessor,private juce::AudioProcessorValueTreeState::Listener {
+class Processor final : public juce::AudioProcessor,private juce::AudioProcessorValueTreeState::Listener,private juce::Timer {
 public:
  Processor();~Processor() override;
  const juce::String getName()const override{return "Silver-K";}
@@ -51,6 +53,9 @@ bool isKStation()const{return kMode.load();}
  bool finishFirmwareLoad(juce::String& error); // Message thread: consume a completed load.
  bool isFirmwareLoading()const{return firmwareLoading.load();}
  bool setRomFolder(const juce::File&,juce::String&);
+ bool setDataFolder(const juce::File&,juce::String&);
+ juce::File dataFolder;
+ juce::File patchesFolder()const{return dataFolder.getChildFile("Patches");}
  struct FirmwareChoice {juce::File file;bool kStation;};
  std::vector<FirmwareChoice> firmwares;
  juce::File romFolder;
@@ -64,8 +69,18 @@ bool isKStation()const{return kMode.load();}
  bool activatePatch(const pluginLib::patchDB::PatchPtr&,juce::String&);
  bool saveCurrentPatch(const juce::File&,juce::String&);
  uint8_t editorChannel()const{return isKStation()?controlChannel.load():midiChannel();}
+ int bufferProfile()const{return buffering.load();}
+ void setBufferProfile(int);
  void setEditorChannel(uint8_t c){controlChannel.store(c&15);}
 private:
+ pluginLib::HostAudioWorkgroup hostAudioWorkgroup;
+ std::atomic<int> buffering{1};
+ void applyBufferProfile();
+ int configureBufferProfile();
+ void timerCallback()override;
+ void observeAudioBlock(int)noexcept;
+ std::atomic<int> observedBlock{0};
+ int lastObservedBlock=0;
  std::thread firmwareLoader;
  std::atomic<bool> firmwareLoading{false},firmwareLoadDone{false};
  juce::String firmwareLoadError;
@@ -75,6 +90,32 @@ private:
  std::vector<uint8_t> kRom,kState;
  std::array<uint8_t,256> kWire{},kMask{};
  void rebuildK();
+ HostClock hostClock;
+ int clockSourceMode=-1;
+ std::array<uint8_t,16> externalNrpn{};
+ template<class Emit> void selectClockSource(Emit emit){
+  // Both supported OS 2.1 images use 0=Auto, 1=Internal, 2=External.
+  const int wanted=hostClock.ownsTransport()?2:0;
+  if(clockSourceMode==wanted)return;
+  clockSourceMode=wanted;
+  const uint8_t channel=controlChannel.load(),status=uint8_t(0xb0|channel);
+  const uint8_t bytes[]{status,99,0,status,98,uint8_t(isKStation()?38:114),status,6,uint8_t(wanted),status,98,externalNrpn[channel]};
+  emit(bytes,sizeof(bytes));
+ }
+ std::atomic<bool> resetClock{true};
+ void prepareHostClock(int);
+ template<class Emit> void sendTimedMidi(const juce::MidiBuffer& midi,Emit emit){
+  HostClock::Event clock{};bool hasClock=hostClock.next(clock);
+  for(const auto m:midi){
+   const int offset=std::max(0,m.samplePosition);
+   while(hasClock && clock.offset<=offset){emit(&clock.status,1,clock.offset);hasClock=hostClock.next(clock);}
+   if(m.numBytes<=65536 && !(hostClock.ownsTransport() && HostClock::transport(m.data[0]))){
+    if(m.numBytes==3 && (m.data[0]&0xf0)==0xb0 && m.data[1]==98)externalNrpn[m.data[0]&15]=m.data[2];
+    emit(m.data,size_t(m.numBytes),offset);
+   }
+  }
+  while(hasClock){emit(&clock.status,1,clock.offset);hasClock=hostClock.next(clock);}
+ }
  void processK(KEngine&,juce::AudioBuffer<float>&,juce::MidiBuffer&);
  void stopEngines();
  static juce::AudioProcessorValueTreeState::ParameterLayout layout();
@@ -112,5 +153,9 @@ private:
  double hostRate=48000;int hostBlock=256;
  bool placeholder=false;
  void rebuild();
+ void initializeDataFolder();
+ bool rememberDataFolder(juce::String&);
+ juce::File settingsFile()const;
+ juce::File resolveAsset(const juce::ValueTree&,const char*)const;
 };
 }

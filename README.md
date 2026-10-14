@@ -1,18 +1,22 @@
 # Silver-K 0.2 Alpha
 
-An early alpha release for continued development. Patch management, CPU performance, latency and optimization are still being refined.
+An early alpha release for continued development. CPU performance, latency and optimization are still being refined.
 
 [Download 0.2 Alpha](https://github.com/temaniak/Silver-K/releases/tag/v0.2.0-alpha.1). Installation and first-run instructions are provided below in English. See the [detailed installation guide](doc/INSTALL.md) and [release notes](doc/releases/0.2.0-alpha.1.md).
+
+Current source and local builds include single-selection patch loading, A/X bank import and host-clock fixes. The alpha.1 download predates these changes.
 
 Silver-K combines **K-Station** and **KS** firmware emulation in one desktop synthesizer. The selected firmware determines the engine, available controls, parts and automatic skin. The build supports **Windows x64 Standalone/VST3** and **macOS Standalone/VST3/AU**. Windows builds, DSP JIT tests and ROM-free checks run in GitHub Actions; macOS arm64 is also verified locally.
 
 - K-Station: one part, stereo output; tabs 2–4 are dimmed.
 - KS: four parts and four output channels; routing and MIDI settings on **Perf**.
-- Shared patch browser: recursive folders, tags, favourites, source model and compatibility reports.
+- Shared patch browser: single-selection loading, sortable columns, recursive folders, tags, favourites, source model and compatibility reports.
+- A-Station and X-Station programs and banks import through SYX/MIDI/ZIP. A/K bank pairs are expanded into individual sounds.
+- Host tempo and transport drive the original firmware MIDI clock; realtime clock bytes take priority over queued parameter edits.
 - K-Station ↔ KS patch conversion. KS-only oscillator waves become sine on K-Station, filters become LP 12, and unsupported features use target defaults.
 - Automatic KS grey lower panel, built-in skins and custom JSON skins.
 
-A-Station patches can be identified and stored; A-Station conversion and verified X-Station import are not implemented yet. KS external audio input is not connected.
+A-Station uses the compatible K-Station sound format; X-Station uses the compatible KS sound format. Loading into the other engine applies the existing conversion rules. KS external audio input is not connected.
 
 ## Release packages
 
@@ -52,18 +56,17 @@ Keep the `.vst3` folder intact; do not extract its internal binary. AU is availa
 
 ## Firmware and data locations
 
-Store your firmware and data in a permanent user folder, for example:
+Silver-K uses one permanent main folder. By default it creates `Documents/Silver-K`:
 
 ```text
 Documents/Silver-K/
-├── ROMs/       Your supported K-Station and KS firmware
-├── KS-Data/    Test KS Data, zero Wave ROM or your own compatible data
-└── Presets/    Factory and user patch banks
+├── ROMs/       Your firmware, KS Data and Wave ROM
+└── Patches/    Your factory and user patch banks
 ```
 
-Copy the release archive's `KS-Data` folder there. Keep your original firmware in `ROMs` and patch banks in `Presets`. Select these files through Silver-K's **Setup** page; they do not need to be placed inside plugin bundles or system plugin folders.
+Choose this main folder through **Setup → Silver-K folder**. Silver-K creates `ROMs` and `Patches`, supplies our synthetic `ks-init-flash.bin` and zero-filled `ks-wave-zero.bin` if absent, scans firmware in `ROMs` and automatically adds `Patches` to the browser. Existing files are preserved. Original firmware, factory banks and samples must be supplied separately. Old release archives may contain a `KS-Data` folder; copy those two synthetic files into `ROMs`.
 
-Supported firmware versions are **K-Station OS 2.1.01** and **KS OS 2.1.02**. In **Setup → ROM folder**, select your firmware folder, then choose a firmware from the top selector. Alternatively, use **Load firmware** to select a supported file. OS/SYX updates, decoded BIN files and ZIP archives containing supported firmware are accepted. The loader checks the contents, not just the filename.
+Supported firmware versions are **K-Station OS 2.1.01** and **KS OS 2.1.02**. In **Setup → Silver-K folder**, select the main folder, then choose a firmware from the top selector. Alternatively, use **Load firmware** to select a supported file. OS/SYX updates, decoded BIN files and ZIP archives containing supported firmware are accepted. The loader checks the contents, not just the filename.
 
 Firmware and Wave ROM contents are not embedded in DAW project state. Keep the selected files available and select them again if you move them. Official KS OS and factory-sound downloads are available from [Novation](https://downloads.novationmusic.com/novation/synthesisers-legacy/ks-rack).
 
@@ -82,7 +85,7 @@ Neither file contains original OS code, DSP firmware, Novation factory patches o
 
 1. Select `ks-init-flash.bin` through **Setup → KS factory data**.
 2. Select `ks-wave-zero.bin` through **Setup → Wave ROM**.
-3. Select your own KS OS 2.1.02 through **ROM folder / Load firmware** and wait for `Loading firmware...` to finish.
+3. Select your own KS OS 2.1.02 through **Silver-K folder / Load firmware** and wait for `Loading firmware...` to finish.
 4. In Standalone, select an audio output and MIDI input. In a DAW, enable monitoring on the instrument track and send MIDI to Silver-K.
 5. Play the initial `Silver Init` saw program using the selected MIDI channel. For four parts, enable **Perf → Performance (4 parts)** and check each part's active state, channel, keyboard range and output routing.
 
@@ -105,9 +108,9 @@ Loaded Data is represented by the `KS Factory` browser source. With the test Ini
 
 ## Factory presets and patch banks
 
-1. Store your banks in a permanent `Presets` folder. The browser accepts supported `.syx`, `.mid`, `.midi` files and ZIP archives containing them.
+1. Store your banks in the main folder’s `Patches` subfolder. The browser accepts supported `.syx`, `.mid`, `.midi`, V-Station `.fxb` and `.fxp` files and ZIP archives containing them.
 2. Open **Patches → Add folder** to scan a folder and its subfolders, or **Add file** to add an individual bank. Use **Rescan** if necessary and check the source/model/tag filters.
-3. Select a patch and click **Load**, or double-click its row.
+3. Click a patch row to load it immediately, or select it with the arrow keys. Re-click the selected row or press Enter to reload it, including into another selected part. Click a column header to sort; click again to reverse the direction. Sorting and filtering preserve selection without loading another sound.
 4. In KS Performance mode, select the destination part using tabs 1–4 before loading a Program. A Performance contains the full four-part setup. Some preset-loading paths reload the Performance and interrupt sound.
 5. Use **Save current** for the current sound, **Export .syx** for a selected library entry, and **Save tags** after editing tags or favourites.
 
@@ -115,10 +118,10 @@ K-Station uses its own firmware and does not require KS Init Flash or KS Wave RO
 
 ## Alpha limitations
 
-- **Patch management is unfinished.** Bank import, organization, tags, compatibility and saving workflows are still being refined. Keep your original banks and verify saved patches by reloading them.
+- Keep original banks and allow queued edits to reach the engine before saving the current sound or DAW state.
 - **Performance and optimization are unfinished.** CPU load, loading/warm-up and multitimbral operation at small audio buffers need further work.
-- **Latency needs further improvement.** Setup's Host latency reports plugin latency; audio-driver, physical MIDI and DAW-chain delays are additional. Increasing the audio buffer can reduce dropouts but increases overall latency.
-- KS external audio input, A-Station conversion and verified X-Station import are not implemented. Sound accuracy against physical instruments has not been established.
+- **Latency needs further improvement.** Setup's Plugin latency reports the internal delay; audio-driver, physical MIDI and DAW-chain delays are additional. Increasing the audio buffer can reduce dropouts but increases overall latency.
+- KS external audio input is not implemented. Sound accuracy against physical instruments has not been established. X-Station-to-K conversion replaces unsupported oscillator/filter and modulation features; review the adaptation report.
 
 This alpha is a starting point for continued plugin development.
 
@@ -138,8 +141,8 @@ Requirements for the verified platform: macOS arm64, Xcode command-line tools, C
 git clone https://github.com/temaniak/Silver-K.git
 cd Silver-K
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64
-cmake --build build --target silverK_Standalone silverK_VST3 silverK_AU silver_check -j 6
-SILVER_K_DATA=/tmp/silver-k-tests ctest --test-dir build --output-on-failure -R '^silver_conversion$'
+cmake --build build --target silverK_Standalone silverK_VST3 silverK_AU silver_check silverClock_test silverWorkflow_test -j 6
+SILVER_K_DATA=/tmp/silver-k-tests ctest --test-dir build --output-on-failure -R '^silver_'
 python3 tools/check_repository.py
 ```
 
@@ -151,9 +154,9 @@ Install Visual Studio 2022 or later with **Desktop development with C++**, a Win
 
 ```powershell
 cmake -S . -B build -A x64
-cmake --build build --config Release --target silverK_Standalone silverK_VST3 silver_check --parallel 4
+cmake --build build --config Release --target silverK_Standalone silverK_VST3 silver_check silverClock_test silverWorkflow_test --parallel 4
 $env:SILVER_K_DATA = "$env:TEMP/silver-k-tests"
-ctest --test-dir build -C Release --output-on-failure -R '^silver_conversion$'
+ctest --test-dir build -C Release --output-on-failure -R '^silver_'
 python tools/check_repository.py
 ```
 
@@ -163,6 +166,14 @@ For offline builds, pass `-DJUCE_SOURCE=/path/to/JUCE -DDSP_SOURCE=/path/to/dsp5
 
 ## Run
 
-In **Setup**, select your local ROM folder and firmware. For KS, select the supplied `assets/ks-init-flash.bin` in the KS data field. Optional external wave banks remain local; without them sample-dependent oscillators are silenced through original MIDI commands. Add your own patch folders in **Patches**. Use **Perf** for KS multi mode and output routing.
+In **Setup**, select your main Silver-K folder and firmware. For KS, select the supplied `assets/ks-init-flash.bin` in the KS data field. Optional external wave banks remain local; without them sample-dependent oscillators are silenced through original MIDI commands. Add your own patch folders in **Patches**. Use **Perf** for KS multi mode and output routing.
 
 Details and current limitations: [user guide](doc/silver_k.md). Provenance and licenses: [THIRD_PARTY.md](THIRD_PARTY.md).
+
+**Setup → Rescan ROMs** updates the saved firmware catalog after files are added or removed. Subsequent plugin launches remember the main folder and restore this catalog without rescanning ROMs. Loading a selected firmware still validates its contents. **Audio buffer → Balanced** is the default; Low latency reduces the reserve for light projects.
+
+V-Station is a separate source synth type in the Model column and filter. Legacy `NvS0`/`FBCh` banks with 400 programs and `NvS0`/`FPCh` individual presets are supported, directly or in ZIP archives. The 128-byte sound blocks and original chunk names are retained; the K engine loads the shared sound format directly. KS uses its K-compatible importer and 16-character name field. Unknown FXB/FXP layouts and unrelated VST presets are rejected. This source type identifies presets; playback uses the existing K/KS firmware engines. SYX export carries the K sound data, while names and V-Station identity remain in library metadata. K/A SysEx filenames are retained, including inside ZIP; unnamed bank slots receive sequential model/number names. Existing imported sources are refreshed once after this importer update, preserving favourites and user tags.
+
+In AU hosts such as Logic, the preparation maximum can exceed actual live slices. **Low latency** follows observed slice sizes; other profiles keep the preparation maximum as a reserve. Latency updates run on the message thread even with the editor closed. A sudden increase in slice size or CPU overload can still underrun a small reserve. The I/O buffer and Logic Process Buffer Range remain separate host settings.
+
+The bank selector lists collections (populated folders, multi-program files and factory banks); individual preset files appear in the table. Rescan keeps the selected collection. V-Station playback in the K engine uses 6 dB of firmware program-level reserve; source files and library data remain unchanged. KS and native K/A playback retain their level. Select the V-Station preset again to apply this reserve to an older saved project.

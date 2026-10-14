@@ -9,9 +9,9 @@ Silver-K combines K-Station and four-part KS emulation. This early alpha still n
 | `Standalone/Silver-K.app` or `Standalone/Silver-K.exe` | Standalone application |
 | `Plugins/VST3/Silver-K.vst3` | VST3 instrument |
 | `Plugins/AU/Silver-K.component` | AU instrument, macOS only |
-| `KS-Data/ks-wave-zero.bin` | Zero-filled Wave ROM substitute: 129024 bytes, no samples |
-| `KS-Data/ks-init-flash.bin` | Our test KS Data: 524288 bytes containing basic programs, performances and startup settings |
-| `KS-Data/*.manifest.json` | Test-file sizes, provenance and SHA-256 hashes |
+| `Silver-K/ROMs/ks-wave-zero.bin` | Zero-filled Wave ROM substitute: 129024 bytes, no samples |
+| `Silver-K/ROMs/ks-init-flash.bin` | Our test KS Data: 524288 bytes containing basic programs, performances and startup settings |
+| `Silver-K/ROMs/*.manifest.json` | Test-file sizes, provenance and SHA-256 hashes |
 | `INSTALL.md` | This guide |
 | `RELEASE_NOTES.md` | Release description and limitations |
 | `release-manifest.json`, `SHA256SUMS.txt` | Release contents and checksums |
@@ -34,8 +34,8 @@ This archive targets **Apple Silicon (arm64)**. Run your DAW natively for Apple 
    ~/Library/Audio/Plug-Ins/Components/
    ```
 5. In Finder, use **Go → Go to Folder…** (`Command+Shift+G`) and paste the path, including `~`. Create the destination folder if it does not exist.
-6. When updating, replace the old plugin bundle completely. Keep a separate backup if you want to return to the previous version. Do not extract the executable from `Contents/MacOS`.
-7. Start your DAW and rescan plugins. In Logic, open Plug-in Manager and repeat AU validation if needed. Silver-K is an instrument; look in the synthesizer list.
+6. When updating, replace the old plugin bundle completely. Keep a separate backup outside the plugin directories if you want to return to the previous version. Check both `~/Library/Audio/Plug-Ins/Components/` and `/Library/Audio/Plug-Ins/Components/`: leave only one installed `Silver-K.component`. Versions in these two locations share the same AU identity. Do not extract the executable from `Contents/MacOS`.
+7. Start your DAW and rescan plugins. In Logic, open Plug-in Manager and repeat AU validation if needed. Silver-K is an instrument; choose it from the Instrument slot under **AU Instruments → The Usual Suspects → Silver-K**. After removing a duplicate or replacing a component, fully quit and reopen Logic so its loaded component list is refreshed.
 
 Mac bundles are ad hoc signed, **without Developer ID signing or Apple notarization**. If macOS blocks the application, verify the archive's source and use **System Settings → Privacy & Security → Open Anyway** after attempting to launch it. Do not disable Gatekeeper system-wide. A plugin may also need the normal system approval and another DAW scan. See [Apple's instructions](https://support.apple.com/102445).
 
@@ -64,33 +64,29 @@ AU is available only on macOS. This release does not include VST2.
 
 ## 4. Where to keep ROM, KS Data and factory presets
 
-Choose a permanent user folder, for example:
+Silver-K creates `Documents/Silver-K` by default. Choose another permanent main folder through **Setup → Silver-K folder** if preferred:
 
 ```text
-Documents
-└── Silver-K
-    ├── ROMs
-    │   ├── your K-Station firmware
-    │   └── your KS firmware
-    ├── KS-Data
-    │   ├── ks-init-flash.bin
-    │   ├── ks-wave-zero.bin
-    │   └── your original KS Data / Wave ROM, if available
-    └── Presets
-        ├── K-Station
-        └── KS
+Documents/Silver-K/
+├── ROMs/
+│   ├── your K-Station and KS firmware
+│   ├── ks-init-flash.bin
+│   ├── ks-wave-zero.bin
+│   └── your own KS Data / Wave ROM, if available
+└── Patches/
+    └── your factory and user banks
 ```
 
-Copy `KS-Data` from the archive into this folder. Put firmware in `ROMs` and sound banks in `Presets`. Avoid temporary download folders that you may delete later. ROM files do not need to go into the system VST3/AU directories or inside `.app`, `.component` or `.vst3` bundles: select their paths in Setup.
+Selecting the main folder creates both subfolders, generates the synthetic Init Flash and zero Wave ROM when absent, scans firmware in `ROMs` and adds `Patches` automatically. Existing files are preserved. Original firmware and banks are supplied separately; none belong inside plugin bundles or system plugin directories. Old release archives' `KS-Data` files can be copied into `ROMs`.
 
-Silver-K remembers paths and validates supported firmware contents. OS code and Wave ROM are not embedded in DAW project state. If you move the files, select them again. Moving a project to another computer requires the same local files there.
+The chosen main folder is remembered between instances. Project state stores relative paths for files inside it and accepts old absolute paths. Copies with matching filenames in the current `ROMs` folder take precedence; the firmware and Wave ROM hashes must still match the project. Moving a project to another computer requires those external files there.
 
 ## 5. OS firmware is a separate required file
 
 Supported versions are **K-Station OS 2.1.01** and **KS OS 2.1.02**. An archive name may differ from its internal version; validation uses contents and checksums.
 
 1. Put your firmware in `ROMs`.
-2. Open **Setup → ROM folder** and select that folder. Subfolders are scanned.
+2. Open **Setup → Silver-K folder** and select the main Silver-K folder. Its ROMs subfolder is scanned.
 3. Supported formats include the corresponding OS/SYX updates, decoded BIN files and ZIP archives containing supported firmware. You can also use **Load firmware** to select a file. A factory-sound ZIP is not a firmware ZIP.
 4. For KS, configure KS Data as described below, then select KS in the firmware menu at the top. Wait for `Loading firmware...` to finish.
 
@@ -102,10 +98,10 @@ Official KS OS and factory-sound downloads: [Novation KS Rack](https://downloads
 
 Factory programs are not required for a basic test: KS Init Flash contains our own simple sounds. It initializes user programs, performances and startup settings. It is **KS Data, not Wave ROM**.
 
-1. Copy both files from the archive's `KS-Data` folder into your permanent folder.
+1. Select your main Silver-K folder; the synthetic files are created in `ROMs` automatically if absent.
 2. Under **Setup → KS factory data**, select `ks-init-flash.bin`, **524288 bytes**.
 3. Under **Setup → Wave ROM**, select `ks-wave-zero.bin`, **129024 bytes**.
-4. Use **ROM folder** or **Load firmware** to supply KS OS 2.1.02 and select it in the firmware menu.
+4. Use **Silver-K folder** or **Load firmware** to supply KS OS 2.1.02 and select it in the firmware menu.
 5. Wait for loading to finish. Check the output, audio device and MIDI channel. Single mode uses the global/editor MIDI channel selected in Setup.
 6. The initial `Silver Init` program uses a generated saw wave. Play a note. In Standalone, select your MIDI input; in a DAW, create an instrument track, enable monitoring and send MIDI to Silver-K.
 7. For four parts, open **Perf**, enable **Performance (4 parts)** and select parts with tabs 1–4. Check **Part active**, MIDI channel, keyboard range and Output. For ordinary stereo operation, choose Main 1+2.
@@ -131,16 +127,16 @@ Changing factory Data does not replace Wave ROM. Sample-dependent factory progra
 
 Full KS Data initialization and a library of individual patches are separate loading workflows.
 
-1. Put banks and individual patches in `Presets`. Recognized `.syx`, `.mid` and `.midi` files are supported, including ZIP archives containing them. You may extract ZIPs first to keep your folders organized.
+1. Put banks and individual patches in `Patches`. Recognized `.syx`, `.mid`, `.midi` and supported V-Station `.fxb` and `.fxp` files are supported, including ZIP archives containing them. You may extract ZIPs first to keep your folders organized.
 2. Open **Patches → Add folder** and select a bank folder. Subfolders are scanned. Use **Add file** for an individual bank or file.
 3. Wait for scanning to finish. Use **Rescan** if needed and clear model/source/tag filters.
-4. Select a patch row and click **Load**, or double-click the row.
+4. Click a patch row to load it immediately. Arrow-key selection also loads; re-clicking the selected row or pressing Enter reloads it. Click any column header to sort; click again to reverse the order.
 5. In KS Performance mode, select the destination part with tabs 1–4 before loading. A Program loads into the selected part; a Performance contains the full four-part configuration. Some preset-loading paths reload the whole Performance and interrupt sound.
 6. Use **Save current** for the current sound, **Export .syx** for a selected library entry and **Save tags** after editing tags or favourites.
 
-K-Station runs with its own OS and does not need KS Init Flash or KS Wave ROM. Add its factory presets through Patches in the same way. K-Station ↔ KS conversion replaces unsupported functions; review the compatibility report when loading. A-Station patches can be recognized and stored, but A-Station conversion and verified X-Station import are not implemented in this version.
+K-Station runs with its own OS and does not need KS Init Flash or KS Wave ROM. Add its factory presets through Patches in the same way. K-Station ↔ KS conversion replaces unsupported functions; review the compatibility report when loading. A-Station and X-Station programs and banks are supported. A/K bank pairs are expanded into separate programs. A → K and X → KS preserve compatible sound blocks; the other engine uses the conversion report.
 
-Patch management is unfinished. Verify saved sounds by reloading them and keep your original banks separately. Save DAW project state after changes have reached the engine, rather than immediately while moving a control.
+Verify saved sounds by reloading them and keep your original banks separately. Save DAW project state after changes have reached the engine, rather than immediately while moving a control.
 
 ## 9. Troubleshooting
 
@@ -149,8 +145,17 @@ Patch management is unfinished. Verify saved sounds by reloading them and keep y
 - **Silver Init works but a factory patch is silent:** check whether the patch needs sampled Wave ROM. The zero bank does not contain those waves.
 - **A Performance part is silent:** check Part active, MIDI channel, Lowest/Highest note and Output. Enable Aux 3+4 in your DAW, or route the part to Main 1+2 for a two-channel output.
 - **Distorted output:** reduce Program boost, oscillator levels or Part volume. Boost at 0 dB is the normal level, not a muted voice.
-- **Dropouts or high CPU:** check the audio device and try a larger audio buffer. This can increase latency. Multiple parts and small buffers still need optimization.
-- **Noticeable latency:** Setup's Host latency reports plugin latency. Audio-driver, physical MIDI-device and DAW-chain delays are additional. Smaller buffers reduce latency but increase CPU demands.
+- **Dropouts or high CPU:** raise **Setup → Audio buffer** from Low latency to Balanced, Safe or Maximum reserve. This increases the emulation scheduling reserve and note latency without rebooting firmware. The DAW/audio interface buffer remains a separate host setting.
+- **Noticeable latency:** Setup's Plugin latency reports internal delay. Audio-driver, physical MIDI-device and DAW-chain delays are additional. Smaller buffers reduce latency but increase CPU demands.
 - **Plugin not listed:** check the installation path and DAW architecture, restart and rescan. On Windows, check the Visual C++ runtime; on macOS, check the normal system launch approval.
+- **Logic validates Silver-K but it is missing from the Instrument menu:** check for duplicate components in the user and system AU directories above. Move the older copy outside both directories, then fully quit and reopen Logic. Confirm that Plug-in Manager shows the installed version and that Hide and Ignore are unchecked; use the Instrument slot on a software instrument track.
 
 This release is a starting point for further development. KS external audio input is not connected, and sound accuracy against physical instruments has not been established.
+
+**Setup → Rescan ROMs** updates the saved firmware catalog after files are added or removed. Subsequent plugin launches remember the main folder and restore this catalog without rescanning ROMs. Loading a selected firmware still validates its contents. **Audio buffer → Balanced** is the default; Low latency reduces the reserve for light projects.
+
+V-Station appears as its own **Model** and filter choice. Add supported `NvS0`/`FBCh` 400-program banks or `NvS0`/`FPCh` individual presets with **Patches → Add file**, or import a folder/ZIP containing them. Names come from the preset chunk, even if the outer header says “User 300”. K loads the shared 128-byte sound format directly; KS uses its compatible importer and keeps up to 16 name characters. Original preset files remain unchanged. K/A patches retain filenames from individual SysEx files and ZIP entries; unnamed bank programs get model/number names. The first launch after this importer update refreshes existing patch sources once and preserves favourites/tags. ROM catalogs remain cached.
+
+In AU hosts such as Logic, the preparation maximum can exceed actual live slices. **Low latency** follows observed slice sizes; other profiles keep the preparation maximum as a reserve. Latency updates run on the message thread even with the editor closed. A sudden increase in slice size or CPU overload can still underrun a small reserve. The I/O buffer and Logic Process Buffer Range remain separate host settings.
+
+The bank selector lists collections (populated folders, multi-program files and factory banks); individual preset files appear in the table. Rescan keeps the selected collection. V-Station playback in the K engine uses 6 dB of firmware program-level reserve; source files and library data remain unchanged. KS and native K/A playback retain their level. Select the V-Station preset again to apply this reserve to an older saved project.

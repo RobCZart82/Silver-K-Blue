@@ -29,6 +29,9 @@ namespace kstation
 
         uint64_t getUnderrunCount() const;
         uint64_t getMidiOverflowCount() const;
+        void setBufferFloor(unsigned nativeFrames);
+        void setAudioBuffer(uint32_t hostBlock,float hostRate,unsigned nativeFloor);
+        void ensureAudioBlock(uint32_t hostBlock,float hostRate) noexcept;
         // Queue-only bridge for hosts that already own bounded MIDI storage.
         bool enqueueMidiBytes(const uint8_t*, size_t, uint32_t nativeOffset = 0);
         void setNonRealtime(bool enabled) noexcept;

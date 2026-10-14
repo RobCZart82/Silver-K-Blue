@@ -16,14 +16,17 @@ public:
     bool partMidi(unsigned part,const uint8_t*,size_t);
     void process(float* left,float* right,size_t n,bool offline=false);
     void process(const std::array<float*,OutputCount>&,size_t n,bool offline=false);
-    std::vector<uint8_t> dumpProgram(); // Control thread, original UART dump.
+    std::vector<uint8_t> dumpProgram(); // Control thread, canonical mirrors; no guest execution.
     std::array<uint64_t,4> diagnostics();
     std::vector<uint8_t> saveFlash(); // Excludes OS and external wave bank.
     std::array<uint8_t,256> snapshot(unsigned part=0)const;
     State fullSnapshot()const;
     uint64_t underruns()const{return underrun.load();}
     uint64_t overflows()const{return overflow.load();}
-    unsigned latency()const{return lead;}
+    unsigned latency()const{return lead.load();}
+    void setAudioBuffer(unsigned block,unsigned floor);
+    void ensureAudioBlock(unsigned block) noexcept;
+    void setBufferFloor(unsigned frames){lead.store(std::max(baseLead,std::min(4096u,frames)));}
 private:
     struct Event{uint64_t due;uint8_t value;uint8_t part=255,length=0;};
     struct Frame{uint64_t due;std::array<float,OutputCount> value;};
@@ -34,13 +37,19 @@ private:
     std::array<SnapshotSlot,3> snapshots;
     std::atomic<unsigned> publishedSnapshot{0};
     State initialSnapshot;bool initialPublished=false;
+    std::mutex flashSnapshotMutex;
+    std::vector<uint8_t> flashSnapshot;
+    uint64_t publishedFlashRevision=~uint64_t(0);
+    std::atomic<uint64_t> diagnosticProduced{0},diagnosticMidi{0},diagnosticWave{0};
     std::atomic<uint64_t> consumed{0},underrun{0},overflow{0};
     std::atomic<bool> stopping{false},running{false},pause{false},paused{false};
     std::thread worker;
     std::mutex startMutex,coldMutex;
     std::condition_variable startCV;
     bool started=false;
-    unsigned lead;
+    unsigned baseLead;
+    std::atomic<unsigned> lead;
+    std::atomic<unsigned> realtimeBlock{256};
     std::string failure;
     double rate,phase=0;
     uint64_t produced=0;

@@ -4,12 +4,17 @@
 #include <cmath>
 #include <stdexcept>
 #include "dsp56kBase/threadtools.h"
+#include "dsp56kBase/audioworkgroup.h"
 namespace ks {
 Device::Device(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,const std::vector<uint8_t>& flash,double hostRate,int block,const std::vector<uint8_t>& program)
-:lead(std::min(4096,std::max(512,block*2+256))),rate(hostRate){
- worker=std::thread([this,os,bank,flash,program]{
+:baseLead(std::min(4096,std::max(256,block+128))),lead(baseLead),rate(hostRate){
+ realtimeBlock.store(unsigned(std::max(64,block)));
+ worker=std::thread([this,os,bank,flash,program,block]{
   dsp56k::ThreadTools::setCurrentThreadName("KS H8S / dual DSP");
+  // Boot and JIT compilation have no audio deadline. Enter the realtime band
+  // only after warm-up, so a long cold compile cannot demote the live worker.
   dsp56k::ThreadTools::setCurrentThreadPriority(dsp56k::ThreadPriority::High);
+  dsp56k::AudioWorkgroup::Member audioWorkgroup;
   try{board=std::make_unique<Board>(os,bank,flash,true);if(!board->boot())throw std::runtime_error("KS controller boot timeout");
    if(program.size()==270 || program.size()==1038){
     const uint8_t select[]{uint8_t(0xb0|(flash[0x1ff08]&15)),32,uint8_t(program.size()==1038?65:33),uint8_t(0xc0|(flash[0x1ff08]&15)),0};
@@ -53,9 +58,14 @@ Device::Device(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,c
    for(auto& p:history){auto a=board->renderSample();for(unsigned c=0;c<OutputCount;++c)p[c]=double(a[c])/8388608;}
    publish();
    for(unsigned i=0;i<lead;++i){output.push(Frame{produced,nextSample()});++produced;}
+   dsp56k::ThreadTools::setCurrentThreadPriority(dsp56k::ThreadPriority::Highest);
+   dsp56k::ThreadTools::setCurrentThreadRealtimeParameters(int(rate),std::max(64,block));
    running.store(true);{std::lock_guard lock(startMutex);started=true;}startCV.notify_one();
+   auto configuredBlock=realtimeBlock.load();
    while(!stopping.load()){
     if(pause.load()){paused.store(true);while(pause.load() && !stopping.load())std::this_thread::sleep_for(std::chrono::microseconds(50));paused.store(false);continue;}
+    const auto block=realtimeBlock.load();if(block!=configuredBlock){dsp56k::ThreadTools::setCurrentThreadRealtimeParameters(int(rate),int(block));configuredBlock=block;}
+    audioWorkgroup.update();
     if(produced>=consumed.load()+lead){std::this_thread::sleep_for(std::chrono::microseconds(50));continue;}
     Event e{};while(events.peek(e) && e.due<=produced){
      if(e.part<PartCount){
@@ -72,6 +82,8 @@ Device::Device(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,c
  });
  std::unique_lock lock(startMutex);startCV.wait(lock,[this]{return started;});
 }
+void Device::setAudioBuffer(unsigned block,unsigned floor){baseLead=std::min(4096u,std::max(256u,block+128));realtimeBlock.store(std::max(64u,block));setBufferFloor(floor);}
+void Device::ensureAudioBlock(unsigned block) noexcept{const auto needed=std::min(4096u,std::max(256u,block+128));auto current=lead.load(std::memory_order_relaxed);for(unsigned attempt=0;attempt<4 && current<needed;++attempt)if(lead.compare_exchange_weak(current,needed)){realtimeBlock.store(std::max(64u,block));break;}}
 Device::~Device(){stopping.store(true);pause.store(false);if(worker.joinable())worker.join();}
 std::array<float,OutputCount> Device::nextSample(){
  std::array<float,OutputCount> out{};
@@ -110,6 +122,12 @@ void Device::process(const std::array<float*,OutputCount>& channels,size_t n,boo
  if(offline)while(running.load() && !stopping.load() && output.size()<lead)std::this_thread::yield();
 }
 void Device::publish(){
+ diagnosticProduced.store(produced);diagnosticMidi.store(board->midiReceived);diagnosticWave.store(board->waveReads);
+ if(publishedFlashRevision!=board->flashRevision){
+  // Host serialization may copy a large bank. The worker never waits for it.
+  std::unique_lock lock(flashSnapshotMutex,std::try_to_lock);
+  if(lock.owns_lock()){board->copyUserFlash(flashSnapshot);publishedFlashRevision=board->flashRevision;}
+ }
  const auto state=board->state();if(!initialPublished){initialSnapshot=state;initialPublished=true;}
  const auto current=publishedSnapshot.load();
  for(unsigned slot=0;slot<snapshots.size();++slot)if(slot!=current && !snapshots[slot].readers.load()){
@@ -126,17 +144,14 @@ State Device::fullSnapshot()const{
 }
 std::array<uint8_t,256> Device::snapshot(unsigned part)const{return fullSnapshot().parts[std::min(part,PartCount-1)];}
 void Device::suspend(){pause.store(true);while(running.load() && !paused.load())std::this_thread::sleep_for(std::chrono::microseconds(50));}
-void Device::resume(){pause.store(false);}
-std::array<uint64_t,4> Device::diagnostics(){std::lock_guard lock(coldMutex);suspend();const std::array<uint64_t,4> result{produced,consumed.load(),board->midiReceived,board->waveReads};resume();return result;}
-std::vector<uint8_t> Device::saveFlash(){std::lock_guard lock(coldMutex);suspend();auto data=board->saveUserFlash();resume();return data;}
+void Device::resume(){pause.store(false);while(running.load() && paused.load())std::this_thread::sleep_for(std::chrono::microseconds(50));}
+std::array<uint64_t,4> Device::diagnostics(){return {diagnosticProduced.load(),consumed.load(),diagnosticMidi.load(),diagnosticWave.load()};}
+std::vector<uint8_t> Device::saveFlash(){std::lock_guard lock(flashSnapshotMutex);return flashSnapshot;}
 std::vector<uint8_t> Device::dumpProgram(){
- std::lock_guard lock(coldMutex);suspend();std::vector<uint8_t> result;uint8_t byte;
- // The released OS does not dispatch request 0x42. Serialize the documented
- // controller buffers read-only; all loads still enter through original UART.
- if(board->read(0x167ba)){result=stateMessage(board->state());resume();return result;}
- while(board->popMidiOut(byte)){};
- const uint8_t request[]{0xf0,0,0x20,0x29,1,0x42,0x7f,0x40,0,0x11,2,0,0,0xf7};board->enqueueMidi(request,sizeof(request));
- for(unsigned n=0;n<16384;++n){board->renderSample();while(board->popMidiOut(byte)){if(byte==0xf0)result.clear();if(!result.empty() || byte==0xf0)result.push_back(byte);if(byte==0xf7 && result.size()==270){const auto state=board->state();std::copy_n(state.parts[0].data()+179,8,result.data()+13+179);std::fill(result.begin()+13+209,result.end()-1,0);board->restoreDesiredLevels(result.data()+13);resume();return result;}}}
- resume();return {};
+ // Sending a dump request and rendering until its reply advanced guest time
+ // without advancing produced/consumed. A host state read could then shift
+ // the arp/clock and buffered sound. Pack the same canonical controller
+ // mirrors read-only in both Single and Performance, keeping the audio epoch.
+ return stateMessage(fullSnapshot());
 }
 }

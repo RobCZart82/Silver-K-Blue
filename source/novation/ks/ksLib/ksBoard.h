@@ -9,6 +9,7 @@
 #include <memory>
 #include <string>
 #include "../../kstation/kstationLib/kstationQueue.h"
+#include "../../kstation/kstationLib/kstationMidiQueue.h"
 
 namespace ks {
 // Owns the controller and both DSPs; accessed only by the emulation worker.
@@ -38,6 +39,8 @@ public:
     bool overlay=false, mainEntered=false, ready=false;
     bool boot();
     std::vector<uint8_t> saveUserFlash() const;
+    void copyUserFlash(std::vector<uint8_t>&) const;
+    uint64_t flashRevision=0; // Worker-owned; publish completed Flash pages only.
     State state(); // Worker only: read controller state, never execute guest helpers.
     void discardAudio(){audio.reset();}
     std::string lcd;
@@ -54,7 +57,8 @@ private:
     bool started[2]{};
     uint64_t serialNext=0,serialSlot=0;bool serialSlaveStarted=false;
     uint64_t adcDue=0, rxDue=0,txDue=0;
-    kstation::Queue<uint8_t,65536> midiIn,midiOut;
+    kstation::MidiSerialQueue<65536> midiIn;
+    kstation::Queue<uint8_t,65536> midiOut;
     PlaceholderMidi placeholder;
     PartMidi partMidi;
     std::array<std::array<uint8_t,256>,600> programDesired{};
