@@ -6,7 +6,16 @@ Raw local reports are not committed. A hypothesis is not a measured result.
 
 ## Current state — 2026-10-15
 
-- Live note/sustain follow-up: C++ now handles Note On/Off decisions, key and
+- Full post-boot follow-up: `SILVER_KS_CONTROLLER=native` now runs normal KS
+  playback control in C++, with H8 retained for original bootstrap only. Eight
+  passages match complete DSP tapes, 24-stream integer audio, state/Flash and
+  MIDI output; the interpreter lock and actual counters show **zero H8 calls
+  after boot**, including native preparation. Frozen original-H8 CPU controls
+  show **2.4–5.3% lower process CPU seconds**, three pairs per passage on the
+  local Windows Intel. This is a clock-compatible native port, not a batched
+  OsTIrus-style redesign. Default H8 and the earlier hybrid remain available;
+  keep the experiment off by default. Mac, real VST3 host and Ryzen pending.
+- Historical live note/sustain stage: C++ handles Note On/Off decisions, key and
   velocity memory, held-key/mono priority, CC64 state and part/pedal release
   decisions. Complete DSP bus tapes/audio match H8 in four scenarios, including
   all four voice modes and pedal threshold/repeated-note cases. This remains a
@@ -42,8 +51,9 @@ Raw local reports are not committed. A hypothesis is not a measured result.
   dirty state and the patch/commit containing this instrumentation.
 - No conclusion yet about the tester stutters or the fastest remedy.
 - OsTIrus 2.2.25 source comparison confirms separate TI/TI2 DSP threads,
-  a native C++ controller implementation and host-side output summing. KS runs
-  the original H8 instructions and both DSPs serially with shared serial timing.
+  a native C++ controller implementation and host-side output summing. KS's
+  default runs original H8 and both DSPs serially with shared serial timing;
+  native control and parallel DSP scheduling are now separate opt-in modes.
   The tester's successful OsTIrus run is a useful comparison, but no matched
   OsTIrus/Silver-K runtime benchmark exists yet. Follow-up: K-Station works;
   only KS stutters during playback, in VST3 on Windows 11 on a Ryzen 3 3100
@@ -1374,6 +1384,166 @@ build/tests/trace analysis during captures. Power/thermal state not controlled.
   state and audio oracles; stopping H8 now would break supported behavior.
 - Publication: source/tests/docs only to the existing `origin/Optimized`.
   Final commit/push identity and verification are reported in the chat.
+
+## 2026-10-15 — Complete native KS playback, original H8 bootstrap retained
+
+- Request clarified: retain H8 for DSP loading/initial setup, move all normal
+  playback control to C++, keep it optional, compare original commands/audio/
+  CPU, publish source and this diary to `Optimized`. This supersedes the
+  previous entry's open boot question and incomplete playback migration.
+- Source: parent **`6d9369456c92fb333cc40cac4309e384658c7ed4`**, branch
+  `Optimized`, this patch. Windows x64, Core i5-13600KF, 32 GB; MSVC 19.44,
+  Release/NMake. DSP pin **`44353be2f0156cac970c6ab4f467ea1998b40605`**, JIT
+  and shared H8 core unchanged. No Windows settings, system timer policy,
+  priorities, affinity, buffers, resampling or serial/slice targets changed.
+  No system trace collection, installs or deletions in this round; private
+  input ROM/Flash/wave files are read only. Test state lives in ignored output.
+- New `SILVER_KS_CONTROLLER=native` / `native-cpp-runtime` takes over immediately
+  after `Board::boot()` returns, before Device program restore/voice warm-up.
+  Original H8 remains the default; unset and recreate the instance to disable.
+  The earlier `native-midi` hybrid and recorded-fixture prototype stay separate.
+  K remains unchanged. The worker-owned handoff API also supports explicit
+  disable/re-enable at quiescent boundaries, retaining current register/RAM
+  state so original H8 can resume without resetting the sound.
+- Implemented fixed C++ flow for **13,766 playback boundaries** (12,664 new,
+  reusing 1,102 existing note/voice boundaries): UART/interrupt/main-loop work;
+  all channel/system/realtime MIDI, CC/NRPN/bend/pressure and SysEx routing;
+  notes/sustain/voice modes/stealing; oscillator/filter/envelope/LFO/FX parameter
+  calculations and DSP feedback; clock/arpeggiator; program/performance editing,
+  state and user Flash handling. This consumes live input and DSP replies;
+  it does not replay captured commands or call H8 for remaining callees.
+- This is a **native compatibility port**, retaining the controller's register/
+  RAM ABI and original clock grid. It removes runtime opcode decoding, not the
+  original polling/state-machine frequency. It is not an event-batched
+  OsTIrus-style controller and does not inherit the earlier tape-replay saving.
+  C++ fetch boundaries account for clocks without reading immutable opcodes;
+  ordinary RAM/stack bypasses device-map dispatch while actual MMIO/DSP/Flash/
+  wave access remains mapped. Native TPU0 uses an O(1) counter advance with
+  exact reference wrap/compare/IRQ behavior; original H8 retains its old loop.
+- Guards: fingerprint the entire verified OS 2.1.02 and compare active SRAM
+  executable ranges at handoff. Reject executable writes/unknown native states
+  explicitly; lock the original interpreter after handoff, with **no implicit
+  fallback**. The H8 object retains timing/frame storage, not interpreted work.
+  Firmware-update/bootloader execution is outside the native playback range;
+  loading firmware through the plugin recreates the engine and uses original
+  boot. Private firmware/tables are still required externally, never embedded.
+- Production VST3 and Standalone, probe and affected Processor test consumers
+  rebuilt successfully in Release, including consumers of the changed Board/
+  Device headers. Frozen final probe SHA-256:
+  **`d2ab50c74031ae22f8084510967ee637f499836c89ebab8bac398f68ece47e13`**.
+  Local evidence root: **`output/perf-native-controller/20261015-185859-final/`**.
+  `source.json` records per-file source hashes/configuration; comparison metadata
+  records executable identities (and the final runner hash for frozen controls).
+- Differential validation passed against original H8: **440,512 boundaries**
+  (13,766 x 32 full-width operand/flag sets) plus **80** interrupt/mask/tie
+  entries. Registers, CCR/EXR, PC, clocks, stack bookkeeping, pending interrupts,
+  data/IO access values/order/cycles/in-flight PC and final RAM match. Alternate
+  samples use mapped instruction fetch and production clock-only fetch; an
+  independent reference disassembler identifies only the fetch callbacks that
+  intentionally disappear. Actual data/IO accesses are never filtered away.
+  ROM/image changes, unknown PCs and interpreter-lock guards were exercised.
+  Additional **150,000** RAM/ROM-overlay operations match mapped byte order,
+  clocks and IO side effects; **101,232** timer cases match the original loop,
+  including wrap, compare zero, clearing and coalesced repeated matches.
+  Existing hybrid decoder, note and voice differential tests also passed.
+- Preflight caught an incorrect indirect bit-store translation; fixed its
+  register-indirect mask and reran the complete boundary oracle successfully.
+  The first whole-Board smoke already matched commands/audio but used 3.1%
+  more CPU in one Single pair; this was not a performance result. Timer/fetch/
+  RAM paths above were then optimized only inside native mode and revalidated.
+- Final correctness ID: **`correctness/20261015-185859`**, 8 scenarios x 2 s /
+  **90,681 native frames**; bus pair plus one unrecorded pair each, 32 processes.
+  Full binary bus tapes are byte-identical, including all A/B read responses,
+  writes/acceptance, PC, clocks, slices and checkpoints. All 24 integer audio
+  hashes/peaks, guest/DSP clocks/instruction counters and serial state match.
+  Final state/Flash/MIDI-output digests and received/transmitted MIDI counts
+  match as well. `state` completes one real in-memory Flash page write; input
+  files are not modified. All native preparation/playback reports show actual
+  post-boot interpreter calls **0**, and positive native execution.
+
+| Passage | 24-stream audio hash | DSP port events | H8 calls after boot |
+| --- | --- | ---: | ---: |
+| Single | `58781405289897816` | 736,364 | 0 |
+| Multi | `13074848859789201745` | 537,112 | 0 |
+| MIDI | `3819855541230884524` | 579,064 | 0 |
+| Sustain / voice modes | `17487164177108066277` | 352,175 | 0 |
+| All CC / NRPN / bend / pressure | `1977305875963167696` | 388,261 | 0 |
+| Program / performance / state / Flash | `2430842298004455044` | 362,922 | 0 |
+| Clock / arpeggiator / transport | `6672608335291489240` | 308,108 | 0 |
+| Voice stealing / unison | `6863044123991515266` | 654,626 | 0 |
+
+- CPU baseline audit: a new per-step interpreter guard/counter could penalize
+  the current H8 control. Therefore headline numbers use an **archived original
+  EXE without that new instrumentation**, same compiler/Release configuration,
+  DSP pin/JIT, inputs and exact passage. Frozen H8 SHA-256:
+  **`2d6bf78483cf27ddaaeaf082f111c502a26b99d9a8aed88ddf4f7218b5355bf7`**
+  (`output/perf-live-controller/20261015-155316/ksControllerProbe_test.exe`).
+  Runner now accepts `--reference-executable` and records both binary hashes.
+- Headline performance ID: **`frozen-reference/20261015-190920`**, sequential
+  DSPs, four scenarios x 4 s / **181,362 native frames**, three interleaved
+  unrecorded pairs per scenario (H8/native, native/H8, H8/native), plus separate
+  trace controls, 32 processes. One fixture process at a time, no concurrent
+  builds/tests. CPU is whole-process user+kernel seconds for equal work;
+  bootstrap/setup, trace/report file IO are excluded. No DAW CPU-meter estimate.
+  Full command tapes, audio and guest/serial counters also match the frozen
+  original. That older fixture lacks state/Flash/MIDI-output snapshots; those
+  are explicitly marked unavailable and verified with the current H8 above.
+
+| Passage | Original H8 CPU s, median | C++ CPU s, median | CPU reduction | Wall s H8 -> C++ |
+| --- | ---: | ---: | ---: | --- |
+| Single | 2.062500 | 1.953125 | **5.30%** | 2.0982 -> 1.9907 |
+| Multi | 1.968750 | 1.921875 | **2.38%** | 1.9840 -> 1.9124 |
+| MIDI | 2.000000 | 1.921875 | **3.91%** | 2.0076 -> 1.9335 |
+| Sustain | 1.937500 | 1.875000 | **3.23%** | 1.9710 -> 1.8822 |
+
+- Raw CPU seconds in order, original / native: Single
+  `[2.046875, 2.062500, 2.062500]` / `[1.937500, 1.953125, 2.000000]`;
+  Multi `[1.968750, 2.015625, 1.968750]` / `[1.937500, 1.921875, 1.890625]`;
+  MIDI `[1.953125, 2.000000, 2.000000]` / `[1.875000, 1.921875, 1.937500]`;
+  Sustain `[1.968750, 1.937500, 1.937500]` / `[1.875000, 1.859375, 1.906250]`.
+  These are modest local savings; three short pairs and quantized process
+  timing do not establish a precise universal percentage or a dropout fix.
+- Separate same-current-EXE control ID: **`primary/20261015-190218`**, same
+  4 s/three-pair protocol. CPU medians H8 -> native: Single 2.062500 -> 1.921875
+  (-6.82%), Multi 2.015625 -> 1.921875 (-4.65%), MIDI 2.031250 -> 1.937500
+  (-4.62%), Sustain 2.000000 -> 1.875000 (-6.25%). Commands/audio/state/Flash/
+  MIDI snapshots all match. Do not prefer these larger numbers over the frozen
+  baseline; different runs also contain normal timing variance. The short
+  2 s single-pair correctness series is not CPU evidence (it includes noisy
+  reversals). Earlier **23–25% tape-replay** results are not live-controller
+  performance and are not carried forward.
+- Two-worker/toggle ID: **`toggle/20261015-191155`**, final native probe, Pedal,
+  2 s, disable at 0.65 s /
+  re-enable at 0.95 s, separate bus and unrecorded pair. Complete commands,
+  audio, clocks/serial/state/Flash/MIDI snapshots match original H8. The disabled
+  window executes 797,572 original-core calls as intended; calls since final
+  native handoff remain **0**. This is compatibility evidence, not a CPU-saving
+  claim for parallel DSPs.
+- Production Processor integration: `silverLatency_test` passed with native
+  control and two DSP workers, private K/KS firmware and a fresh isolated data
+  directory. Both models passed synchronous host reentry, 44.1/48 kHz and
+  256/512/1024 blocks, buffer profiles, state restore, asynchronous firmware
+  completion, nonsilent offline rendering and return to realtime; 9 latency
+  notifications each. `silverClock_test` passed host tempo/transport/sample
+  offset checks. `silverEditor_test` passed geometry/navigation with actual
+  K/KS firmware and the same experimental flags in its own isolated directory.
+  Logs are `latency.log`, `clock-test.log`, `editor-test.log` in the evidence
+  root; no user's existing data directory was used for these writes.
+- Publication: source/tests/docs only to existing `origin/Optimized`; raw tapes,
+  private ROM/banks, disassembly/generators, reports, audio and executables stay
+  ignored. Final commit/push identity is reported in the chat. Public CI skips
+  private-ROM checks and cannot reproduce those validations without inputs.
+  Staged whitespace/UTF-8/Python syntax checks passed; repository audit passed
+  for **590 tracked files**, with no private data or build artifacts. All C++
+  source hashes still match the measured binary snapshot; only the comparison
+  runner subsequently gained the frozen-reference option documented above.
+- Limitations: private synthetic Flash and zero wave bank, one OS revision and
+  local Intel only. No macOS build/audio/CPU validation, real VST3-host listening,
+  multi-instance deadline test, full real-wave/patch corpus or Ryzen 3 3100
+  result. Exact offline audio equality is not a real-time dropout measurement.
+  No conclusion that the tester's stutter is fixed. Next: real host A/B tests,
+  then profile native control vs DSP cost before considering any further
+  controller batching; keep original H8 as the oracle.
 
 ## Entry template
 

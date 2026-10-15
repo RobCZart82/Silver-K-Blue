@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Private KS live C++ controller stages vs original H8; no tape playback.
 
-This is a hybrid: C++ handles notes, key state, sustain, voice lifecycle and DSP
-host transport; H8 retains parameter calculators, periodic voice service,
-UART/routing, clock/arp and state loaders. Compare full bus tapes AND all audio;
-never label it H8 removal.
+--controller hybrid retains original callees. --controller native runs all
+post-boot control flow in C++, with a locked H8 interpreter and verified code
+image. Both retain original DSP timing; neither is recorded tape playback.
+Compare full DSP bus tapes, all audio, controller state/Flash and MIDI output.
 """
 import argparse
 from datetime import datetime, timezone
@@ -21,22 +21,29 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     for name in ('executable', 'ks-rom', 'flash', 'wave'):
         p.add_argument('--' + name, type=Path, required=True)
+    p.add_argument('--reference-executable', type=Path, help='Optional frozen original-H8 fixture (records its identity; legacy state snapshots may be unavailable)')
     p.add_argument('--output', type=Path, default=Path('output/perf-live-controller'))
     p.add_argument('--repeats', type=int, default=3)
-    p.add_argument('--scenarios', nargs='+', choices=['single', 'multi', 'midi', 'pedal'], default=['single', 'multi', 'midi', 'pedal'])
+    p.add_argument('--scenarios', nargs='+', choices=['single', 'multi', 'midi', 'pedal', 'controls', 'state', 'clock', 'steal'], default=['single', 'multi', 'midi', 'pedal'])
     p.add_argument('--seconds', type=float, default=4., help='Same bounded 2..4 s work for bus/audio/CPU')
     p.add_argument('--dsp-threads', choices=['1', '2'], default='1')
+    p.add_argument('--controller', choices=['hybrid', 'native'], default='hybrid', help='Staged hybrid or full native post-boot execution')
     p.add_argument('--toggle', action='store_true', help='Disable at 0.65 s and re-enable at 0.95 s')
     args = p.parse_args()
     if args.repeats < 1 or not 2 <= args.seconds <= 4 or any(not v.is_file() for v in [args.executable, args.ks_rom, args.flash, args.wave]):
         p.error('Positive repeats and existing executable/private inputs required')
+    if args.reference_executable and not args.reference_executable.is_file():
+        p.error('Reference executable must exist')
     root = args.output.resolve() / time.strftime('%Y%m%d-%H%M%S')
     root.mkdir(parents=True, exist_ok=False)
     exe = args.executable.resolve()
+    reference = args.reference_executable.resolve() if args.reference_executable else exe
     (root / 'metadata.json').write_text(json.dumps(dict(
         executable_sha256=hashlib.sha256(exe.read_bytes()).hexdigest(),
-        started_utc=datetime.now(timezone.utc).isoformat(), dsp_threads=args.dsp_threads, toggle=args.toggle, seconds=args.seconds,
-        comparison='original H8 vs live C++ note/pedal/voice lifecycle/host transport; H8 retains parameter calculators and other services'), indent=2))
+        reference_executable_sha256=hashlib.sha256(reference.read_bytes()).hexdigest(),
+        runner_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        started_utc=datetime.now(timezone.utc).isoformat(), controller=args.controller, dsp_threads=args.dsp_threads, toggle=args.toggle, seconds=args.seconds,
+        comparison=('original H8 vs full native post-boot C++ control flow; no H8 fallback' if args.controller == 'native' else 'original H8 vs staged hybrid C++ controller')), indent=2))
     print('Local results:', root, flush=True)
     rows, summaries = [], []
 
@@ -50,7 +57,8 @@ def main():
         report, tape = folder / 'report.json', folder / 'bus.kst'
         print('Running', tag, flush=True)
         with (folder / 'fixture.log').open('w', encoding='utf-8') as log:
-            r = subprocess.run([str(exe), str(args.ks_rom.resolve()), str(args.flash.resolve()),
+            selected = reference if mode in ('h8', 'record') else exe
+            r = subprocess.run([str(selected), str(args.ks_rom.resolve()), str(args.flash.resolve()),
                                 str(args.wave.resolve()), str(report), mode, scenario, str(tape), str(args.seconds)],
                                stdout=log, stderr=subprocess.STDOUT, env=env, timeout=120)
         row = dict(test_id=tag, returncode=r.returncode, mode=mode, scenario=scenario)
@@ -65,6 +73,7 @@ def main():
     keys = ['frames', 'audio_hash', 'peak', 'h8_start_cycles', 'h8_end_cycles',
             'controller_end_cycles', 'dsp_a_cycles', 'dsp_b_cycles', 'dsp_a_instructions',
             'dsp_b_instructions', 'serial_depth', 'serial_underruns', 'serial_overflows']
+    snapshots = ['state_digest', 'flash_digest', 'flash_revision', 'midi_tx_digest', 'midi_tx_bytes', 'midi_received']
 
     def equal(a, b, fields):
         for key in fields:
@@ -72,10 +81,16 @@ def main():
                 raise ValueError(f'{key} differs ({a[key]} / {b[key]}); no equivalence claim')
 
     for scenario in args.scenarios:
-        candidate = 'live-toggle' if args.toggle else 'live'
+        candidate = ('native' if args.controller == 'native' else 'live') + ('-toggle' if args.toggle else '')
         before = run('record', scenario, scenario + '-h8-bus')
         after = run(candidate + '-record', scenario, scenario + '-live-bus')
-        equal(before, after, keys + ['trace_events', 'trace_slices', 'trace_digest', 'bus'])
+        if before.get('controller_backend') != 'original-h8':
+            raise ValueError('Reference must execute original H8')
+        snapshot_available = all(key in before for key in snapshots)
+        if not snapshot_available and not args.reference_executable:
+            raise ValueError('Current H8 control must provide state/Flash/MIDI snapshots')
+        compared = keys + (snapshots if snapshot_available else [])
+        equal(before, after, compared + ['trace_events', 'trace_slices', 'trace_digest', 'bus'])
         original_tape = root / (scenario + '-h8-bus') / 'bus.kst'
         native_tape = root / (scenario + '-live-bus') / 'bus.kst'
         # Explicit bytes, including cycle/PC/read responses/slice clocks, not
@@ -85,10 +100,16 @@ def main():
         for repeat in range(args.repeats):
             for mode in (['h8', candidate] if repeat % 2 == 0 else [candidate, 'h8']):
                 current = run(mode, scenario, f'{scenario}-r{repeat+1}-{mode}')
-                equal(before, current, keys)
-                if mode == candidate and current.get('native_midi_messages', 0) == 0:
-                    raise ValueError('Live mode handled no MIDI')
-        summary = dict(scenario=scenario, full_bus_bytes_identical=True,
+                equal(before, current, compared)
+                if mode == candidate:
+                    if current.get('native_midi_messages', 0) == 0:
+                        raise ValueError('C++ mode handled no MIDI')
+                    if args.controller == 'native':
+                        if not current.get('native_runtime_steps', 0) or current.get('original_h8_step_calls', -1) != 0 or current.get('h8_interpreted_steps_since_handoff', -1) != 0:
+                            raise ValueError('Native mode did not establish H8-free execution')
+                        if not args.toggle and current.get('h8_interpreted_steps_after_boot', -1) != 0:
+                            raise ValueError('H8 executed during native post-boot preparation/playback')
+        summary = dict(scenario=scenario, full_bus_bytes_identical=True, state_flash_midi_snapshots_compared=snapshot_available,
                        audio_and_guest_counters_identical=True, frames=before['frames'],
                        audio_hash=before['audio_hash'], trace_events=before['trace_events'],
                        tape_sha256=hashlib.sha256(original_tape.read_bytes()).hexdigest(),
@@ -100,7 +121,11 @@ def main():
                        voice_steps=after['native_voice_steps'], allocation_calls=after['native_allocation_calls'],
                        voice_start_calls=after['native_voice_start_calls'], voice_release_calls=after['native_voice_release_calls'],
                        transport_steps=after['native_transport_steps'], original_h8_step_calls=after['original_h8_step_calls'],
-                       original_h8_pages=after['original_h8_pages'])
+                       original_h8_pages=after['original_h8_pages'], controller_backend=after['controller_backend'],
+                       native_runtime_steps=after.get('native_runtime_steps'),
+                       native_interrupt_entries=after.get('native_interrupt_entries'),
+                       h8_interpreted_steps_after_boot=after.get('h8_interpreted_steps_after_boot'),
+                       h8_interpreted_steps_since_handoff=after.get('h8_interpreted_steps_since_handoff'))
         for mode in ['h8', candidate]:
             group = [r['report'] for r in rows if r['scenario'] == scenario and r['mode'] == mode]
             summary['modes'][mode] = dict(runs=len(group),

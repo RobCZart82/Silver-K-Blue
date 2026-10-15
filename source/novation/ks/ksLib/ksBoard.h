@@ -3,6 +3,7 @@
 #include "ksDspWorkers.h"
 #include "ksControllerTrace.h"
 #include "ksLiveMidiController.h"
+#include "ksRuntimeController.h"
 #include "ksPlaceholderMidi.h"
 #include "ksState.h"
 #include "ksPartMidi.h"
@@ -34,9 +35,14 @@ public:
     std::shared_ptr<const ControllerTape> finishControllerTrace();
     void startRecordedController(std::shared_ptr<const ControllerTape>);
     void enableLiveMidiController(bool enabled=true);
+    void enableNativeController(bool enabled=true);
+    const RuntimeController* nativeController()const{return nativeRuntime.get();}
+    uint64_t h8InterpretedSteps()const{return h8->interpretedSteps;}
+    uint64_t h8StepsSinceNativeHandoff()const{return nativeRuntime?h8->interpretedSteps-nativeH8Steps:0;}
     const LiveMidiController* liveMidiController()const{return liveMidi.get();}
     void enableControllerDelegationProfile(){if(liveMidi)liveMidi->enableDelegationProfile();}
-    const char* controllerBackend()const{return recordedController?"recorded-cpp-prototype":liveMidi?"live-cpp-midi-hybrid":"original-h8";}
+    void resetControllerMetrics(){if(liveMidi)liveMidi->resetMetrics();if(nativeRuntime)nativeRuntime->steps=nativeRuntime->interruptEntries=0;}
+    const char* controllerBackend()const{return recordedController?"recorded-cpp-prototype":nativeRuntime?"native-cpp-runtime":liveMidi?"live-cpp-midi-hybrid":"original-h8";}
     uint64_t controllerCycles()const{return recordedController?recordedController->cycles():h8->cycles;}
     uint64_t checkedControllerPorts()const{return recordedController?recordedController->checkedPorts():0;}
     bool enqueueMidi(const uint8_t* b,size_t n);
@@ -66,6 +72,7 @@ private:
     baseLib::performance::Diagnostics* performance=nullptr; // worker-owned attachment
     uint64_t diagnosticAdvances=0;
     void tick(uint64_t previous);
+    void tickNative(uint64_t previous);
     void adaptStoredProgram(uint8_t*,size_t);
     void muteStoredPrograms();
     bool enqueueNativeMidi(const uint8_t*,size_t);
@@ -91,6 +98,8 @@ private:
     std::unique_ptr<ControllerRecorder> controllerRecorder;
     std::unique_ptr<RecordedController> recordedController;
     std::unique_ptr<LiveMidiController> liveMidi;
+    std::unique_ptr<RuntimeController> nativeRuntime;
+    uint64_t nativeH8Steps=0;
     // Destroy/join before any DSP, queue, diagnostics or callback state.
     std::unique_ptr<DspWorkers> dspWorkers;
 };

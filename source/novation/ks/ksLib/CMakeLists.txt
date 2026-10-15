@@ -14,3 +14,5 @@ if(BUILD_TESTING)
  target_compile_features(ksPlaceholderMidi_test PRIVATE cxx_std_17)
  add_test(NAME ksPlaceholderMidi COMMAND ksPlaceholderMidi_test)
 endif()
+
+target_sources(ksLib PRIVATE ksRuntimeController.cpp ksRuntimeIo.cpp ksRuntimeMidi.cpp ksRuntimeState.cpp ksRuntimeParameters.cpp ksRuntimeVoices.cpp ksRuntimeExtended.cpp ksRuntimeController.h ksRuntimeBoundary.h)

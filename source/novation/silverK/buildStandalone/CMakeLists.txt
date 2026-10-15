@@ -62,6 +62,14 @@ target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksControllerTrace
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksLiveMidiController.cpp")
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksLiveNoteController.cpp")
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksLiveVoiceController.cpp")
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksRuntimeController.cpp")
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksRuntimeIo.cpp")
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksRuntimeMidi.cpp")
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksRuntimeState.cpp")
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksRuntimeParameters.cpp")
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksRuntimeVoices.cpp")
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksRuntimeExtended.cpp")
+
 target_link_libraries(ksLib PUBLIC baseLib dsp56kEmu h8s)
 # Opt-in checks require user-supplied KS OS, zero wave bank and Flash paths.
 add_executable(ksPartMidi_test "${ROOT}/source/novation/ks/ksLib/ksPartMidi_test.cpp")

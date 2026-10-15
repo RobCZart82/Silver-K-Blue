@@ -509,12 +509,12 @@ commit it before comparisons. Dependencies may be overridden with local source:
 the report's DSP revision is the repository pin, not verification of an override.
 
 
-### Controller migration status (2026-10-15, voice lifecycle stage)
+### Historical hybrid status (2026-10-15, voice lifecycle stage / 6d93694)
 
-This remains an **incomplete, opt-in hybrid migration**. The public switch and
-`live-cpp-midi-hybrid` backend name are preserved for compatibility. H8 remains
-necessary during normal playback; do not describe this branch as a complete
-native controller or imply that stopping H8 is supported.
+At that revision this was an **incomplete, opt-in hybrid migration**. The public
+switch and `live-cpp-midi-hybrid` backend name are preserved for compatibility.
+H8 remains necessary during playback in that historical hybrid mode. The
+separate complete post-boot mode is documented below.
 
 | Responsibility | Current execution |
 | --- | --- |
@@ -541,3 +541,108 @@ validating real state/preset/clock/arp/voice-stealing passages and measuring CPU
 against H8. Zero original-core calls in one short passage would establish only
 that passage, not complete feature coverage. Windows builds and local checks
 do not validate macOS, a real VST3 host or the tester's Ryzen 3 3100.
+
+
+## Native KS playback controller
+
+`SILVER_KS_CONTROLLER=native` selects `native-cpp-runtime` for a newly created
+KS instance. H8 performs the original bootstrap and initial setup; the native
+controller takes over when `Board::boot()` returns, before the Device's program
+restore, voice warm-up and normal playback. The interpreter is then locked.
+Unset the variable and recreate the instance to return to original H8. This is
+process-local configuration, not a Windows setting or saved host preference.
+K is unchanged. `native-midi` still selects the historical hybrid; recorded
+fixture playback remains a separate mode.
+
+The native implementation covers normal playback controller code for verified
+KS OS 2.1.02: MIDI/system/realtime/SysEx parsing and part routing, all CC/NRPN,
+bend/pressure, notes/sustain/voice allocation and stealing, synthesis parameter
+conversion and DSP feedback, clock/arpeggiator, program/performance editing,
+state and user Flash writes. DSP firmware continues running in the original
+DSP emulators with the same JIT configuration, clocks, serial ordering, slice
+targets, resampling and buffers.
+
+This is a **native compatibility implementation**, not an event-batched
+OsTIrus-style architecture. It retains the register/RAM ABI and original guest
+clock grid to preserve exact commands/audio and allow a quiescent switch back
+to H8. The H8 object stores that frame and remains available for comparison;
+retaining it does not mean interpreting instructions during native playback.
+Fixed C++ control flow replaces opcode decoding; there is no new JIT or tape.
+Native fetches account for bus clocks without rereading instruction bytes.
+Ordinary controller RAM/stack accesses bypass the device map while preserving
+byte order and bus clocks. MMIO, DSP, Flash and wave accesses use the Board's
+actual callbacks. The virtual TPU0 timer advances arithmetically; original H8
+keeps its per-clock timer loop as the reference. Windows timers are untouched.
+
+A complete ROM fingerprint and comparison of the active executable SRAM guard
+handoff. Writes to that code and states outside the ported playback code fail
+explicitly; there is **no automatic H8 fallback**. MCU OS flashing/bootloader
+entry is outside this mode. Loading firmware through the plugin recreates the
+engine and uses original bootstrap. Original/private ROM and data files remain
+required and are never embedded in the source. The experiment stays off by
+default; verified scenarios are not a claim of every possible patch/wave,
+malformed SysEx stream, host or platform.
+
+The worker-owned `Board::enableNativeController(bool)` API enables/disables at
+quiescent boundaries. It is mutually exclusive with recorded playback. Explicit
+disable re-enables the interpreter and restores the mapped memory/fetch path;
+subsequent enable validates the current image again. Normal plugin selection
+is immutable per instance. Diagnostic backend strings distinguish all modes.
+
+Private comparisons:
+
+```powershell
+cmake --build build-nmake --target ksRuntimeController_test ksControllerTimers_test ksControllerMemory_test ksControllerProbe_test
+& build-nmake/source/novation/silverK/buildStandalone/silverPlugin/ksRuntimeController_test.exe output/perf-dsp-threads/private-KSOS2102.SYX
+python tools/run_live_controller_comparison.py --executable build-nmake/source/novation/silverK/buildStandalone/silverPlugin/ksControllerProbe_test.exe --ks-rom output/perf-dsp-threads/private-KSOS2102.SYX --flash "$env:USERPROFILE/Documents/Silver-K/ROMs/ks-init-flash.bin" --wave "$env:USERPROFILE/Documents/Silver-K/ROMs/ks-wave-zero.bin" --controller native --repeats 3 --seconds 4
+```
+
+The runtime differential test checks every ported boundary with varied full
+32-bit registers/flags against original H8. It alternates instruction-read-back
+and production clock-only fetch, independently decoding the reference fetch
+length and comparing all remaining data/IO accesses, their clocks and in-flight
+PC, registers, flags, stack bookkeeping and final RAM. Interrupt entries cover
+priorities/masks/ties. Additional ROM-free tests compare native RAM/ROM-overlay
+accesses with the mapped reference, MMIO side effects and original timer loops.
+The no-argument private runtime CTest skips with code 77; normal public CI cannot
+supply private firmware and does not establish runtime ROM equivalence.
+
+The runner compares full logical DSP port tapes byte-for-byte and hashes all
+24 integer audio streams, state, user Flash and MIDI output, plus guest/serial
+counters. Add `--scenarios controls state clock steal` for the extended live
+passages, or `--dsp-threads 2 --toggle --repeats 1 --seconds 2 --scenarios pedal`
+for a separate compatibility/switching check. `state` actually stores a Single
+preset into the private in-memory Flash and requires a completed page write;
+input files are not modified. `clock` drives the arpeggiator at 90/180 BPM with
+start/stop/continue. `steal` sends 24 notes with two-voice unison across four
+parts. `controls` sends all CC numbers plus explicit NRPN, bend and pressure.
+
+Native reports must show `original_h8_step_calls=0`,
+`h8_interpreted_steps_after_boot=0` and
+`h8_interpreted_steps_since_handoff=0`, with positive `native_runtime_steps`.
+The interpreter counters count calls (including interrupt arbitration), not ISA
+instruction counts. The legacy `h8_*_cycles` fields are the shared controller
+clock in native mode; growing cycles are not interpreted execution. Explicit
+toggle tests allow H8 in the disabled window; the last-handoff counter must
+still remain zero. Resetting diagnostics preserves controller state. Counter
+segments after a toggle describe only the last enabled controller object.
+Recorded replay has no live state/Flash/MIDI-output snapshot comparison; those
+digest fields are null there. CPU means whole-process user+kernel seconds for
+equal rendered work on Windows, excluding bootstrap/preparation and report IO.
+Recording and unrecorded timing runs remain separate; the replay saving from
+an earlier experiment is not the native live controller's saving.
+
+Add `--reference-executable <archived-original-fixture.exe>` to compare with a
+frozen original-H8 build rather than the current instrumented H8 control.
+Metadata records both executable SHA-256 values and the runner hash. The frozen
+fixture must run the original backend and support the same passage, inputs,
+render length and trace format. Older fixtures can lack state/Flash/MIDI-output
+snapshots; the summary explicitly records
+`state_flash_midi_snapshots_compared=false` in that case. Complete bus tapes,
+audio and guest/serial counters must still match. Verify those extra snapshots
+separately with the current H8 control. A frozen baseline avoids attributing
+new per-step diagnostic overhead to a controller CPU saving.
+
+Consult the latest diary entry for actual Windows results. macOS compilation,
+real-host listening/deadline behavior and the tester's Ryzen 3 3100 remain
+separate validation work.

@@ -41,22 +41,25 @@ struct Stats {
 };
 }
 int main(int argc,char** argv){try{
-    if(argc!=8 && argc!=9){std::cout<<"SKIP: KS OS, Flash, wave, report JSON, mode, single|multi|midi|pedal, trace path, optional seconds (up to 4) required\n";return 77;}
+    if(argc!=8 && argc!=9){std::cout<<"SKIP: KS OS, Flash, wave, report JSON, mode, single|multi|midi|pedal|controls|state|clock|steal, trace path, optional seconds (up to 4) required\n";return 77;}
     const double duration=argc==9?std::stod(argv[8]):2.;
     check(std::isfinite(duration)&&duration>=2.&&duration<=4.,"Controller probe duration must be 2..4 seconds");
     const std::string mode=argv[5],scenario=argv[6];
-    const bool liveMode=mode=="live" || mode=="live-record" || mode=="live-toggle" || mode=="live-toggle-record";
-    const bool recording=mode=="record" || mode=="live-record" || mode=="live-toggle-record";
-    const bool toggling=mode=="live-toggle" || mode=="live-toggle-record";
+    const bool nativeMode=mode=="native" || mode=="native-record" || mode=="native-toggle" || mode=="native-toggle-record";
+    const bool liveMode=nativeMode || mode=="live" || mode=="live-record" || mode=="live-toggle" || mode=="live-toggle-record";
+    const bool recording=mode=="native-record" || mode=="native-toggle-record" || mode=="record" || mode=="live-record" || mode=="live-toggle-record";
+    const bool toggling=mode=="native-toggle" || mode=="native-toggle-record" || mode=="live-toggle" || mode=="live-toggle-record";
     check(mode=="h8" || mode=="record" || mode=="replay" || mode=="boot" || liveMode,"Unknown controller probe mode");
-    check(scenario=="single" || scenario=="multi" || scenario=="midi" || scenario=="pedal","Unknown controller probe scenario");
-    const bool multi=scenario=="multi" || scenario=="pedal";
+    check(scenario=="single" || scenario=="multi" || scenario=="midi" || scenario=="pedal" || scenario=="controls" || scenario=="state" || scenario=="clock" || scenario=="steal","Unknown controller probe scenario");
+    const bool multi=scenario=="multi" || scenario=="pedal" || scenario=="controls" || scenario=="state" || scenario=="clock" || scenario=="steal";
     const auto* threads=std::getenv("SILVER_KS_DSP_THREADS");const bool parallel=threads&&std::string(threads)=="2";
     const auto setup=Clock::now();ks::Rom os(argv[1]);check(os.isValid(),"Invalid KS OS");
     auto board=std::make_unique<ks::Board>(os.data(),bytes(argv[3]),bytes(argv[2]),true);
     if(mode=="boot")board->startControllerTrace();
     const auto bootBegin=Clock::now();const double bootCpu=cpu();check(board->boot(),"Original H8 boot failed");
     const double bootCost=cpu()-bootCpu,bootWall=std::chrono::duration<double>(Clock::now()-bootBegin).count();
+    const uint64_t bootH8Steps=board->h8InterpretedSteps();
+    if(nativeMode)board->enableNativeController();
     auto send=[&](const std::vector<uint8_t>& m){check(board->enqueueMidi(m.data(),m.size()),"MIDI rejected");};
     auto discard=[&](unsigned n){for(unsigned i=0;i<n;++i)board->renderSample();};
     std::shared_ptr<const ks::ControllerTape> tape;
@@ -71,6 +74,8 @@ int main(int argc,char** argv){try{
             auto state=board->state();state.performance=true;state.activeMask=15;
             for(unsigned i=0;i<4;++i){state.parts[i]=state.parts[0];auto& p=state.parts[i];p[179]=100;p[181]=uint8_t(i);p[182]=0;p[183]=127;}
             if(scenario=="pedal")for(unsigned i=0;i<4;++i){auto& p=state.parts[i];p[0]=uint8_t((p[0]&~24)|(i<<3));p[88]&=~4;p[182]=36;p[183]=84;}
+            if(scenario=="clock")for(auto& p:state.parts){p[88]=uint8_t((p[88]&~31)|12);p[84]=30;p[85]=9;p[86]=32;p[87]=0;}
+            if(scenario=="steal")for(auto& p:state.parts)p[0]=uint8_t((p[0]&~31)|18); // Poly, two unison voices.
             state.parts[0][189]=1;state.parts[0][190]=15;
             send({0xb0,32,65,0xc0,0});send(ks::stateMessage(state));discard(24000);
         }
@@ -125,14 +130,62 @@ int main(int argc,char** argv){try{
                 events.push_back({native(at),std::move(packet)});
             }
         }
-        if(liveMode){board->enableLiveMidiController();if(recording)board->enableControllerDelegationProfile();}
+        auto add=[&](double at,std::vector<uint8_t> data){if(at<duration)events.push_back({native(at),std::move(data)});};
+        auto four=[&](std::initializer_list<uint8_t> message){std::vector<uint8_t> data;
+            for(unsigned p=0;p<4;++p){bool first=true;for(auto b:message){data.push_back(first?uint8_t(b|p):b);first=false;}}return data;};
+        if(scenario=="controls" || scenario=="state" || scenario=="clock" || scenario=="steal"){
+            events.clear();add(.01,four({0x90,60,100}));add(.02,four({0xb0,64,127}));
+            add(.04,four({0x80,60,0}));add(.06,four({0xb0,64,0}));
+            add(duration-.04,four({0x80,60,0}));add(duration-.03,four({0xb0,64,0}));
+        }
+        if(scenario=="controls"){
+            // All CC numbers with live seven-bit values, plus explicit NRPN,
+            // channel pressure, poly pressure and bend, on all four channels.
+            add(.08,four({0x90,60,101}));
+            for(unsigned cc=0;cc<128;++cc){std::vector<uint8_t> data;
+                for(unsigned p=0;p<4;++p)data.insert(data.end(),{uint8_t(0xb0|p),uint8_t(cc),uint8_t((cc*5+p*17)&127)});
+                add(.1+cc*.011,std::move(data));}
+            for(unsigned n=0;n<6;++n){std::vector<uint8_t> data;
+                for(unsigned p=0;p<4;++p){const auto status=uint8_t(0xb0|p);
+                    data.insert(data.end(),{status,99,0,status,98,uint8_t(5+n*3),status,6,uint8_t(31+n*13),
+                        uint8_t(0xe0|p),uint8_t(n*19),uint8_t(54+p*5),uint8_t(0xd0|p),uint8_t(20+n*15),uint8_t(0xa0|p),60,uint8_t(99-n*11)});}
+                add(.15+n*.22,std::move(data));}
+        }
+        if(scenario=="state"){
+            auto perf=board->state();perf.performance=true;perf.activeMask=15;
+            for(unsigned p=0;p<4;++p){perf.parts[p][179]=uint8_t(70+p*7);perf.parts[p][12]=uint8_t(35+p*17);}
+            add(.08,ks::stateMessage(perf));add(.5,four({0x90,60,95}));
+            ks::State single;single.parts[0]=perf.parts[0];single.parts[0][12]=93;
+            auto stored=ks::stateMessage(single);stored[7]=1;stored[8]=1;stored[11]=1;stored[12]=3;
+            add(.8,std::move(stored));add(.98,{0xb0,32,33,0xc0,3});
+            add(1.13,{0x90,48,101,55,92,62,83});add(1.25,{0x80,48,0,55,0,62,0});
+            add(1.4,{0xb0,32,65,0xc0,0});add(1.41,ks::stateMessage(perf));add(1.85,four({0x90,67,102}));
+        }
+        if(scenario=="clock"){
+            add(.08,{0xfa});add(.12,four({0x90,48,104}));add(.14,four({0x90,55,96}));add(.16,four({0x90,62,88}));
+            for(double t=.09;t<duration-.15;){add(t,{0xf8});t+=60./((t<1.?90.:180.)*24.);}
+            add(.25,four({0xb0,64,127}));add(.65,four({0x80,48,0}));add(.9,four({0xb0,64,0}));
+            add(1.35,{0xfc});add(1.55,{0xfb});add(1.7,four({0x90,69,109}));add(1.85,four({0x80,69,0}));
+        }
+        if(scenario=="steal"){
+            for(unsigned chord=0;chord<3;++chord){std::vector<uint8_t> data;
+                for(unsigned p=0;p<4;++p)for(unsigned n=0;n<6;++n)data.insert(data.end(),{uint8_t(0x90|p),uint8_t(36+p*6+n+chord*3),uint8_t(76+n*7)});
+                add(.12+chord*.48,std::move(data));}
+            add(.3,four({0xb0,64,127}));
+            for(unsigned group=0;group<2;++group){std::vector<uint8_t> data;
+                for(unsigned p=0;p<4;++p)for(unsigned n=0;n<6;++n)data.insert(data.end(),{uint8_t(0x80|p),uint8_t(36+p*6+n+group*3),0});
+                add(.5+group*.5,std::move(data));}
+            add(1.35,four({0xb0,64,0}));add(1.65,four({0xb0,120,0}));add(1.75,four({0x90,60,110}));
+        }
+        std::stable_sort(events.begin(),events.end(),[](const auto& a,const auto& b){return a.frame<b.frame;});
+        if(liveMode){if(!nativeMode)board->enableLiveMidiController();board->resetControllerMetrics();if(recording)board->enableControllerDelegationProfile();}
         if(recording)board->startControllerTrace();
         if(mode=="replay"){tape=ks::ControllerTape::load(argv[7]);board->startRecordedController(tape);}
         h8Start=board->cpu().cycles;size_t next=0;
         const auto begin=Clock::now();const double before=cpu();
         for(uint64_t n=0;n<frames;++n){
             if(toggling && n==native(.65))board->enableLiveMidiController(false);
-            if(toggling && n==native(.95)){board->enableLiveMidiController();if(recording)board->enableControllerDelegationProfile();}
+            if(toggling && n==native(.95)){if(nativeMode)board->enableNativeController();else board->enableLiveMidiController();if(recording)board->enableControllerDelegationProfile();}
             if(mode!="replay")while(next<events.size() && events[next].frame==n)send(events[next++].bytes);
             const auto a=board->renderSample();for(auto v:a){hash^=uint32_t(v);hash*=1099511628211ull;peak=std::max(peak,std::abs(int64_t(v)));}
         }
@@ -143,13 +196,25 @@ int main(int argc,char** argv){try{
             check(live.messages>0 && live.noteActions.noteOnCalls>0 && live.noteActions.noteOffCalls>0 && live.noteActions.pedalCalls>0,"Live note/sustain handlers were not exercised");
             check(live.voiceActions.allocationCalls>0 && live.voiceActions.startCalls>0 && live.voiceActions.releaseCalls>0 && live.voiceActions.transportSteps>0,"Live voice/transport handlers were not exercised");
             uint64_t delegated=0;for(const auto count:live.originalPages)delegated+=count;
-            if(recording)check(delegated==live.originalStepCalls && delegated>0,"Original H8 delegation accounting differs");}
+            if(recording)check(delegated==live.originalStepCalls && (nativeMode?delegated==0:delegated>0),"Original H8 delegation accounting differs");}
+        if(nativeMode){
+            check(board->nativeController()!=nullptr && board->nativeController()->steps>0,"Native runtime did not execute");
+            check(board->h8StepsSinceNativeHandoff()==0,"H8 executed after native handoff");
+            if(!toggling)check(board->h8InterpretedSteps()==bootH8Steps,"H8 executed during post-boot preparation/playback");
+        }
         if(mode=="replay"){
             check(board->cpu().cycles==h8Start,"Prototype executed H8 instructions");
             check(board->controllerCycles()==tape->endCycle && board->checkedControllerPorts()==tape->events.size(),"Prototype did not consume exact trace");
             const uint8_t note[]{0x90,60,100};check(!board->enqueueMidi(note,3),"Prototype accepted unsupported live MIDI");
         }
     }
+    auto digest=[](const auto& data){uint64_t h=14695981039346656037ull;for(auto b:data){h^=uint8_t(b);h*=1099511628211ull;}return h;};
+    std::vector<uint8_t> stateBytes,flashBytes;
+    if(mode!="replay"){const auto finalState=board->state();stateBytes=ks::stateMessage(finalState);
+        stateBytes.insert(stateBytes.end(),{finalState.globalChannel,finalState.activeMask});flashBytes=board->saveUserFlash();}
+    auto snapshotDigest=[&](const auto& data){return mode=="replay"?std::string("null"):"\""+std::to_string(digest(data))+"\"";};
+    std::vector<uint8_t> midiOut;uint8_t transmitted=0;while(board->popMidiOut(transmitted))midiOut.push_back(transmitted);
+    if(scenario=="state")check(board->flashRevision>0,"State scenario did not complete a Flash page write");
     const auto depth=board->serialDepth();std::ostringstream report;report<<std::setprecision(12)
         <<"{\"schema\":\"silver-k.controller-probe.v1\",\"mode\":\""<<mode<<"\",\"scenario\":\""<<scenario<<"\",\"controller_backend\":\""<<board->controllerBackend()
         <<"\",\"dsp_threads\":"<<(parallel?2:1)<<",\"frames\":"<<frames<<",\"audio_hash\":\""<<hash<<"\",\"peak\":"<<peak
@@ -159,7 +224,14 @@ int main(int argc,char** argv){try{
         <<",\"dsp_a_instructions\":"<<board->dsp(0).instructions()<<",\"dsp_b_instructions\":"<<board->dsp(1).instructions()
         <<",\"serial_depth\":["<<depth[0]<<','<<depth[1]<<"],\"serial_underruns\":["<<board->serialUnderruns[0]<<','<<board->serialUnderruns[1]
         <<"],\"serial_overflows\":["<<board->serialOverflows[0]<<','<<board->serialOverflows[1]<<']'
-        <<",\"checked_ports\":"<<board->checkedControllerPorts();
+        <<",\"checked_ports\":"<<board->checkedControllerPorts()
+        <<",\"state_digest\":"<<snapshotDigest(stateBytes)<<",\"flash_digest\":"<<snapshotDigest(flashBytes)
+        <<",\"flash_revision\":"<<board->flashRevision<<",\"midi_tx_digest\":"<<snapshotDigest(midiOut)<<",\"midi_tx_bytes\":"<<midiOut.size()
+        <<",\"midi_received\":"<<board->midiReceived;
+    report<<",\"h8_interpreted_steps_boot\":"<<bootH8Steps
+        <<",\"h8_interpreted_steps_after_boot\":"<<(board->h8InterpretedSteps()-bootH8Steps)
+        <<",\"h8_interpreted_steps_since_handoff\":"<<board->h8StepsSinceNativeHandoff();
+    if(const auto* runtime=board->nativeController())report<<",\"native_runtime_steps\":"<<runtime->steps<<",\"native_interrupt_entries\":"<<runtime->interruptEntries;
     if(tape)report<<",\"trace_events\":"<<tape->events.size()<<",\"trace_slices\":"<<tape->slices.size()<<",\"trace_digest\":\""<<tape->digest()<<"\",\"bus\":"<<Stats(*tape).json();
     if(const auto* live=board->liveMidiController()){report<<",\"native_midi_steps\":"<<live->nativeSteps<<",\"native_midi_bytes\":"<<live->bytes
         <<",\"native_midi_messages\":"<<live->messages<<",\"native_note_on\":"<<live->noteOn<<",\"native_note_off\":"<<live->noteOff<<",\"native_cc\":"<<live->controls
@@ -174,7 +246,7 @@ int main(int argc,char** argv){try{
             if(!first)report<<',';first=false;report<<"{\"page\":"<<page<<",\"calls\":"<<live->originalPages[page]<<'}';
         }report<<']';
     }
-    report<<",\"notes\":\"Original H8 always boots/prepares. Live mode ports MIDI decoding, note/key/pedal state, voice allocation/start/release and DSP host transport; UART/routing/parameter calculators/periodic voice service/clock/arp/state loaders remain H8. original_h8_step_calls includes interrupt arbitration, not instruction or CPU-time counts; page counts cover only the current enabled segment. Replay is separate finite tape playback. CPU counts whole process user+kernel on Windows, no boot/setup/trace file IO. Raw trace may contain private firmware/presets. No complete H8 replacement claimed.\"}";
+    report<<",\"notes\":\"Original H8 boots every mode. Native runtime takes over immediately after boot and also prepares/warmups without H8; verified fixed C++ control flow preserves the guest ABI/timing grid. Hybrid live mode retains original callees. h8 cycle fields are the shared guest clock, not proof of interpreted execution. Interpreter call counters establish handoff; native mode has no fallback. original_h8_step_calls includes interrupt arbitration, not instruction or CPU-time counts; page counts cover only the current enabled segment. Replay is separate finite tape playback. CPU counts whole process user+kernel on Windows, no boot/setup/trace file IO. Raw trace may contain private firmware/presets. Native runtime retains H8 state/clock storage for reversible comparison, not H8 instruction execution. ROM update/bootloader entry is outside the native playback range.\"}";
     std::ifstream existing(argv[4]);check(!existing.good(),"Refusing to overwrite controller report");std::ofstream out(argv[4]);out<<report.str();check(bool(out),"Cannot save controller report");
     std::cout<<report.str()<<'\n';return 0;
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}

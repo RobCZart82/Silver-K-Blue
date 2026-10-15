@@ -28,7 +28,7 @@ public:
     unsigned latency()const{return lead.load();}
     const char* workerWaitBackend()const{return "poll-50us";}
     const char* dspExecutionBackend()const{return parallelDSPs?"two-workers-slice-barrier":"sequential";}
-    const char* controllerBackend()const{return nativeMidi?"live-cpp-midi-hybrid":"original-h8";}
+    const char* controllerBackend()const{return nativeRuntime?"native-cpp-runtime":nativeMidi?"live-cpp-midi-hybrid":"original-h8";}
     const WorkerPlacement& workerPlacement()const{return placement;}
     void setAudioBuffer(unsigned block,unsigned floor);
     void ensureAudioBlock(unsigned block) noexcept;
@@ -37,6 +37,7 @@ private:
     baseLib::performance::Diagnostics* performance;
     const bool parallelDSPs;
     const bool nativeMidi;
+    const bool nativeRuntime;
     WorkerPlacement placement;
     struct Event{uint64_t due;uint8_t value;uint8_t part=255,length=0;};
     struct Frame{uint64_t due;std::array<float,OutputCount> value;};

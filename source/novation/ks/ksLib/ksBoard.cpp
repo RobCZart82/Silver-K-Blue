@@ -1,4 +1,5 @@
 #include "ksBoard.h"
+#include "ksControllerTimers.h"
 #include <algorithm>
 #include <stdexcept>
 #include <sstream>
@@ -66,6 +67,11 @@ uint8_t Board::read(uint32_t a){
     std::ostringstream s;s<<"Unmapped KS read 0x"<<std::hex<<a<<" pc="<<h8->getPC();throw std::runtime_error(s.str());
 }
 void Board::write(uint32_t a,uint8_t v){
+    if(nativeRuntime){
+        const uint32_t code=a>=0xa00000 && a<0xc00000?a-0xa00000:a;
+        if((code>=0x170 && code<0x172)||(code>=0x490 && code<0x2a0c)||(code>=0x2a18 && code<0xb8e8))
+            throw std::runtime_error("Native KS controller cannot modify verified executable SRAM");
+    }
     if(a<0x200000){if(overlay)h8->memory[0xa00000+a]=v;return;}
     if((a>=0xa00000 && a<0xc00000)||(a>=0xffdc00 && a<0xfffc00)){h8->memory[a]=v;return;}
     if(a>=0x800000 && a<0x880000){
@@ -85,7 +91,7 @@ void Board::write(uint32_t a,uint8_t v){
     }
     if(a>=0xfffe00){
         auto off=a&511;auto old=io[off];io[off]=v;
-        if(a==0xffff6f)overlay=!(v&1);
+        if(a==0xffff6f){overlay=!(v&1);if(nativeRuntime){h8->nativeLowBase=overlay?h8->memory+0xa00000:rom.data();h8->nativeLowSize=overlay?0x200000:unsigned(rom.size());h8->nativeLowWritable=overlay;}}
         if(a==0xffff39)h8->interruptMode2=(v&0x30)==0x20;
         if(a==0xffff8b){midiOut.push(v);io[0x18c]&=0x7b;txDue=h8->cycles+8000;}
         if(a==0xffff98 && (v&0x20) && !(old&0x20))adcDue=h8->cycles+1064;
@@ -107,6 +113,35 @@ void Board::tick(uint64_t previous){
         unsigned shift=unsigned(io[0x1d0]&7)*2;
         if(shift<8){auto count=(io[0x1d6]<<8)|io[0x1d7];auto compare=(io[0x1d8]<<8)|io[0x1d9];
             for(uint64_t n=previous>>shift;n<(now>>shift);++n){if(++count==compare){io[0x1d5]|=1;if(io[0x1d4]&1)h8->interrupt(32);if((io[0x1d0]&0x60)==0x20)count=0;}count&=65535;}
+            io[0x1d6]=count>>8;io[0x1d7]=count;
+        }
+    }
+    // OS 2.1.02 measures incoming MIDI-clock intervals with TPU1 TCNT1
+    // (0xffffe6). It selects TPSC=6, normal mode, no compare clearing:
+    // the H8S/2357 TPU clock table defines this as the CPU clock / 256.
+    // Leaving this counter at zero held the firmware PLL at its initial tempo.
+    if((io[0x1c0]&2) && (io[0x1e1]&15)==0 && io[0x1e0]==6){
+        const uint64_t elapsed=(now>>8)-(previous>>8);
+        const uint64_t count=((uint16_t(io[0x1e6])<<8)|io[0x1e7])+elapsed;
+        io[0x1e6]=uint8_t(count>>8);io[0x1e7]=uint8_t(count);
+        if(count>65535){io[0x1e5]|=4;if(io[0x1e4]&4)h8->interrupt(42);}
+    }
+    if(adcDue && now>=adcDue && (io[0x198]&0x20) && !(io[0x198]&0x80)){
+        io[0x198]|=0x80;adcDue=now+1064;if(io[0x198]&0x40)h8->interrupt(28);if(!(io[0x198]&0x10))io[0x198]&=~0x20;
+    }
+}
+// Native timers preserve the reference UART/ADC boundaries. TPU0 advances
+// arithmetically; the original per-clock loop above remains the H8 control.
+void Board::tickNative(uint64_t previous){
+    auto now=h8->cycles;
+    if(txDue && now>=txDue){txDue=0;io[0x18c]|=0x84;if(io[0x18a]&0x80)h8->interrupt(90);if(io[0x18a]&4)h8->interrupt(91);}
+    if((io[0x18a]&0x10) && now>=rxDue && !(io[0x18c]&0x40)){uint8_t b;if(midiIn.pop(b)){io[0x18d]=b;io[0x18c]|=0x40;rxDue=now+8000;++midiReceived;if(io[0x18a]&0x40)h8->interrupt(89);}}
+
+    if((io[0x1c0]&1) && (io[0x1d1]&15)==0){
+        unsigned shift=unsigned(io[0x1d0]&7)*2;
+        if(shift<8){auto count=(io[0x1d6]<<8)|io[0x1d7];auto compare=(io[0x1d8]<<8)|io[0x1d9];
+            const auto timer=advanceControllerTimer(uint16_t(count),uint16_t(compare),(now>>shift)-(previous>>shift),(io[0x1d0]&0x60)==0x20);
+            count=timer.count;if(timer.matched){io[0x1d5]|=1;if(io[0x1d4]&1)h8->interrupt(32);}
             io[0x1d6]=count>>8;io[0x1d7]=count;
         }
     }
@@ -238,7 +273,9 @@ void Board::advance(uint32_t budget){
             [this](unsigned i,unsigned offset,uint8_t value){++hostWrites[i];return dsps[i]->hostWrite(offset,value);});
     }else{
         const auto begin=h8->cycles;if(controllerRecorder)controllerRecorder->beginSlice(begin);
-        if(liveMidi){
+        if(nativeRuntime){
+            while(h8->cycles-begin<budget){auto before=h8->cycles;nativeRuntime->step(*h8);tickNative(before);}
+        }else if(liveMidi){
             while(h8->cycles-begin<budget){auto before=h8->cycles;
                 const unsigned pc=h8->getPC();
                 if(!LiveMidiController::candidate(pc) || !liveMidi->step(*h8)){liveMidi->delegated(pc);h8->step();}
@@ -318,7 +355,19 @@ void Board::startRecordedController(std::shared_ptr<const ControllerTape> tape){
 }
 void Board::enableLiveMidiController(bool enabled){
     if(recordedController || !ready)throw std::logic_error("Live KS MIDI requires completed original boot, without replay");
+    nativeRuntime.reset();h8->interpreterAllowed=true;h8->nativeFetchClocksOnly=false;h8->nativeLowBase=nullptr;
     if(enabled){if(!liveMidi)liveMidi=std::make_unique<LiveMidiController>(*h8);}
     else liveMidi.reset(); // All guest ABI state remains current; H8 can resume.
+}
+void Board::enableNativeController(bool enabled){
+    if(!enabled){enableLiveMidiController(false);return;}
+    if(recordedController || !ready || !started[0] || !started[1])throw std::logic_error("Native KS runtime requires completed original boot without replay");
+    if(nativeRuntime)return;
+    // Validate/allocate before changing ownership or disabling the interpreter.
+    auto state=std::make_unique<LiveMidiController>(*h8);
+    auto runtime=std::make_unique<RuntimeController>(*h8,*state);
+    liveMidi=std::move(state);nativeRuntime=std::move(runtime);
+    nativeH8Steps=h8->interpretedSteps;h8->interpreterAllowed=false;h8->nativeFetchClocksOnly=true;
+    h8->nativeLowBase=overlay?h8->memory+0xa00000:rom.data();h8->nativeLowSize=overlay?0x200000:unsigned(rom.size());h8->nativeLowWritable=overlay;
 }
 }

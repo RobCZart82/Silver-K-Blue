@@ -9,7 +9,7 @@
 #include "dsp56kBase/audioworkgroup.h"
 namespace ks {
 Device::Device(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,const std::vector<uint8_t>& flash,double hostRate,int block,const std::vector<uint8_t>& program,baseLib::performance::Diagnostics* diagnostics)
-:performance(diagnostics),parallelDSPs([]{const auto* v=std::getenv("SILVER_KS_DSP_THREADS");return v&&std::strcmp(v,"2")==0;}()),nativeMidi([]{const auto* v=std::getenv("SILVER_KS_CONTROLLER");return v&&std::strcmp(v,"native-midi")==0;}()),baseLead(std::min(4096,std::max(256,block+128))),lead(baseLead),rate(hostRate){
+:performance(diagnostics),parallelDSPs([]{const auto* v=std::getenv("SILVER_KS_DSP_THREADS");return v&&std::strcmp(v,"2")==0;}()),nativeMidi([]{const auto* v=std::getenv("SILVER_KS_CONTROLLER");return v&&std::strcmp(v,"native-midi")==0;}()),nativeRuntime([]{const auto* v=std::getenv("SILVER_KS_CONTROLLER");return v&&std::strcmp(v,"native")==0;}()),baseLead(std::min(4096,std::max(256,block+128))),lead(baseLead),rate(hostRate){
  realtimeBlock.store(unsigned(std::max(64,block)));
  const auto* cores=std::getenv("SILVER_KS_WORKER_CORES");
  const bool performanceCores=cores&&std::strcmp(cores,"p")==0;
@@ -20,7 +20,7 @@ Device::Device(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,c
   dsp56k::ThreadTools::setCurrentThreadPriority(dsp56k::ThreadPriority::High);
   dsp56k::AudioWorkgroup::Member audioWorkgroup;
   try{board=std::make_unique<Board>(os,bank,flash,true);if(!board->boot())throw std::runtime_error("KS controller boot timeout");
-   if(nativeMidi)board->enableLiveMidiController();
+   if(nativeRuntime)board->enableNativeController();else if(nativeMidi)board->enableLiveMidiController();
    if(program.size()==270 || program.size()==1038){
     const uint8_t select[]{uint8_t(0xb0|(flash[0x1ff08]&15)),32,uint8_t(program.size()==1038?65:33),uint8_t(0xc0|(flash[0x1ff08]&15)),0};
     board->enqueueMidi(select,sizeof(select));board->enqueueMidi(program.data(),program.size());
