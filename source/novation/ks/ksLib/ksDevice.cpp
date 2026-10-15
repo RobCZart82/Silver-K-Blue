@@ -3,19 +3,24 @@
 #include <chrono>
 #include <cmath>
 #include <stdexcept>
+#include <cstdlib>
+#include <cstring>
 #include "dsp56kBase/threadtools.h"
 #include "dsp56kBase/audioworkgroup.h"
 namespace ks {
-Device::Device(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,const std::vector<uint8_t>& flash,double hostRate,int block,const std::vector<uint8_t>& program)
-:baseLead(std::min(4096,std::max(256,block+128))),lead(baseLead),rate(hostRate){
+Device::Device(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,const std::vector<uint8_t>& flash,double hostRate,int block,const std::vector<uint8_t>& program,baseLib::performance::Diagnostics* diagnostics)
+:performance(diagnostics),parallelDSPs([]{const auto* v=std::getenv("SILVER_KS_DSP_THREADS");return v&&std::strcmp(v,"2")==0;}()),nativeMidi([]{const auto* v=std::getenv("SILVER_KS_CONTROLLER");return v&&std::strcmp(v,"native-midi")==0;}()),baseLead(std::min(4096,std::max(256,block+128))),lead(baseLead),rate(hostRate){
  realtimeBlock.store(unsigned(std::max(64,block)));
- worker=std::thread([this,os,bank,flash,program,block]{
+ const auto* cores=std::getenv("SILVER_KS_WORKER_CORES");
+ const bool performanceCores=cores&&std::strcmp(cores,"p")==0;
+ worker=std::thread([this,os,bank,flash,program,block,performanceCores]{
   dsp56k::ThreadTools::setCurrentThreadName("KS H8S / dual DSP");
   // Boot and JIT compilation have no audio deadline. Enter the realtime band
   // only after warm-up, so a long cold compile cannot demote the live worker.
   dsp56k::ThreadTools::setCurrentThreadPriority(dsp56k::ThreadPriority::High);
   dsp56k::AudioWorkgroup::Member audioWorkgroup;
   try{board=std::make_unique<Board>(os,bank,flash,true);if(!board->boot())throw std::runtime_error("KS controller boot timeout");
+   if(nativeMidi)board->enableLiveMidiController();
    if(program.size()==270 || program.size()==1038){
     const uint8_t select[]{uint8_t(0xb0|(flash[0x1ff08]&15)),32,uint8_t(program.size()==1038?65:33),uint8_t(0xc0|(flash[0x1ff08]&15)),0};
     board->enqueueMidi(select,sizeof(select));board->enqueueMidi(program.data(),program.size());
@@ -60,13 +65,20 @@ Device::Device(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,c
    for(unsigned i=0;i<lead;++i){output.push(Frame{produced,nextSample()});++produced;}
    dsp56k::ThreadTools::setCurrentThreadPriority(dsp56k::ThreadPriority::Highest);
    dsp56k::ThreadTools::setCurrentThreadRealtimeParameters(int(rate),std::max(64,block));
+   placement=applyWorkerPlacement(performanceCores);
+   if(parallelDSPs)board->enableDspWorkers(int(rate),unsigned(std::max(64,block)));
    running.store(true);{std::lock_guard lock(startMutex);started=true;}startCV.notify_one();
    auto configuredBlock=realtimeBlock.load();
+   board->setPerformanceDiagnostics(performance);
+   baseLib::performance::WorkerSegment workTiming(performance);
    while(!stopping.load()){
-    if(pause.load()){paused.store(true);while(pause.load() && !stopping.load())std::this_thread::sleep_for(std::chrono::microseconds(50));paused.store(false);continue;}
-    const auto block=realtimeBlock.load();if(block!=configuredBlock){dsp56k::ThreadTools::setCurrentThreadRealtimeParameters(int(rate),int(block));configuredBlock=block;}
+    if(pause.load()){workTiming.flush();paused.store(true);while(pause.load() && !stopping.load())std::this_thread::sleep_for(std::chrono::microseconds(50));paused.store(false);continue;}
+    const auto block=realtimeBlock.load();if(block!=configuredBlock){dsp56k::ThreadTools::setCurrentThreadRealtimeParameters(int(rate),int(block));board->configureDspWorkers(int(rate),block);configuredBlock=block;}
     audioWorkgroup.update();
-    if(produced>=consumed.load()+lead){std::this_thread::sleep_for(std::chrono::microseconds(50));continue;}
+    // Event parking reduced wake latency but regressed KS throughput in repeated
+    // 64- and 128-frame tests. Keep the legacy wait for KS until that is resolved.
+    if(produced>=consumed.load()+lead){workTiming.flush();baseLib::performance::Scope sleepTiming(performance,baseLib::performance::Metric::Sleep);std::this_thread::sleep_for(std::chrono::microseconds(50));continue;}
+    workTiming.start();
     Event e{};while(events.peek(e) && e.due<=produced){
      if(e.part<PartCount){
       std::array<uint8_t,9> packet{};const auto part=e.part,length=e.length;
@@ -77,6 +89,7 @@ Device::Device(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,c
     }
     Frame f{produced,nextSample()};if(produced>=consumed.load())output.push(f);++produced;
     if(!(produced&1023))publish();
+    workTiming.frame();
    }
   }catch(const std::exception& e){failure=e.what();running.store(false);{std::lock_guard lock(startMutex);started=true;}startCV.notify_one();}
  });
@@ -106,22 +119,28 @@ void Device::process(float* l,float* r,size_t n,bool offline){
  process({l,r,nullptr,nullptr},n,offline);
 }
 void Device::process(const std::array<float*,OutputCount>& channels,size_t n,bool offline){
+ using namespace baseLib::performance;
+ const auto epoch=performance?performance->epoch():0;
+ if(epoch)performance->add(Metric::QueueDepth,epoch,output.size());
+ uint64_t missing=0,stale=0;
  const auto begin=consumed.load();Frame f{};
  for(size_t i=0;i<n;++i){auto due=begin+i;
   // This wait is exclusively for a host explicitly selecting offline rendering.
   // The realtime branch has no waits, I/O, locks, heap allocation or guest execution.
   if(offline){while(running.load() && !stopping.load() && output.size()==0)std::this_thread::yield();}
-  while(output.peek(f) && f.due<due)output.pop(f);
+  while(output.peek(f) && f.due<due){output.pop(f);if(epoch)++stale;}
   if(output.peek(f) && f.due==due){output.pop(f);for(unsigned c=0;c<OutputCount;++c)if(channels[c])channels[c][i]=f.value[c];}
-  else {for(auto* channel:channels)if(channel)channel[i]=0;++underrun;}
+  else {for(auto* channel:channels)if(channel)channel[i]=0;++underrun;if(epoch)++missing;}
   consumed.store(due+1,std::memory_order_release);
  }
  // A fast offline caller can empty the queue at the final sample. Refill
  // before returning so an immediate offline -> realtime transition starts
  // with the advertised lead, without waiting in the realtime callback.
  if(offline)while(running.load() && !stopping.load() && output.size()<lead)std::this_thread::yield();
+ if(epoch){performance->add(Metric::MissingFrames,epoch,missing);performance->add(Metric::StaleFrames,epoch,stale);}
 }
 void Device::publish(){
+ baseLib::performance::Scope snapshotTiming(performance,baseLib::performance::Metric::Snapshot);
  diagnosticProduced.store(produced);diagnosticMidi.store(board->midiReceived);diagnosticWave.store(board->waveReads);
  if(publishedFlashRevision!=board->flashRevision){
   // Host serialization may copy a large bank. The worker never waits for it.

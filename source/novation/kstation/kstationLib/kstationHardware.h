@@ -2,6 +2,7 @@
 
 #include "kstationDSP.h"
 #include "kstationH8.h"
+#include "baseLib/performanceDiagnostics.h"
 
 namespace kstation
 {
@@ -17,8 +18,11 @@ namespace kstation
         bool popMidiOut(uint8_t& byte) { return m_h8.popMidiOut(byte); }
         H8& controller() { return m_h8; }
         DSP& dsp() { return m_dsp; }
+        void setPerformanceDiagnostics(baseLib::performance::Diagnostics* p){m_performance=p;}
 
     private:
+        baseLib::performance::Diagnostics* m_performance=nullptr;
+        uint64_t m_diagnosticAdvances=0;
         void advance();
         uint64_t m_h8Cycles = 0;
         int64_t m_dspEpoch = 0;

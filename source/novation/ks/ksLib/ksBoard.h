@@ -1,5 +1,8 @@
 #pragma once
 #include "ksDSP.h"
+#include "ksDspWorkers.h"
+#include "ksControllerTrace.h"
+#include "ksLiveMidiController.h"
 #include "ksPlaceholderMidi.h"
 #include "ksState.h"
 #include "ksPartMidi.h"
@@ -10,9 +13,10 @@
 #include <string>
 #include "../../kstation/kstationLib/kstationQueue.h"
 #include "../../kstation/kstationLib/kstationMidiQueue.h"
+#include "baseLib/performanceDiagnostics.h"
 
 namespace ks {
-// Owns the controller and both DSPs; accessed only by the emulation worker.
+// Coordinator owns H8/IO. Optional DSP workers run only inside a joined slice.
 class Board final : public H8SDevice {
 public:
     static constexpr uint32_t ControllerClockHz=25000000;
@@ -21,6 +25,19 @@ public:
     static constexpr uint32_t WaveBase=0x860000, WaveSize=129024;
     Board(const std::vector<uint8_t>& os, const std::vector<uint8_t>& bank,const std::vector<uint8_t>& storage={},bool isolateParts=false);
     void advance(uint32_t budget=128);
+    void enableDspWorkers(int rate,unsigned block);
+    void configureDspWorkers(int rate,unsigned block){if(dspWorkers)dspWorkers->configure(rate,block);}
+    void setPerformanceDiagnostics(baseLib::performance::Diagnostics* p){performance=p;}
+    // Coordinator/quiescent boundaries only. Replay is fixture-only and has no
+    // live MIDI/state API; disable by constructing a fresh original-H8 Board.
+    void startControllerTrace(size_t events=ControllerTape::MaxEvents,size_t slices=ControllerTape::MaxSlices);
+    std::shared_ptr<const ControllerTape> finishControllerTrace();
+    void startRecordedController(std::shared_ptr<const ControllerTape>);
+    void enableLiveMidiController(bool enabled=true);
+    const LiveMidiController* liveMidiController()const{return liveMidi.get();}
+    const char* controllerBackend()const{return recordedController?"recorded-cpp-prototype":liveMidi?"live-cpp-midi-hybrid":"original-h8";}
+    uint64_t controllerCycles()const{return recordedController?recordedController->cycles():h8->cycles;}
+    uint64_t checkedControllerPorts()const{return recordedController?recordedController->checkedPorts():0;}
     bool enqueueMidi(const uint8_t* b,size_t n);
     bool enqueuePartMidi(unsigned part,const uint8_t* b,size_t n);
     bool zeroBank()const{return placeholder.enabled;}
@@ -45,11 +62,15 @@ public:
     void discardAudio(){audio.reset();}
     std::string lcd;
 private:
+    baseLib::performance::Diagnostics* performance=nullptr; // worker-owned attachment
+    uint64_t diagnosticAdvances=0;
     void tick(uint64_t previous);
     void adaptStoredProgram(uint8_t*,size_t);
     void muteStoredPrograms();
     bool enqueueNativeMidi(const uint8_t*,size_t);
-    std::unique_ptr<H8SEmulator> h8;
+    void catchUpDsp(unsigned index,int64_t target,bool sampled);
+    uint64_t controllerCheckpoint()const;
+    std::unique_ptr<ControllerCpu> h8;
     std::array<std::unique_ptr<DSP>,2> dsps;
     std::vector<uint8_t> rom,flash,waves;
     std::array<uint8_t,512> io{};
@@ -66,5 +87,10 @@ private:
     kstation::Queue<AudioFrame,8192> audio;
     kstation::Queue<DSP::SerialFrame,8192> aToB,bToA;
     uint32_t flashCommand=0,pageRemaining=0;
+    std::unique_ptr<ControllerRecorder> controllerRecorder;
+    std::unique_ptr<RecordedController> recordedController;
+    std::unique_ptr<LiveMidiController> liveMidi;
+    // Destroy/join before any DSP, queue, diagnostics or callback state.
+    std::unique_ptr<DspWorkers> dspWorkers;
 };
 }

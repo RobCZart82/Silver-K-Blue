@@ -37,7 +37,7 @@ static void render(Processor& p,ReentrantHost& host){
  if(p.isKStation()){
   // Use an explicit dry sustained tone, independent of the firmware's selected
   // factory program and envelope/arp phase after a state round trip.
-  std::vector<uint8_t> data(142,0);
+  synthLib::SysexBuffer data(142,0);
   const uint8_t header[]{0xf0,0,0x20,0x29,1,0x41,0x7f,0,0,0x11,1,0,0};
   std::copy_n(header,13,data.begin());data.back()=0xf7;
   for(const auto& control:kstation::controls::Catalog)if(control.patchOffset>=0){

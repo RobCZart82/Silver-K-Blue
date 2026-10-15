@@ -72,7 +72,7 @@ void Processor::rebuild(){
  controlChannel.store(flash.size()>0x1ff08?flash[0x1ff08]&15:0);
  stopEngines();
  if(os.empty()||bank.size()!=ks::Board::WaveSize||flash.size()!=0x80000)return;
- auto d=std::make_unique<ks::Device>(os,bank,flash,hostRate,hostBlock,programToRestore);
+ auto d=std::make_unique<ks::Device>(os,bank,flash,hostRate,hostBlock,programToRestore,&performanceDiagnostics);
  if(!d->valid()){message=d->error();return;}
  ownedDevice=std::move(d);applyBufferProfile();auto* dReady=ownedDevice.get();
  const auto state=dReady->fullSnapshot();wireShadow=state.parts;for(auto& mask:wirePendingMask)mask.fill(0);multi.store(state.performance);activeMask.store(state.activeMask);
@@ -127,9 +127,14 @@ void Processor::prepareHostClock(int samples){
  hostClock.begin(position,hostRate,samples);
 }
 void Processor::processBlock(juce::AudioBuffer<float>& audio,juce::MidiBuffer& midi){
+ using namespace baseLib::performance;
+ Scope callbackTiming(&performanceDiagnostics,Metric::Callback,uint64_t(audio.getNumSamples()),hostRate>0?uint64_t(audio.getNumSamples()*1.0e9/hostRate):0);
+ const auto diagnosticEpoch=performanceDiagnostics.epoch();
+ if(diagnosticEpoch){performanceDiagnostics.add(Metric::HostFrames,diagnosticEpoch,uint64_t(audio.getNumSamples()));performanceDiagnostics.add(Metric::OfflineCallbacks,diagnosticEpoch,isNonRealtime()?1:0);}
  juce::ScopedNoDenormals no;activeAudio.fetch_add(1);
  struct Guard{std::atomic<unsigned>& n;~Guard(){--n;}} guard{activeAudio};if(auto* k=kDevice.load()){observeAudioBlock(audio.getNumSamples());if(buffering.load()==0)k->device.ensureAudioBlock(uint32_t(audio.getNumSamples()),float(k->rate));prepareHostClock(audio.getNumSamples());processK(*k,audio,midi);return;}auto* d=device.load();
  if(!d){audio.clear();midi.clear();return;}
+ Scope controlTiming(&performanceDiagnostics,Metric::Controls);
  observeAudioBlock(audio.getNumSamples());if(buffering.load()==0)d->ensureAudioBlock(unsigned(audio.getNumSamples()));
  prepareHostClock(audio.getNumSamples());
  selectClockSource([&](const uint8_t* data,size_t size){d->midi(data,size);});
@@ -155,6 +160,7 @@ void Processor::processBlock(juce::AudioBuffer<float>& audio,juce::MidiBuffer& m
  std::array<float*,ks::OutputCount> channels{audio.getWritePointer(0),audio.getWritePointer(1),nullptr,nullptr};
  if(wrapperType==wrapperType_Standalone && getMainBusNumOutputChannels()==4){channels[2]=audio.getWritePointer(2);channels[3]=audio.getWritePointer(3);}
  else if(getBusCount(false)>1 && getBus(false,1)->isEnabled()){auto aux=getBusBuffer(audio,false,1);channels[2]=aux.getWritePointer(0);channels[3]=aux.getWritePointer(1);}
+ controlTiming.finish();Scope renderTiming(&performanceDiagnostics,Metric::AudioRender,uint64_t(audio.getNumSamples()));
  d->process(channels,audio.getNumSamples(),isNonRealtime());midi.clear();
 }
 juce::String Processor::status()const{if(isFirmwareLoading())return "Loading firmware...";std::lock_guard guard(controlMutex);return message;}
@@ -226,9 +232,9 @@ void Processor::timerCallback(){
  notifyHostLatency();
 }
 void Processor::setBufferProfile(int profile){{std::lock_guard lock(controlMutex);buffering.store(juce::jlimit(0,3,profile));applyBufferProfile();}notifyHostLatency();savePreferences();}
-void Processor::stopEngines(){pendingHostLatency.store(-1);resetClock.store(true);device.store(nullptr);kDevice.store(nullptr);while(activeAudio.load())std::this_thread::yield();observedBlock.store(0);lastObservedBlock=0;ownedDevice.reset();ownedK.reset();}
+void Processor::stopEngines(){if(performanceDiagnostics.mode()){performanceDiagnostics.stop();performanceStoppedMs=juce::Time::getMillisecondCounterHiRes();performanceStopReason="engine_rebuilt_or_stopped";}pendingHostLatency.store(-1);resetClock.store(true);device.store(nullptr);kDevice.store(nullptr);while(activeAudio.load())std::this_thread::yield();observedBlock.store(0);lastObservedBlock=0;ownedDevice.reset();ownedK.reset();}
 void Processor::rebuildK(){stopEngines();kMode.store(true);multi.store(false);activeMask.store(1);selectedPart.store(0);resetPending();{std::lock_guard lock(uiMidiMutex);uiMidi.reset();}
- try{auto k=std::make_unique<KEngine>(kRom,hostRate,hostBlock,kState,buffering.load()==0?0u:256u<<buffering.load());ownedK=std::move(k);applyBufferProfile();kWire.fill(0);kMask.fill(0);resetClock.store(true);kDevice.store(ownedK.get());message="K-Station OS 2.1.01";}catch(const std::exception& e){message=e.what();}}
+ try{auto k=std::make_unique<KEngine>(kRom,hostRate,hostBlock,kState,buffering.load()==0?0u:256u<<buffering.load(),&performanceDiagnostics);ownedK=std::move(k);applyBufferProfile();kWire.fill(0);kMask.fill(0);resetClock.store(true);kDevice.store(ownedK.get());message="K-Station OS 2.1.01";}catch(const std::exception& e){message=e.what();}}
 bool Processor::loadFirmware(const juce::File& file,juce::String& error){
  const juce::ScopeGuard notify{[this]{notifyHostLatency();}};
  startupPending.store(false);
@@ -270,12 +276,14 @@ const Control* Processor::spec(const juce::String& id)const{static const auto k=
 juce::String Processor::uiParameterId(const juce::String& id)const{return isKStation()?"k_"+id:currentPart()?"part"+juce::String(currentPart()+1)+"_"+id:id;}
 juce::RangedAudioParameter* Processor::uiParameter(const juce::String& id){return parameters.getParameter(uiParameterId(isKStation()?id:semanticId(id)));}
 void Processor::processK(KEngine& engine,juce::AudioBuffer<float>& audio,juce::MidiBuffer& midi){
+ baseLib::performance::Scope controlTiming(&performanceDiagnostics,baseLib::performance::Metric::Controls);
  selectClockSource([&](const uint8_t* data,size_t size){engine.midi(data,size);});
  uint8_t ui[4096];size_t count=0;while(count<sizeof(ui) && uiMidi.pop(ui[count]))++count;if(count)engine.midi(ui,count);
  std::array<uint8_t,128> patch;std::array<uint8_t,2048> cc;uint64_t revision;
  if(engine.device.getControlSnapshot(patch,cc,revision)){if(resetWire.exchange(false))kMask.fill(0);for(const auto& c:kstation::controls::Catalog){const size_t slot=c.number+(c.mapping==kstation::controls::Mapping::NRPN?128:0);const auto raw=c.patchOffset>=0?patch[c.patchOffset]:kWire[slot];if(((raw^kWire[slot])&kMask[slot])==0)kMask[slot]=0;kWire[slot]=uint8_t((raw&~kMask[slot])|(kWire[slot]&kMask[slot]));}}
  for(size_t i=0;i<KCount;++i){int value=pending[ParameterCount+i].exchange(-1);if(value<0)continue;const auto& c=kstation::controls::Catalog[i];const size_t slot=c.number+(c.mapping==kstation::controls::Mapping::NRPN?128:0);auto& raw=kWire[slot];raw=uint8_t((raw&~c.wireMask)|((value<<c.wireShift)&c.wireMask));kMask[slot]|=c.wireMask;const auto status=uint8_t(0xb0|controlChannel.load());if(c.mapping==kstation::controls::Mapping::NRPN){const uint8_t bytes[]{status,99,0,status,98,uint8_t(c.number),status,6,raw};engine.midi(bytes,9);}else{const uint8_t bytes[]{status,uint8_t(c.number),raw};engine.midi(bytes,3);}}
  sendTimedMidi(midi,[&](const uint8_t* data,size_t size,int offset){engine.midi(data,size,uint32_t(offset));});
+ controlTiming.finish();baseLib::performance::Scope renderTiming(&performanceDiagnostics,baseLib::performance::Metric::AudioRender,uint64_t(audio.getNumSamples()));
  engine.process(audio.getWritePointer(0),audio.getWritePointer(1),audio.getNumSamples(),isNonRealtime(),getTotalNumInputChannels()?audio.getReadPointer(0):nullptr);for(int ch=2;ch<audio.getNumChannels();++ch)audio.clear(ch,0,audio.getNumSamples());midi.clear();
 }
 bool Processor::activatePatch(const pluginLib::patchDB::PatchPtr& patch,juce::String& error){return activatePatchForPart(patch,currentPart(),error);}

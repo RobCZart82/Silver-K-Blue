@@ -2,6 +2,7 @@
 #include "kstationHardware.h"
 #include "kstationQueue.h"
 #include "kstationRomLoader.h"
+#include "baseLib/workerWakeup.h"
 
 #include "dsp56kBase/threadtools.h"
 #include "dsp56kBase/audioworkgroup.h"
@@ -38,6 +39,9 @@ namespace kstation
 
     struct Device::Impl
     {
+        baseLib::performance::Diagnostics* performance;
+        baseLib::WorkerWakeup wakeup;
+        uint64_t diagnosticStale=0; // audio-thread only
         std::unique_ptr<Hardware> hardware;
         Queue<TimedAudioFrame, 8192> audio;
         Queue<MidiByte, 65536> midi;
@@ -65,7 +69,8 @@ namespace kstation
         std::thread worker;
         uint64_t produced = 0;
 
-        explicit Impl(const Rom& rom)
+        explicit Impl(const Rom& rom,baseLib::performance::Diagnostics* diagnostics)
+            :performance(diagnostics)
         {
             for (auto& cc : controllers) cc.store(0xff, std::memory_order_relaxed);
             if (!rom.isValid()) { failure = rom.error(); return; }
@@ -130,11 +135,13 @@ namespace kstation
         {
             stop.store(true, std::memory_order_release);
             pauseRequested.store(false, std::memory_order_release);
+            wakeup.notify(performance);
             if (worker.joinable()) worker.join();
         }
 
         void publishSnapshot()
         {
+            baseLib::performance::Scope timing(performance,baseLib::performance::Metric::Snapshot);
             if(publishedFlashRevision!=hardware->controller().flashRevision())
             {
                 std::unique_lock lock(flashSnapshotMutex,std::try_to_lock);
@@ -165,12 +172,15 @@ namespace kstation
 
         void run()
         {
+            hardware->setPerformanceDiagnostics(performance);
+            baseLib::performance::WorkerSegment workTiming(performance);
             dsp56k::AudioWorkgroup::Member audioWorkgroup;
             unsigned configuredBlock=0;
             while (!stop.load(std::memory_order_acquire))
             {
                 if (pauseRequested.load(std::memory_order_acquire))
                 {
+                    workTiming.flush();
                     paused.store(true, std::memory_order_release);
                     while (pauseRequested.load(std::memory_order_acquire) && !stop.load())
                         std::this_thread::sleep_for(std::chrono::microseconds(100));
@@ -184,10 +194,14 @@ namespace kstation
                     || produced - lastSnapshotFrame >= 1024) publishSnapshot();
                 if (produced >= consumed.load(std::memory_order_acquire) + leadFrames.load(std::memory_order_relaxed))
                 {
-                    std::this_thread::sleep_for(std::chrono::microseconds(50));
+                    workTiming.flush();
+                    baseLib::performance::Scope sleepTiming(performance,baseLib::performance::Metric::Sleep);
+                    wakeup.waitWhile([&]{return !stop.load(std::memory_order_acquire) && !pauseRequested.load(std::memory_order_acquire)
+                        && produced>=consumed.load(std::memory_order_acquire)+leadFrames.load(std::memory_order_relaxed);},performance);
                     continue;
                 }
                 MidiByte event{};
+                workTiming.start();
                 while (midi.peek(event) && event.due <= produced)
                 {
                     // Missing factory slots are erased memory. Do not let a host
@@ -225,6 +239,7 @@ namespace kstation
                 // output so a guest dump cannot block its transmitting firmware.
                 uint8_t discarded;
                 while (hardware->popMidiOut(discarded)) {}
+                workTiming.frame();
             }
         }
 
@@ -239,6 +254,7 @@ namespace kstation
                 if (queued.due > position) return false;
                 audio.pop(queued);
                 if (queued.due == position) { frame=queued.frame; return true; }
+                if(performance && performance->mode())++diagnosticStale;
             }
             return false;
         }
@@ -247,6 +263,7 @@ namespace kstation
         {
             if (!valid.load(std::memory_order_acquire)) return false;
             pauseRequested.store(true, std::memory_order_release);
+            wakeup.notify(performance);
             while (!paused.load(std::memory_order_acquire))
             {
                 if (!valid.load(std::memory_order_acquire))
@@ -269,10 +286,10 @@ namespace kstation
         }
     };
 
-    Device::Device(const synthLib::DeviceCreateParams& params) : synthLib::Device(params)
+    Device::Device(const synthLib::DeviceCreateParams& params,baseLib::performance::Diagnostics* performance) : synthLib::Device(params)
     {
         const auto rom = params.romData.empty() ? RomLoader::findROM() : Rom(params.romData, params.romName);
-        m_impl = std::make_unique<Impl>(rom);
+        m_impl = std::make_unique<Impl>(rom,performance);
     }
     Device::~Device() = default;
     bool Device::isValid() const { return m_impl->valid.load(std::memory_order_acquire); }
@@ -286,7 +303,7 @@ namespace kstation
     uint32_t Device::getInternalLatencyMidiToOutput() const { return static_cast<uint32_t>(m_impl->leadFrames.load(std::memory_order_relaxed)); }
     uint32_t Device::getInternalLatencyInputToOutput() const { return static_cast<uint32_t>(m_impl->leadFrames.load(std::memory_order_relaxed)); }
     uint64_t Device::getUnderrunCount() const { return m_impl->underruns.load(); }
-    void Device::setBufferFloor(unsigned frames){m_impl->leadFrames.store(std::max(m_impl->baseLeadFrames.load(),size_t(std::min(4096u,frames))));}
+    void Device::setBufferFloor(unsigned frames){m_impl->leadFrames.store(std::max(m_impl->baseLeadFrames.load(),size_t(std::min(4096u,frames))));m_impl->wakeup.notify(m_impl->performance);}
     void Device::setAudioBuffer(uint32_t block,float rate,unsigned floor){
         const auto burst=size_t(std::ceil(double(block)*DSP::SampleRate/rate));
         const auto lead=std::min(size_t(8064),std::max(MinimumLeadFrames,(burst+LeadMarginFrames+127)&~size_t(127)));
@@ -299,6 +316,7 @@ namespace kstation
         for(unsigned attempt=0;attempt<4 && lead<needed;++attempt)if(m_impl->leadFrames.compare_exchange_weak(lead,needed)){m_impl->realtimeBlock.store(unsigned(std::max(size_t(64),burst)));break;}
     }
     uint64_t Device::getMidiOverflowCount() const { return m_impl->midiOverflows.load(); }
+    const char* Device::workerWaitBackend() const {return m_impl->wakeup.backend();}
     void Device::setNonRealtime(bool enabled) noexcept { m_impl->nonRealtime.store(enabled, std::memory_order_release); }
 
     bool Device::prepareAudio(uint32_t maxHostBlock, float hostSamplerate)
@@ -375,6 +393,12 @@ namespace kstation
 
     void Device::processAudio(const synthLib::TAudioInputs& inputs, const synthLib::TAudioOutputs& outputs, size_t samples)
     {
+        using namespace baseLib::performance;
+        auto* performance=m_impl->performance;
+        const auto epoch=performance?performance->epoch():0;
+        const auto staleBefore=m_impl->diagnosticStale;
+        uint64_t missing=0;
+        if(epoch)performance->add(Metric::QueueDepth,epoch,m_impl->audio.size());
         auto consumed = m_impl->consumed.load(std::memory_order_relaxed);
         const bool offline = m_impl->nonRealtime.load(std::memory_order_acquire);
         const auto lead = m_impl->leadFrames.load(std::memory_order_relaxed);
@@ -385,6 +409,7 @@ namespace kstation
             bool available = m_impl->popAudioAt(consumed, frame);
             if (!available && offline)
             {
+                m_impl->wakeup.notify(performance);
                 // A DAW bounce has no realtime deadline. Wait on the lock-free
                 // queue so a fast host cannot turn worker lag into silent audio.
                 // CPU/JIT execution stays on its single owner; the realtime
@@ -396,12 +421,15 @@ namespace kstation
                 }
             }
             if (!available && isValid()) m_impl->underruns.fetch_add(1, std::memory_order_relaxed);
+            if(epoch && !available)++missing;
             for (size_t channel = 0; channel < outputs.size(); ++channel)
                 if (outputs[channel]) outputs[channel][i] = channel < 2 ? float(frame[channel]) / 8388608.0f : 0.0f;
             m_impl->consumed.store(++consumed, std::memory_order_release);
         }
+        m_impl->wakeup.notify(performance);
         // A cold warm-up or bounce must refill before handing audio to a live host.
         if(offline)while(isValid() && !m_impl->stop.load() && m_impl->audio.size()<lead)std::this_thread::yield();
+        if(epoch){performance->add(Metric::MissingFrames,epoch,missing);performance->add(Metric::StaleFrames,epoch,m_impl->diagnosticStale-staleBefore);}
     }
 
     bool Device::sendMidi(const synthLib::SMidiEvent& event, std::vector<synthLib::SMidiEvent>&)
@@ -563,6 +591,7 @@ namespace kstation
             const auto settle = size_t(std::ceil(restore.size() * 10.0 * DSP::SampleRate / 31250.0)) + 2048;
             for (size_t i = 0; i < settle; ++i) replacement->renderSample();
             m_impl->hardware.swap(replacement);
+            m_impl->hardware->setPerformanceDiagnostics(m_impl->performance);
             m_impl->publishedFlashRevision=~uint64_t(0);
             m_impl->audio.reset();
             m_impl->midi.reset();

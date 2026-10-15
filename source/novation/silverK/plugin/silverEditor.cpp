@@ -501,6 +501,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
     std::array<juce::TextButton,4> parts;
     juce::ComboBox firmwareSelect,skinSelect,bufferSelect;
     juce::TextButton rescanRoms{"Rescan ROMs"};
+    juce::TextButton diagnostics{"Performance diagnostics"};
     juce::TextButton waveRom{"Wave ROM"},factory{"KS factory data"},customSkin{"Load skin JSON"};
     juce::ToggleButton performanceMode{"Performance (4 parts)"},partActive{"Part active"};
     juce::TextButton performanceSwitch{"Performance"};
@@ -556,6 +557,25 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         customSkin.setBounds(298,353,190,34);customSkin.onClick=[this]{chooseAsset(3);};
         rescanRoms.setBounds(450,245,150,38);rescanRoms.onClick=[this]{juce::String error;const bool ok=processor.setRomFolder(processor.dataFolder.getChildFile("ROMs"),error);refreshFirmwares();status.setText(ok?"ROM list updated":error,juce::dontSendNotification);};rescanRoms.setComponentID("rescanRoms");
         bufferSelect.setBounds(52,401,436,34);bufferSelect.setComponentID("audioBuffer");for(const auto& name:juce::StringArray{"Audio buffer: Low latency","Audio buffer: Balanced (recommended)","Audio buffer: Safe","Audio buffer: Maximum reserve"})bufferSelect.addItem(name,bufferSelect.getNumItems()+1);bufferSelect.setSelectedId(processor.bufferProfile()+1,juce::dontSendNotification);bufferSelect.onChange=[this]{processor.setBufferProfile(bufferSelect.getSelectedId()-1);};bufferSelect.setTooltip("Internal audio buffering. The audio interface buffer is set in your DAW.");
+        addAndMakeVisible(diagnostics);diagnostics.setBounds(510,401,270,34);diagnostics.setComponentID("performanceDiagnostics");
+        diagnostics.setTooltip("Record optional performance measurements and save a JSON report for Windows or macOS.");
+        diagnostics.onClick=[this]{
+            juce::PopupMenu menu;const bool ready=processor.firmwareReady()&&!processor.isFirmwareLoading();
+            menu.addItem(1,"Start new summary measurement",ready);menu.addItem(2,"Start new detailed measurement",ready);
+            menu.addItem(3,"Stop measurement",processor.performanceDiagnosticsMode()!=0);menu.addSeparator();menu.addItem(4,"Save performance report...");
+            const juce::Component::SafePointer<Surface> self(this);
+            menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&diagnostics),[self](int result){
+                if(!self)return;
+                if(result>=1&&result<=3){self->processor.setPerformanceDiagnostics(result==3?0:result);return;}
+                if(result!=4)return;
+                self->chooser=std::make_unique<juce::FileChooser>("Save performance report",self->processor.dataFolder.getChildFile("silver-k-performance.json"),"*.json");
+                self->chooser->launchAsync(juce::FileBrowserComponent::saveMode|juce::FileBrowserComponent::canSelectFiles|juce::FileBrowserComponent::warnAboutOverwriting,[self](const juce::FileChooser& c){
+                    if(!self || c.getResult()==juce::File{})return;
+                    const bool ok=c.getResult().replaceWithText(self->processor.performanceReport());
+                    self->status.setText(ok?"Performance report saved":"Cannot save performance report",juce::dontSendNotification);
+                });
+            });
+        };
         waveRom.setBounds(52,295,180,38);waveRom.onClick=[this]{chooseAsset(1);};factory.setBounds(246,295,190,38);factory.onClick=[this]{chooseAsset(2);};
         auto pageRect=juce::Rectangle<int>(850,28,74,34);
         for(int i=0;i<5;++i)
@@ -866,6 +886,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         viewport.setBounds(page==2?juce::Rectangle<int>(24,146,int(skin["width"])-48,int(skin["height"])-170):rect(skin["advanced"]["viewport"]));
         for(juce::Component* c:std::array<juce::Component*,6>{&status,&latency,&loadRom,&folder,&channel,&help})c->setVisible(isSetup);
         rescanRoms.setVisible(isSetup);bufferSelect.setVisible(isSetup);waveRom.setVisible(isSetup);factory.setVisible(isSetup);skinSelect.setVisible(isSetup);customSkin.setVisible(isSetup);
+        diagnostics.setVisible(isSetup);
         loadRom.setBounds(52,245,200,38);folder.setBounds(266,245,170,38);
         if(page==1)rebuildSections();if(page==2)performancePanel->refresh();
         if(studioSkin())updateExtraVisibility();repaint();
@@ -937,6 +958,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
     }
     void timerCallback() override
     {
+        diagnostics.setButtonText(processor.performanceDiagnosticsMode()?"Diagnostics: recording":"Performance diagnostics");
         if(processor.isFirmwareLoading()){
             juce::String error;
             if(!processor.finishFirmwareLoad(error)){setEnabled(false);lcd.setText("Loading firmware...",juce::dontSendNotification);status.setText("Loading firmware...",juce::dontSendNotification);return;}

@@ -4,7 +4,7 @@
 #include <sstream>
 namespace ks {
 Board::Board(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,const std::vector<uint8_t>& storage,bool isolateParts)
- : h8(std::make_unique<H8SEmulator>()),rom(os),flash(0x80000,0xff),waves(bank) {
+ : h8(std::make_unique<ControllerCpu>()),rom(os),flash(0x80000,0xff),waves(bank) {
     if(os.size()!=87360 || bank.size()!=WaveSize)throw std::invalid_argument("KS OS/bank size mismatch");
     // Update excludes container checksum. Rebuild its transport field, which
     // original reset code verifies while copying Flash to SRAM.
@@ -52,7 +52,11 @@ uint8_t Board::read(uint32_t a){
         return flash[a-0x800000];
     }
     if((a>=0xa00000 && a<0xc00000)||(a>=0xffdc00 && a<0xfffc00))return h8->memory[a];
-    if((a>=0x400000 && a<0x400010)||(a>=0x600000 && a<0x600010))return dsps[a>=0x600000]->hostRead(a&15);
+    if((a>=0x400000 && a<0x400010)||(a>=0x600000 && a<0x600010)){
+        const unsigned i=a>=0x600000;const auto value=dsps[i]->hostRead(a&15);
+        if(controllerRecorder)controllerRecorder->port(h8->cycles,h8->getPC(),i,a&15,value,false,true);
+        return value;
+    }
     if(a>=0xfffe00){
         if(a==0xffff51)return ((io[0x162]&0xf7)==0x32 || (io[0x162]&0xf7)==0x33)?0:0xff; // LCD not busy / keys released (mux refined below).
         if(a==0xffff50 || a==0xffff53 || a==0xffff5d)return 0xff;
@@ -75,7 +79,9 @@ void Board::write(uint32_t a,uint8_t v){
         return;
     }
     if((a>=0x400000 && a<0x400010)||(a>=0x600000 && a<0x600010)){
-        const unsigned i=a>=0x600000;++hostWrites[i];if(!dsps[i]->hostWrite(a&15,v))throw std::runtime_error("KS HDI write while busy");return;
+        const unsigned i=a>=0x600000;++hostWrites[i];const bool accepted=dsps[i]->hostWrite(a&15,v);
+        if(controllerRecorder)controllerRecorder->port(h8->cycles,h8->getPC(),i,a&15,v,true,accepted);
+        if(!accepted)throw std::runtime_error("KS HDI write while busy");return;
     }
     if(a>=0xfffe00){
         auto off=a&511;auto old=io[off];io[off]=v;
@@ -119,6 +125,7 @@ void Board::tick(uint64_t previous){
     }
 }
 bool Board::enqueueMidi(const uint8_t* bytes,size_t count){
+    if(recordedController)return false;
     // Leave enough UART space for a complete routed packet and the zero-bank
     // adapter's injected controls. A rejected byte has not entered either parser.
     for(size_t n=0;n<count;++n){if(bytes[n]>=0xf8){if(!midiIn.push(bytes[n]))return false;continue;}if(midiIn.size()>65536-4096)return false;if(!partMidi.accept(bytes[n],
@@ -128,6 +135,7 @@ bool Board::enqueueMidi(const uint8_t* bytes,size_t count){
     return true;
 }
 bool Board::enqueuePartMidi(unsigned part,const uint8_t* bytes,size_t count){
+    if(recordedController)return false;
     if(!partMidi.enabled || !partMidi.performance)return enqueueMidi(bytes,count);
     if(part>=PartCount || (count!=3 && count!=9))return false;
     if(midiIn.size()>65536-4096)return false;
@@ -150,7 +158,7 @@ bool Board::enqueueNativeMidi(const uint8_t* bytes,size_t count){
         placeholder.seed(ch,programDesired[index].data());return 1u<<ch;
     },[this](uint8_t* message,size_t length){adaptStoredProgram(message,length);}))return false;return true;
 }
-bool Board::boot(){while(h8->cycles<ControllerClockHz*10ull && !ready){advance();audio.reset();}if(!ready)return false;
+bool Board::boot(){if(recordedController)throw std::logic_error("Recorded KS controller cannot boot H8");while(h8->cycles<ControllerClockHz*10ull && !ready){advance();audio.reset();}if(!ready)return false;
     std::array<uint8_t,256> p{};for(unsigned n=0;n<256;++n)p[n]=read(0x168fc+n);
     const unsigned bank=flash[0x1ff02],program=flash[0x1ff03];
     if(placeholder.enabled && bank>=1 && bank<=8 && program<(bank<=4?100u:50u)){
@@ -198,6 +206,7 @@ std::vector<uint8_t> Board::saveUserFlash() const {
     std::vector<uint8_t> saved;copyUserFlash(saved);return saved;
 }
 void Board::copyUserFlash(std::vector<uint8_t>& saved) const {
+    if(recordedController)throw std::logic_error("Recorded KS controller has no live Flash API");
     saved.assign(flash.begin()+0x1fc00,flash.begin()+0x60000);
     if(placeholder.enabled)for(unsigned n=0;n<600;++n)PlaceholderMidi::restoreProgram(saved.data()+0x20000-0x1fc00+n*256,programDesired[n].data());
     if(placeholder.enabled)for(unsigned n=0;n<100;++n)for(unsigned part=0;part<4;++part)
@@ -206,6 +215,7 @@ void Board::copyUserFlash(std::vector<uint8_t>& saved) const {
         saved[0x45800-0x1fc00+n*1024+part*256+181]=performanceDesired[n][part*256+181];
 }
 State Board::state() {
+    if(recordedController)throw std::logic_error("Recorded KS controller has no live state API");
     State result;result.performance=read(0x167ba)!=0;result.globalChannel=placeholder.globalChannel;
     result.activeMask=result.performance?(read(0x167d3)&15):1;
     for(unsigned part=0;part<(result.performance?PartCount:1);++part){auto& p=result.parts[part];const unsigned index=result.performance?part+1:0;
@@ -218,19 +228,44 @@ State Board::state() {
         first[191]=read(0x168fc+191);first[208]=read(0x168fc+208);}
     return result;
 }
-Board::AudioFrame Board::renderSample(){AudioFrame a{};const auto begin=h8->cycles;while(!audio.pop(a)){advance();if(h8->cycles-begin>ControllerClockHz)throw std::runtime_error("KS serial output timeout");}return a;}
+Board::AudioFrame Board::renderSample(){AudioFrame a{};const auto begin=controllerCycles();while(!audio.pop(a)){advance();if(controllerCycles()-begin>ControllerClockHz)throw std::runtime_error("KS serial output timeout");}return a;}
 void Board::advance(uint32_t budget){
-    const auto begin=h8->cycles;
-    while(h8->cycles-begin<budget){auto before=h8->cycles;h8->step();tick(before);if(h8->getPC()==0x41e2)mainEntered=true;if(mainEntered && h8->getPC()==0x4334)ready=true;}
-    for(unsigned order=0;order<2;++order){unsigned i=1-order;if(dsps[i]->bootFinished()){
-        if(!started[i]){epochs[i]=int64_t(dspTime(h8->cycles))-int64_t(dsps[i]->cycles());started[i]=true;if(i==1)aToB.reset();}
-        const auto target=int64_t(dspTime(h8->cycles))-epochs[i];
+    using namespace baseLib::performance;
+    const bool sample=performance && performance->mode()==2 && ((++diagnosticAdvances&255)==0);
+    Scope h8Timing(performance,Metric::H8,0,0,true,sample&&!recordedController);
+    if(recordedController){
+        recordedController->advance(budget,[this](unsigned i,unsigned offset){return dsps[i]->hostRead(offset);},
+            [this](unsigned i,unsigned offset,uint8_t value){++hostWrites[i];return dsps[i]->hostWrite(offset,value);});
+    }else{
+        const auto begin=h8->cycles;if(controllerRecorder)controllerRecorder->beginSlice(begin);
+        if(liveMidi){
+            while(h8->cycles-begin<budget){auto before=h8->cycles;
+                const unsigned pc=h8->getPC();
+                if(pc<0x2de8 || pc>=0x2efc || !liveMidi->step(*h8))h8->step();
+                tick(before);if(h8->getPC()==0x41e2)mainEntered=true;if(mainEntered && h8->getPC()==0x4334)ready=true;}
+        }else{
+            // Default H8 loop has no per-instruction experiment dispatch.
+            while(h8->cycles-begin<budget){auto before=h8->cycles;h8->step();tick(before);if(h8->getPC()==0x41e2)mainEntered=true;if(mainEntered && h8->getPC()==0x4334)ready=true;}
+        }
+        if(controllerRecorder)controllerRecorder->endSlice(h8->cycles);
+    }
+    h8Timing.finish();
+    const auto nowController=controllerCycles();
+    if(dspWorkers){
+        const std::array<int64_t,2> targets{int64_t(dspTime(nowController))-epochs[0],int64_t(dspTime(nowController))-epochs[1]};
+        Scope barrierTiming(performance,Metric::DspBarrier,0,0,true,sample);
+        dspWorkers->run(targets,sample);
+    }else for(unsigned order=0;order<2;++order){unsigned i=1-order;if(dsps[i]->bootFinished()){
+        Scope dspTiming(performance,i?Metric::DspB:Metric::DspA,0,0,true,sample);
+        if(!started[i]){epochs[i]=int64_t(dspTime(nowController))-int64_t(dsps[i]->cycles());started[i]=true;if(i==1)aToB.reset();}
+        const auto target=int64_t(dspTime(nowController))-epochs[i];
         while(int64_t(dsps[i]->cycles())<target){dsps[i]->discardAudio();dsps[i]->step(1);}
     }}
     // Both DSPs share the master's serial clock and frame sync. Independent
     // peripheral clocks can stretch differently when interrupt work is pending.
     auto& master=dsps[0]->peripherals().getEsai();
-    const uint64_t serialTime=dspTime(h8->cycles);
+    Scope serialTiming(performance,Metric::Serial,0,0,true,sample);
+    const uint64_t serialTime=dspTime(nowController);
     if(!serialNext && master.hasEnabledTransmitters())serialNext=serialTime+DSP::SerialSlotCycles;
     while(serialNext && serialTime>=serialNext){
         for(unsigned i=0;i<2;++i){auto& esai=dsps[i]->peripherals().getEsai();
@@ -239,5 +274,51 @@ void Board::advance(uint32_t budget){
         }
         ++serialSlot;serialNext+=DSP::SerialSlotCycles;
     }
+}
+void Board::enableDspWorkers(int rate,unsigned block){
+    if(dspWorkers)return;
+    if(!started[0] || !started[1])throw std::logic_error("KS DSP workers require completed sequential boot");
+    dspWorkers=std::make_unique<DspWorkers>(this,[](void* board,unsigned i,int64_t target,bool sampled){
+        static_cast<Board*>(board)->catchUpDsp(i,target,sampled);
+    },rate,block);
+}
+void Board::catchUpDsp(unsigned i,int64_t target,bool sampled){
+    using namespace baseLib::performance;
+    Scope dspTiming(performance,i?Metric::DspB:Metric::DspA,0,0,true,sampled);
+    // ESAI clocks stay disabled; all cross-DSP callbacks are serviced by the
+    // coordinator AFTER both catch-ups, exactly as in sequential advance().
+    while(int64_t(dsps[i]->cycles())<target){dsps[i]->discardAudio();dsps[i]->step(1);}
+}
+uint64_t Board::controllerCheckpoint()const {
+    uint64_t hash=14695981039346656037ull;
+    auto byte=[&](uint8_t v){hash^=v;hash*=1099511628211ull;};
+    auto word=[&](uint64_t v){for(unsigned n=0;n<8;++n)byte(uint8_t(v>>(n*8)));};
+    for(const auto* image:{&rom,&flash,&waves})for(auto v:*image)byte(v);
+    for(unsigned n=0xa00000;n<0xc00000;++n)byte(h8->memory[n]);
+    for(unsigned n=0xffdc00;n<0xfffc00;++n)byte(h8->memory[n]);
+    for(auto v:io)byte(v);
+    word(h8->cycles);word(h8->getPC());word(serialNext);word(serialSlot);word(serialSlaveStarted);
+    word(midiIn.size());word(audio.size());word(aToB.size());word(bToA.size());word(partMidi.enabled);
+    for(unsigned i=0;i<2;++i){word(dsps[i]->cycles());word(dsps[i]->instructions());word(uint64_t(epochs[i]));word(started[i]);
+        for(const auto& slot:dsps[i]->serialTx)for(auto v:slot)word(v);
+    }
+    return hash;
+}
+void Board::startControllerTrace(size_t events,size_t slices){
+    if(controllerRecorder || recordedController)throw std::logic_error("KS controller recording/replay already active");
+    controllerRecorder=std::make_unique<ControllerRecorder>(controllerCheckpoint(),h8->cycles,events,slices);
+}
+std::shared_ptr<const ControllerTape> Board::finishControllerTrace(){
+    if(!controllerRecorder)throw std::logic_error("No KS controller recording");
+    auto result=controllerRecorder->finish();controllerRecorder.reset();return result;
+}
+void Board::startRecordedController(std::shared_ptr<const ControllerTape> tape){
+    if(controllerRecorder || recordedController || liveMidi || !ready || !started[0] || !started[1])throw std::logic_error("KS controller replay requires completed original boot");
+    recordedController=std::make_unique<RecordedController>(std::move(tape),controllerCheckpoint(),h8->cycles);
+}
+void Board::enableLiveMidiController(bool enabled){
+    if(recordedController || !ready)throw std::logic_error("Live KS MIDI requires completed original boot, without replay");
+    if(enabled){if(!liveMidi)liveMidi=std::make_unique<LiveMidiController>(*h8);}
+    else liveMidi.reset(); // All guest ABI state remains current; H8 can resume.
 }
 }

@@ -25,6 +25,12 @@ static void lighting(juce::Slider& s){
 }
 static void verify(Processor& p){
  std::unique_ptr<juce::AudioProcessorEditor> e(p.createEditor());click(*e,"pageMain");auto* main=find(*e,"mainPanel");check(main&&main->getWidth()==1280&&main->getHeight()==1000,"Canvas dimensions");
+ auto* diagnostics=find(*e,"performanceDiagnostics");check(diagnostics&&!diagnostics->isVisible(),"Diagnostics escaped Setup");
+ click(*e,"pageSetup");check(diagnostics->isVisible()&&diagnostics->getParentComponent()->getLocalBounds().contains(diagnostics->getBounds()),"Diagnostics missing/outside Setup");
+ auto report=juce::JSON::parse(p.performanceReport());check(report["schema"].toString()=="silver-k.performance.v1"&&report["metrics"].isObject(),"Invalid diagnostics JSON");
+ check(p.performanceDiagnosticsMode()==0,"Diagnostics enabled by default");
+ if(!p.firmwareReady())check(!p.setPerformanceDiagnostics(1),"Recording started without firmware");
+ snapshot(*e,"Diagnostics-Setup");click(*e,"pageMain");
  check(!find(*e,"pageExtra")->isVisible(),"Global Extra visible");check(!find(*e,"oscSelect1")->isVisible(),"OSC selector visible");
  for(const char* id:{"osc1_semitone","osc2_semitone","osc3_semitone","cutoff","resonance","osc1_level","osc2_level","osc3_level","noise_level","ring_level","fm_attack","fm_decay","lfo1_rate","lfo1_delay","volume","arp_rate","arp_gate","portamento_time"}){auto* s=slider(*main,p,id);check(int(s->getProperties()["rotaryDiameter"])==72,"Knob diameter: "+juce::String(id));check(s->getProperties()["rotaryStyle"].toString()=="led","Lost native LED arc: "+juce::String(id));}
  check(control(*main,p,"osc1_semitone")->getY()==control(*main,p,"osc1_level")->getY(),"Mixer first alignment");check(control(*main,p,"osc3_semitone")->getY()==control(*main,p,"ring_level")->getY(),"Mixer last alignment");

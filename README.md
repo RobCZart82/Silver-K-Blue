@@ -2,6 +2,8 @@
 
 A beta release for continued development. CPU performance, latency and optimization are still being refined.
 
+Optional **Setup → Performance diagnostics** records K/KS performance sessions and exports JSON on Windows and macOS. See the [measurement guide](doc/PERFORMANCE_DIAGNOSTICS.md) and shared [optimization journal](doc/OPTIMIZATION_LOG.md) for reproduction conditions, validation status and the next investigation.
+
 [Download 0.2.4 Beta](https://github.com/temaniak/Silver-K/releases/tag/v0.2.4). Installation and first-run instructions are provided below in English. See the [detailed installation guide](doc/INSTALL.md) and [release notes](doc/releases/0.2.4.md).
 
 This beta includes the patch-manager, V-Station import, host-clock, audio scheduling and data-folder fixes since 0.2 Alpha.

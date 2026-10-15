@@ -18,6 +18,7 @@ set(SOURCES
 	md5.cpp md5.h
 	os.cpp os.h
 	propertyMap.cpp propertyMap.h
+	workerWakeup.cpp workerWakeup.h
 	rc4.cpp rc4.h
 	semaphore.h
 	sha1.cpp sha1.h

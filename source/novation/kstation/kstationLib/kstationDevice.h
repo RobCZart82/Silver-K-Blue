@@ -3,13 +3,14 @@
 #include "synthLib/device.h"
 #include <memory>
 #include <array>
+#include "baseLib/performanceDiagnostics.h"
 
 namespace kstation
 {
     class Device final : public synthLib::Device
     {
     public:
-        explicit Device(const synthLib::DeviceCreateParams& params);
+        explicit Device(const synthLib::DeviceCreateParams& params,baseLib::performance::Diagnostics* performance=nullptr);
         ~Device() override;
         bool isValid() const override;
         std::string error() const;
@@ -29,6 +30,7 @@ namespace kstation
 
         uint64_t getUnderrunCount() const;
         uint64_t getMidiOverflowCount() const;
+        const char* workerWaitBackend() const;
         void setBufferFloor(unsigned nativeFrames);
         void setAudioBuffer(uint32_t hostBlock,float hostRate,unsigned nativeFloor);
         void ensureAudioBlock(uint32_t hostBlock,float hostRate) noexcept;

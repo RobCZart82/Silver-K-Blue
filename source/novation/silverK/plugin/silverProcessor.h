@@ -85,8 +85,16 @@ bool isKStation()const{return kMode.load();}
  uint8_t editorChannel()const{return isKStation()?controlChannel.load():midiChannel();}
  int bufferProfile()const{return buffering.load();}
  void setBufferProfile(int);
+ // Message/control thread only. Mode: 0 stop, 1 new summary, 2 new detailed session.
+ bool setPerformanceDiagnostics(int mode);
+ int performanceDiagnosticsMode()const{return performanceDiagnostics.mode();}
+ juce::String performanceReport()const;
  void setEditorChannel(uint8_t c){controlChannel.store(c&15);editorChannelPreference.store(c&15);savePreferences();}
 private:
+ baseLib::performance::Diagnostics performanceDiagnostics;
+ juce::var performanceSession;
+ double performanceStartedMs=0,performanceStoppedMs=0;
+ juce::String performanceStopReason;
  MidiNoteLearn noteLearn;
  pluginLib::HostAudioWorkgroup hostAudioWorkgroup;
  std::atomic<int> buffering{1};

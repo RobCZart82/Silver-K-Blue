@@ -1,0 +1,12 @@
+# Project continuity
+
+- Read `README.md` for active build/runtime paths.
+- Before performance work, read `doc/OPTIMIZATION_LOG.md` and `doc/PERFORMANCE_DIAGNOSTICS.md`.
+- Keep the optimization log current in the same change as diagnostics or optimization work. Record the date, source/build identity, platform, scenario, actual validation, results, limitations and next step. Separate measured results from hypotheses and pending checks.
+- Windows and macOS share the same source and log. Never imply that a build, audio test or performance result on one platform validates the other. Add a dated entry when moving platforms; preserve previous evidence.
+- Do not commit private firmware, banks, audio captures, binaries or personal diagnostic reports. Share sanitized findings and reference local reports by a test identifier.
+- Authorized optimization scope: Windows worker wake-up / idle waiting and the opt-in KS worker placement experiment below. Keep guest timing, instruction semantics, JIT settings, resampling, buffer sizes and thread priorities unchanged. macOS keeps its existing wait behavior until separately investigated.
+- Current follow-up also authorizes an opt-in KS-worker-only P-core CPU Sets experiment and matched measurements. Do not change Windows settings, process-wide placement, host CPU-set policy, thread priorities or JIT. Keep original/default controls and record actual placement from ETW.
+- Current follow-up authorizes an opt-in KS dual-DSP worker experiment with the original H8, matched baseline measurements and diary updates. Keep JIT, guest slice targets, serial ordering, buffers and Windows settings unchanged. Preserve default sequential execution and validate audio equivalence before judging performance.
+- Current follow-up authorizes H8-to-DSP bus recording and an opt-in C++ controller prototype on branch Optimized. Keep original H8 as default/reference, raw captures private, and distinguish recorded-scenario replay from a live replacement controller. Compare commands, audio and CPU; no JIT or Windows policy changes.
+- Current follow-up authorizes live KS MIDI notes/basic CC controller work, command/audio comparison and diary updates. Keep default H8 and distinguish a hybrid native MIDI decoder with original H8 voice/parameter handlers from a complete controller replacement. Preserve guest instruction boundaries/timing and interrupt semantics; no JIT changes.

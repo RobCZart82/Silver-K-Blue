@@ -22,8 +22,13 @@ namespace kstation
 
     void Hardware::advance()
     {
+        using namespace baseLib::performance;
+        const bool sample=m_performance && m_performance->mode()==2 && ((++m_diagnosticAdvances&255)==0);
+        Scope h8Timing(m_performance,Metric::H8,0,0,true,sample);
         m_h8Cycles += m_h8.exec(128);
+        h8Timing.finish();
         if (!m_dsp.bootFinished() || m_resetAsserted) return;
+        Scope dspTiming(m_performance,Metric::DspA,0,0,true,sample);
         if (!m_dspStarted)
         {
             m_dspEpoch = static_cast<int64_t>(m_h8Cycles * 7) - static_cast<int64_t>(m_dsp.cycles());

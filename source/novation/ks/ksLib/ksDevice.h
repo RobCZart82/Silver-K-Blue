@@ -1,14 +1,16 @@
 #pragma once
 #include "ksBoard.h"
+#include "ksWorkerPlacement.h"
 #include <atomic>
 #include <mutex>
 #include <thread>
 #include <condition_variable>
+#include "baseLib/performanceDiagnostics.h"
 namespace ks {
 // DSP/H8 ownership belongs to the worker. Host audio does bounded queue access.
 class Device {
 public:
-    Device(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,const std::vector<uint8_t>& flash,double hostRate,int block,const std::vector<uint8_t>& program={});
+    Device(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,const std::vector<uint8_t>& flash,double hostRate,int block,const std::vector<uint8_t>& program={},baseLib::performance::Diagnostics* performance=nullptr);
     ~Device();
     bool valid() const{return running.load();}
     const std::string& error()const{return failure;}
@@ -24,10 +26,18 @@ public:
     uint64_t underruns()const{return underrun.load();}
     uint64_t overflows()const{return overflow.load();}
     unsigned latency()const{return lead.load();}
+    const char* workerWaitBackend()const{return "poll-50us";}
+    const char* dspExecutionBackend()const{return parallelDSPs?"two-workers-slice-barrier":"sequential";}
+    const char* controllerBackend()const{return nativeMidi?"live-cpp-midi-hybrid":"original-h8";}
+    const WorkerPlacement& workerPlacement()const{return placement;}
     void setAudioBuffer(unsigned block,unsigned floor);
     void ensureAudioBlock(unsigned block) noexcept;
     void setBufferFloor(unsigned frames){lead.store(std::max(baseLead,std::min(4096u,frames)));}
 private:
+    baseLib::performance::Diagnostics* performance;
+    const bool parallelDSPs;
+    const bool nativeMidi;
+    WorkerPlacement placement;
     struct Event{uint64_t due;uint8_t value;uint8_t part=255,length=0;};
     struct Frame{uint64_t due;std::array<float,OutputCount> value;};
     std::unique_ptr<Board> board;

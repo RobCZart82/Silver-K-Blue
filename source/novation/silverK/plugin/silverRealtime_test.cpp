@@ -21,8 +21,11 @@ int main(int argc,char** argv){
  silverK::Processor p;p.prepareToPlay(48000,prepared);p.flashFile=juce::File(argv[3]);p.bankFile=juce::File(argv[4]);
  juce::String error;if(!p.loadFirmware(juce::File(argv[k?1:2]),error)){std::cerr<<error<<std::endl;return 3;}
  p.setBufferProfile(profile);const auto initialLatency=p.getLatencySamples();
+ const auto reportPath=juce::SystemStats::getEnvironmentVariable("SILVER_PERF_REPORT",{});
+ const int diagnosticMode=juce::SystemStats::getEnvironmentVariable("SILVER_PERF_MODE","1").getIntValue();
  auto set=[&](const char* id,int value){auto* parameter=p.uiParameter(id);if(parameter)parameter->setValueNotifyingHost(parameter->convertTo0to1(float(value)));};
  for(auto item:{std::pair<const char*,int>{"arp_on",0},{"amp_attack",0},{"amp_release",0},{"amp_sustain",127},{"delay_level",0},{"reverb_level",0},{"chorus_level",0},{"volume",127},{"osc1_level",127},{"osc2_level",0},{"osc3_level",0},{"filter_freq",127}})set(item.first,item.second);
+ if(reportPath.isNotEmpty() && !p.setPerformanceDiagnostics(diagnosticMode)){std::cerr<<"Cannot start diagnostics\n";return 4;}
  juce::AudioBuffer<float> audio(4,block);juce::MidiBuffer midi;midi.ensureSize(4096);
  const auto before=p.underruns();std::atomic<uint64_t> warm{before};std::atomic<bool> warmCaptured{false};
  const auto begin=std::chrono::steady_clock::now();
@@ -72,6 +75,10 @@ int main(int argc,char** argv){
 #endif
  audioThread.join();
  done=true;stateReader.join();controlActions.join();const auto after=p.underruns();
+ if(reportPath.isNotEmpty()){
+  p.setPerformanceDiagnostics(0);
+  if(!juce::File(reportPath).replaceWithText(p.performanceReport())){std::cerr<<"Cannot save diagnostics report\n";return 4;}
+ }
  std::cout<<"model="<<(k?"K":"KS")<<" prepared="<<prepared<<" block="<<block<<" save="<<save<<" profile="<<profile<<" sweep="<<sweep<<" latency_ms="<<initialLatency/48.0<<" final_latency_ms="<<p.getLatencySamples()/48.0<<" note_onset_ms="<<first/48.0<<" startup_missed_frames="<<warm.load()-before<<" steady_missed_frames="<<after-warm.load()<<" state_reads="<<saves<<" max_state_ms="<<maxSaveMs<<" max_callback_ms="<<maxCallback<<" peak="<<peak<<std::endl;
  const bool responsive=profile!=0 || prepared<=block || sweep || p.getLatencySamples()<initialLatency;
  return responsive && finite && first>=0 && peak>1e-4 && after==warm.load()?0:1;
