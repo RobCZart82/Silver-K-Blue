@@ -125,14 +125,14 @@ int main(int argc,char** argv){try{
                 events.push_back({native(at),std::move(packet)});
             }
         }
-        if(liveMode)board->enableLiveMidiController();
+        if(liveMode){board->enableLiveMidiController();if(recording)board->enableControllerDelegationProfile();}
         if(recording)board->startControllerTrace();
         if(mode=="replay"){tape=ks::ControllerTape::load(argv[7]);board->startRecordedController(tape);}
         h8Start=board->cpu().cycles;size_t next=0;
         const auto begin=Clock::now();const double before=cpu();
         for(uint64_t n=0;n<frames;++n){
             if(toggling && n==native(.65))board->enableLiveMidiController(false);
-            if(toggling && n==native(.95))board->enableLiveMidiController();
+            if(toggling && n==native(.95)){board->enableLiveMidiController();if(recording)board->enableControllerDelegationProfile();}
             if(mode!="replay")while(next<events.size() && events[next].frame==n)send(events[next++].bytes);
             const auto a=board->renderSample();for(auto v:a){hash^=uint32_t(v);hash*=1099511628211ull;peak=std::max(peak,std::abs(int64_t(v)));}
         }
@@ -140,7 +140,10 @@ int main(int argc,char** argv){try{
         check(peak>1000,"Controller probe rendered silence");
         if(recording){tape=board->finishControllerTrace();tape->validate();tape->save(argv[7]);}
         if(liveMode){const auto& live=*board->liveMidiController();
-            check(live.messages>0 && live.noteActions.noteOnCalls>0 && live.noteActions.noteOffCalls>0 && live.noteActions.pedalCalls>0,"Live note/sustain handlers were not exercised");}
+            check(live.messages>0 && live.noteActions.noteOnCalls>0 && live.noteActions.noteOffCalls>0 && live.noteActions.pedalCalls>0,"Live note/sustain handlers were not exercised");
+            check(live.voiceActions.allocationCalls>0 && live.voiceActions.startCalls>0 && live.voiceActions.releaseCalls>0 && live.voiceActions.transportSteps>0,"Live voice/transport handlers were not exercised");
+            uint64_t delegated=0;for(const auto count:live.originalPages)delegated+=count;
+            if(recording)check(delegated==live.originalStepCalls && delegated>0,"Original H8 delegation accounting differs");}
         if(mode=="replay"){
             check(board->cpu().cycles==h8Start,"Prototype executed H8 instructions");
             check(board->controllerCycles()==tape->endCycle && board->checkedControllerPorts()==tape->events.size(),"Prototype did not consume exact trace");
@@ -158,12 +161,20 @@ int main(int argc,char** argv){try{
         <<"],\"serial_overflows\":["<<board->serialOverflows[0]<<','<<board->serialOverflows[1]<<']'
         <<",\"checked_ports\":"<<board->checkedControllerPorts();
     if(tape)report<<",\"trace_events\":"<<tape->events.size()<<",\"trace_slices\":"<<tape->slices.size()<<",\"trace_digest\":\""<<tape->digest()<<"\",\"bus\":"<<Stats(*tape).json();
-    if(const auto* live=board->liveMidiController())report<<",\"native_midi_steps\":"<<live->nativeSteps<<",\"native_midi_bytes\":"<<live->bytes
+    if(const auto* live=board->liveMidiController()){report<<",\"native_midi_steps\":"<<live->nativeSteps<<",\"native_midi_bytes\":"<<live->bytes
         <<",\"native_midi_messages\":"<<live->messages<<",\"native_note_on\":"<<live->noteOn<<",\"native_note_off\":"<<live->noteOff<<",\"native_cc\":"<<live->controls
         <<",\"native_note_steps\":"<<live->noteActions.steps<<",\"native_note_on_calls\":"<<live->noteActions.noteOnCalls
         <<",\"native_note_off_calls\":"<<live->noteActions.noteOffCalls<<",\"native_sustain_calls\":"<<live->noteActions.pedalCalls
-        <<",\"native_sustain_release_calls\":"<<live->noteActions.pedalReleaseCalls;
-    report<<",\"notes\":\"Original H8 always boots/prepares. Live mode ports MIDI decoding, note/key/pedal state and release decisions; UART/routing/DSP voice parameter generation remain H8. Replay is separate finite tape playback. CPU counts whole process user+kernel on Windows, no boot/setup/trace file IO. Raw trace may contain private firmware/presets. No complete H8 replacement claimed.\"}";
+        <<",\"native_sustain_release_calls\":"<<live->noteActions.pedalReleaseCalls
+        <<",\"native_voice_steps\":"<<live->voiceActions.steps<<",\"native_allocation_calls\":"<<live->voiceActions.allocationCalls
+        <<",\"native_voice_start_calls\":"<<live->voiceActions.startCalls<<",\"native_voice_release_calls\":"<<live->voiceActions.releaseCalls
+        <<",\"native_transport_steps\":"<<live->voiceActions.transportSteps<<",\"original_h8_step_calls\":"<<live->originalStepCalls
+        <<",\"original_h8_pages\":[";
+        bool first=true;for(unsigned page=0;page<live->originalPages.size();++page)if(live->originalPages[page]){
+            if(!first)report<<',';first=false;report<<"{\"page\":"<<page<<",\"calls\":"<<live->originalPages[page]<<'}';
+        }report<<']';
+    }
+    report<<",\"notes\":\"Original H8 always boots/prepares. Live mode ports MIDI decoding, note/key/pedal state, voice allocation/start/release and DSP host transport; UART/routing/parameter calculators/periodic voice service/clock/arp/state loaders remain H8. original_h8_step_calls includes interrupt arbitration, not instruction or CPU-time counts; page counts cover only the current enabled segment. Replay is separate finite tape playback. CPU counts whole process user+kernel on Windows, no boot/setup/trace file IO. Raw trace may contain private firmware/presets. No complete H8 replacement claimed.\"}";
     std::ifstream existing(argv[4]);check(!existing.good(),"Refusing to overwrite controller report");std::ofstream out(argv[4]);out<<report.str();check(bool(out),"Cannot save controller report");
     std::cout<<report.str()<<'\n';return 0;
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}

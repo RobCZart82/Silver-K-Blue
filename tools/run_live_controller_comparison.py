@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Private KS live C++ note/sustain controller vs original H8; no tape playback.
+"""Private KS live C++ controller stages vs original H8; no tape playback.
 
-This is a hybrid: C++ handles notes, key state and sustain; original H8 still
-handles UART/routing and DSP voice generation. Compare full bus tapes AND all
-audio; never label it H8 removal.
+This is a hybrid: C++ handles notes, key state, sustain, voice lifecycle and DSP
+host transport; H8 retains parameter calculators, periodic voice service,
+UART/routing, clock/arp and state loaders. Compare full bus tapes AND all audio;
+never label it H8 removal.
 """
 import argparse
 from datetime import datetime, timezone
@@ -35,7 +36,7 @@ def main():
     (root / 'metadata.json').write_text(json.dumps(dict(
         executable_sha256=hashlib.sha256(exe.read_bytes()).hexdigest(),
         started_utc=datetime.now(timezone.utc).isoformat(), dsp_threads=args.dsp_threads, toggle=args.toggle, seconds=args.seconds,
-        comparison='original H8 vs live C++ notes/key/sustain state; original DSP voice parameter generation'), indent=2))
+        comparison='original H8 vs live C++ note/pedal/voice lifecycle/host transport; H8 retains parameter calculators and other services'), indent=2))
     print('Local results:', root, flush=True)
     rows, summaries = [], []
 
@@ -95,7 +96,11 @@ def main():
                        note_on=after['native_note_on'], note_off=after['native_note_off'], cc=after['native_cc'], modes={},
                        note_steps=after['native_note_steps'], note_on_calls=after['native_note_on_calls'],
                        note_off_calls=after['native_note_off_calls'], sustain_calls=after['native_sustain_calls'],
-                       sustain_release_calls=after['native_sustain_release_calls'])
+                       sustain_release_calls=after['native_sustain_release_calls'],
+                       voice_steps=after['native_voice_steps'], allocation_calls=after['native_allocation_calls'],
+                       voice_start_calls=after['native_voice_start_calls'], voice_release_calls=after['native_voice_release_calls'],
+                       transport_steps=after['native_transport_steps'], original_h8_step_calls=after['original_h8_step_calls'],
+                       original_h8_pages=after['original_h8_pages'])
         for mode in ['h8', candidate]:
             group = [r['report'] for r in rows if r['scenario'] == scenario and r['mode'] == mode]
             summary['modes'][mode] = dict(runs=len(group),

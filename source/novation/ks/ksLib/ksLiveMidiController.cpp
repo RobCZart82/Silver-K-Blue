@@ -22,9 +22,11 @@ LiveMidiController::LiveMidiController(const H8SEmulator& h){
         for(unsigned n=range.first;n<range.second;++n){hash^=h.memory[n];hash*=1099511628211ull;}
     if(hash!=0x883c476e3df41f22ull)throw std::runtime_error("Native KS MIDI decoder requires verified OS 2.1.02");
     LiveNoteController::verify(h);
+    LiveVoiceController::verify(h);
 }
 bool LiveMidiController::step(ControllerCpu& h){
     const unsigned pc=h.getPC();
+    if(LiveVoiceController::candidate(pc))return !interruptReady(h)&&voiceActions.step(h);
     if(LiveNoteController::candidate(pc))return !interruptReady(h)&&noteActions.step(h);
     if(pc<0x2de8 || pc>=0x2efc || (!decoding && pc!=Entry))return false;
     // Interrupt arbitration stays in H8. Native instructions may be interrupted
@@ -56,7 +58,8 @@ bool LiveMidiController::step(ControllerCpu& h){
     }
     // Preserve instruction fetch bus cycles and bus pairing, without decoding
     // or executing firmware instructions. No JIT or CPU-core changes.
-    for(unsigned n=0;n<length;++n)h.read8(pc+n);
+    h.read8(pc);h.pc=h.makepc(pc+1);
+    for(unsigned n=1;n<length;++n)h.read8(pc+n);
     unsigned next=pc+length;
     auto mov8=[&](int8_t& dst,int v){dst=int8_t(v);value(h,dst);};
     auto store8=[&](unsigned addr,int8_t v){value(h,v);h.write8(v,addr);};

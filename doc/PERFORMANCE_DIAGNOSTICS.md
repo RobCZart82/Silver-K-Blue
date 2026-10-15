@@ -424,7 +424,7 @@ and implement live MIDI-to-DSP decisions against the H8 reference.
 ## Opt-in live KS note/sustain controller (hybrid)
 
 `SILVER_KS_CONTROLLER=native-midi` opts a newly created KS instance into the live
-C++ MIDI decoder and Note On/Off/sustain handlers after original H8 boot. Unset it and recreate the instance
+C++ MIDI decoder, Note On/Off/sustain handlers, voice lifecycle and DSP host transport after original H8 boot. Unset it and recreate the instance
 to return to original H8. K is unchanged. This process-local environment switch
 is not a saved preference and does not change Windows settings. The explicit
 worker-owned `Board::enableLiveMidiController(bool)` API can also switch at a
@@ -439,17 +439,23 @@ This stage ports the OS 2.1.02 byte decoder, Note On/Off decisions and key/pedal
 state into C++. It handles keyboard range, velocity-zero release, ordered key
 and velocity memory, physical/held bitmaps, mono replacement-note search,
 sustain threshold 63/64, pedal-up held-voice release and part release/reset.
-It accepts live values and does not load a tape. UART, channel/part routing,
-DSP voice allocation/parameter calculations and upload, arpeggiator timing and
-other CC-to-parameter conversion still run in original H8.
+It also selects/reuses/steals voices (Mono, Mono auto, Poly, Poly retrigger),
+maintains the voice slots and velocity curves, performs the note-start/glide
+and release command sequence, selects DSP/voice address windows, and transfers
+24-bit host data/status/address words to both DSPs. It accepts live values and
+does not load a tape. UART, channel/part routing, the bulk parameter calculators,
+periodic voice servicing, arpeggiator/clock and preset/state loaders still run
+in original H8. Native voice-start calls into those remaining calculators;
+porting the command transport alone does not remove that dependency.
 Other message types (program, pressure, bend, SysEx, system common/realtime)
-retain their original H8 paths. It is **not** a complete native DSP controller
+retain original H8 decoding/dispatch; shared voice/transport helpers run in C++
+when reached from those paths. It is **not** a complete native DSP controller
 and cannot run with H8 stopped. No H8 CPU-core or DSP JIT source/config changed.
 
 The C++ controller preserves original instruction boundaries, fetch/data bus
 cycles, registers, flags and call ABI. Pending interrupts go through original
 H8 arbitration; both DSPs keep the same slice targets and serial ordering.
-A fingerprint rejects unverified parser, note/pedal and helper revisions. This
+A fingerprint rejects unverified parser, note/pedal, voice lifecycle, transport and helper revisions. This
 conservative ABI bridge allows the original handlers to remain the oracle
 while later stages port DSP voice/parameter logic. It is a compatibility step;
 do not reuse the recorded-playback saving as a live-controller result.
@@ -463,12 +469,12 @@ python tools/run_live_controller_comparison.py --executable build-nmake/source/n
 ```
 
 The isolated test compares C++ against independent original-H8 decoding at
-every boundary (registers/flags/PC/clocks and each bus access), all 16 channels,
+every boundary (registers/flags/PC/clocks and each bus access, including its clock and in-flight PC), all 16 channels,
 all 128 data values, varied velocities/CC values and running status. No private
 firmware is embedded. The no-argument CTest returns skip 77; run it explicitly
 with private OS for evidence. Normal CI cannot validate this private-ROM case.
-It also compares all 462 fixed note/pedal transitions, 32 varied operand/flag
-sets each, at their real call boundaries. No DSP engine is stubbed to make the
+It also compares all 462 fixed note/pedal and 640 voice/transport transitions,
+32 varied operand/flag sets each, at their real call boundaries. No DSP engine is stubbed to make the
 full-Board audio comparison pass.
 
 The runner first compares original-H8 `record` with `live-record`: complete
@@ -501,3 +507,37 @@ the Git revision and dirty state at CMake configure time, configuration and
 compiler. Reconfigure after source changes; on a dirty tree attach the patch or
 commit it before comparisons. Dependencies may be overridden with local source:
 the report's DSP revision is the repository pin, not verification of an override.
+
+
+### Controller migration status (2026-10-15, voice lifecycle stage)
+
+This remains an **incomplete, opt-in hybrid migration**. The public switch and
+`live-cpp-midi-hybrid` backend name are preserved for compatibility. H8 remains
+necessary during normal playback; do not describe this branch as a complete
+native controller or imply that stopping H8 is supported.
+
+| Responsibility | Current execution |
+| --- | --- |
+| Note/CC byte decoding; Note On/Off, held keys and sustain | C++ for the verified native ranges; original paths for other message types |
+| Voice selection/stealing, velocity curve, slot initialization, note start/release | C++ lifecycle; calls remaining H8 parameter routines |
+| DSP A/B host address, status, 24-bit read/write and voice address selection | C++, same bus timing, polling and timeout call targets |
+| Oscillator/filter/envelope/LFO/FX parameter calculation and periodic voice maintenance | H8 |
+| Channel/part dispatch, remaining CC/NRPN, bend/pressure, MIDI clock and arpeggiator | H8 |
+| Program/performance changes, SysEx, state/Flash serialization and boot | H8 with the existing host adapters |
+| Interrupt arbitration, timers and UART | Original H8/Board timing |
+
+The private controller probe reports `native_voice_steps`,
+`native_allocation_calls`, `native_voice_start_calls`,
+`native_voice_release_calls`, `native_transport_steps` and
+`original_h8_step_calls`. The last field counts calls to the original core,
+including interrupt handling; it is neither an instruction count nor a CPU
+measurement. Bus-recording probes explicitly enable `original_h8_pages`
+(page number = guest PC >> 8). Page counts add diagnostic work; the vector is empty
+in unrecorded timing probes and normal plugin instances. Switching off/on
+starts a new counter segment, so toggle reports cover the last enabled segment.
+
+Completion requires implementing the remaining responsibilities, then
+validating real state/preset/clock/arp/voice-stealing passages and measuring CPU
+against H8. Zero original-core calls in one short passage would establish only
+that passage, not complete feature coverage. Windows builds and local checks
+do not validate macOS, a real VST3 host or the tester's Ryzen 3 3100.

@@ -1,30 +1,9 @@
 #include "ksLiveNoteController.h"
-#include "ksLiveMidiController.h"
+#include "ksControllerBoundary.h"
 #include <stdexcept>
-#include <type_traits>
 
 namespace ks {
-namespace {
-void flag(ControllerCpu& h,unsigned mask,bool set){h.ccr=uint8_t((h.ccr&~mask)|(set?mask:0));}
-void value(ControllerCpu& h,int32_t v){h.ccr=uint8_t((h.ccr&~14)|(v<0?8:0)|(!v?4:0));}
-// Preserve the existing interruptible guest ABI while porting controller logic.
-// Each case is a fixed native state transition, not a runtime opcode decoder.
-struct Boundary {
-    ControllerCpu& h;unsigned next,length;
-    Boundary(ControllerCpu& cpu,unsigned pc,unsigned n):h(cpu),next(pc+n),length(n){for(unsigned i=0;i<n;++i)h.read8(pc+i);}
-    template<class T>void move(T& dst,int64_t src){dst=T(src);value(h,dst);}
-    void store8(unsigned a,int8_t v){h.write8(v,a);value(h,v);}
-    void store16(unsigned a,int16_t v){h.write16(v,a);value(h,v);}
-    void store32(unsigned a,int32_t v){h.write32(v,a);value(h,v);}
-    template<class T>void push(T v){if constexpr(sizeof(T)==4)h.pushL(uint32_t(v));else h.pushW(uint16_t(v));value(h,v);h.clockI(2);}
-    template<class T>void pop(T& v){if constexpr(sizeof(T)==4)v=T(h.popL());else v=T(h.popW());value(h,v);h.clockI(2);}
-    template<class T>void inc(T& v,int delta){int32_t old=v,result=old+delta;value(h,result);const uint32_t sign=1u<<(sizeof(T)*8-1);flag(h,2,(delta>0?(~uint32_t(old)&uint32_t(result)):(uint32_t(old)&~uint32_t(result)))&sign);v=T(result);}
-    template<class T>void shift(T& v,unsigned n,bool left){constexpr unsigned bits=sizeof(T)*8;uint32_t u=typename std::make_unsigned<T>::type(v);flag(h,1,u&(1u<<(left?bits-n:n-1)));u=left?u<<n:u>>n;value(h,int32_t(u<<(32-bits)));v=T(u);}
-    void branch(bool take,unsigned target){if(length==4)h.clockI(2);if(take)next=target;}
-    void call(unsigned target){h.pushPC(h.makepc(next));++h.indent;if(length==4)h.clockI(2);next=target;}
-    void ret(){--h.indent;h.clockI(2);next=h.pcoff(h.popPC());}
-};
-}
+using namespace controllerDetail;
 void LiveNoteController::verify(const h8state& h){
     uint64_t hash=14695981039346656037ull;
     for(auto range:{std::pair<unsigned,unsigned>{0x2efc,0x31dc},{0x33b8,0x349c},{0x352c,0x358a},

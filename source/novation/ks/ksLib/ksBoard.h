@@ -35,6 +35,7 @@ public:
     void startRecordedController(std::shared_ptr<const ControllerTape>);
     void enableLiveMidiController(bool enabled=true);
     const LiveMidiController* liveMidiController()const{return liveMidi.get();}
+    void enableControllerDelegationProfile(){if(liveMidi)liveMidi->enableDelegationProfile();}
     const char* controllerBackend()const{return recordedController?"recorded-cpp-prototype":liveMidi?"live-cpp-midi-hybrid":"original-h8";}
     uint64_t controllerCycles()const{return recordedController?recordedController->cycles():h8->cycles;}
     uint64_t checkedControllerPorts()const{return recordedController?recordedController->checkedPorts():0;}

@@ -14,9 +14,9 @@ struct Bus final:H8SDevice {
     explicit Bus(const std::vector<uint8_t>& os):rom(os),ram(1<<24){}
     const std::vector<uint8_t>& rom;
     std::vector<uint8_t> ram;
-    std::vector<std::tuple<bool,uint32_t,uint8_t>> accesses;
-    uint8_t read(uint32_t a)override{const auto v=a<rom.size()?rom[a]:ram[a];accesses.emplace_back(false,a,v);return v;}
-    void write(uint32_t a,uint8_t v)override{ram[a]=v;accesses.emplace_back(true,a,v);}
+    std::vector<std::tuple<bool,uint32_t,uint8_t,uint64_t,uint32_t>> accesses;
+    uint8_t read(uint32_t a)override{const auto v=a<rom.size()?rom[a]:ram[a];accesses.emplace_back(false,a,v,state->cycles,state->getPC());return v;}
+    void write(uint32_t a,uint8_t v)override{ram[a]=v;accesses.emplace_back(true,a,v,state->cycles,state->getPC());}
 };
 void same(const ks::ControllerCpu& a,const ks::ControllerCpu& b,const Bus& x,const Bus& y){
     check(a.getPC()==b.getPC(),"Native MIDI PC differs");check(a.cycles==b.cycles,"Native MIDI cycles differ");
@@ -84,6 +84,9 @@ int main(int argc,char**argv){try{
     native->memory[0x3426]^=1;rejected=false;
     try{ks::LiveMidiController bad(*native);}catch(const std::exception&){rejected=true;}
     check(rejected,"Unverified note-handler revision accepted");native->memory[0x3426]^=1;
+    native->memory[0xa338]^=1;rejected=false;
+    try{ks::LiveMidiController bad(*native);}catch(const std::exception&){rejected=true;}
+    check(rejected,"Unverified voice-handler revision accepted");native->memory[0xa338]^=1;
     ks::LiveNoteController actions;
     native->cycles=original->cycles;native->lastread=original->lastread;
     native->lastwrite=original->lastwrite;native->indent=original->indent;
@@ -104,7 +107,31 @@ int main(int argc,char**argv){try{
     }
     check(noteBoundaries==462*32,"Note transition coverage differs");
     check(x.ram==y.ram,"Note transition RAM differs");
+    ks::LiveVoiceController voices;uint64_t voiceBoundaries=0;
+    for(unsigned pc=0;pc<0xa69e;pc+=2)if(ks::LiveVoiceController::candidate(pc)){
+        for(unsigned sample=0;sample<32;++sample){
+            for(unsigned i=0;i<8;++i)original->regs[i].er=native->regs[i].er=int(random()&0xffffff);
+            original->setSP(0xfff000);native->setSP(0xfff000);
+            original->pc=original->makepc(pc);native->pc=native->makepc(pc);
+            original->ccr=native->ccr=uint8_t(random());original->exr=native->exr=0;
+            original->pending_irqs=native->pending_irqs=0;
+            x.accesses.clear();y.accesses.clear();
+            if(!voices.step(*native))break;
+            check(ks::LiveMidiController::candidate(pc),"Hot filter excludes native voice transition");
+            original->step();++voiceBoundaries;
+            try{same(*original,*native,x,y);}catch(const std::exception&){std::cerr<<"Voice transition PC="<<std::hex<<pc<<std::dec<<" sample="<<sample<<'\n';throw;}
+        }
+    }
+    check(voiceBoundaries==640*32,"Voice transition coverage differs");
+    check(x.ram==y.ram,"Voice transition RAM differs");
+    for(unsigned pc:{0x2416,0x77f4,0x8fcc,0xa338}){
+        native->pc=native->makepc(pc);native->pending_irqs=1ull<<32;
+        native->interruptPriority[32]=6;native->exr=0;
+        const auto cycles=native->cycles;
+        check(!controller.step(*native) && native->getPC()==pc && native->cycles==cycles,"Native voice bypassed pending interrupt");
+        native->pending_irqs=0;
+    }
     std::cout<<"PASS: "<<bytes<<" live bytes, "<<controller.messages<<" Note/CC messages, "<<steps
-        <<" decoder boundaries + "<<noteBoundaries<<" note/pedal boundaries: original H8 vs C++ registers/flags/clocks/PC and every bus access; toggle mid-message, unsupported statuses, interrupts and firmware guard\n";
+        <<" decoder boundaries + "<<noteBoundaries<<" note/pedal + "<<voiceBoundaries<<" voice/transport boundaries: original H8 vs C++ registers/flags/clocks/PC and every bus access; toggle mid-message, unsupported statuses, interrupts and firmware guard\n";
     return 0;
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}

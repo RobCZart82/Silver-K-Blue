@@ -5,6 +5,7 @@ target_sources(ksLib PRIVATE ksDspWorkers.cpp ksDspWorkers.h)
 target_sources(ksLib PRIVATE ksControllerTrace.cpp ksControllerTrace.h)
 target_sources(ksLib PRIVATE ksLiveMidiController.cpp ksLiveMidiController.h)
 target_sources(ksLib PRIVATE ksLiveNoteController.cpp ksLiveNoteController.h)
+target_sources(ksLib PRIVATE ksLiveVoiceController.cpp ksLiveVoiceController.h ksControllerBoundary.h)
 target_include_directories(ksLib PUBLIC ${CMAKE_CURRENT_LIST_DIR}/..)
 target_link_libraries(ksLib PUBLIC baseLib dsp56kEmu h8s)
 

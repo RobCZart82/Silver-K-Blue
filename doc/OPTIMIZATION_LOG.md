@@ -1286,6 +1286,95 @@ build/tests/trace analysis during captures. Power/thermal state not controlled.
   transition cost while preserving exact clocks/interrupts. Note state now has
   an independent C++ implementation and a strict H8 oracle for that work.
 
+## 2026-10-15 — Native KS voice lifecycle and DSP host transport (migration incomplete)
+
+- Request: finish the entire C++ controller, keep it optional, leave JIT/Windows
+  policy unchanged, update this shared diary and publish to `Optimized`.
+  **The full-controller request is not complete in this change.** This is a
+  verified additional migration stage; it still requires H8 during playback.
+  The open scope question is whether original H8 boot alone may remain in the
+  eventual complete mode. Neither answer changes the unfinished live work below.
+- Source: parent `ab97a51d9fa5792a39d4c560b41c96844683dc1c`, branch `Optimized`,
+  this entry/source patch. Windows x64, Core i5-13600KF, 32 GB; MSVC 19.44,
+  Release/NMake. DSP dependency/configuration and JIT unchanged from the prior
+  entry (`44353be2f0156cac970c6ab4f467ea1998b40605`). No Windows settings,
+  system timer policy, process/thread priority or affinity edits, UAC collection,
+  installs, deletions or changes to the user's ROM/Flash files.
+- Added `ksLiveVoiceController`: 640 fixed C++ state transitions for DSP host
+  address/status/24-bit read/write on A/B, selected voice/part address windows,
+  voice allocation/reuse/stealing for mono/auto/poly/retrigger, velocity curves,
+  voice slot initialization, note-start/glide/retrigger sequence, and matching
+  note/pedal release. Original timing/polling and timeout calls retained. This
+  is an interruptible guest-ABI migration, not a new opcode decoder or JIT.
+  The bulk synthesis parameter calculators and periodic voice service still
+  execute H8 callees. Threshold tables are read from the private input ROM;
+  no ROM image, table dump or raw recording is included in the repository.
+- Original H8 stays default. Existing `SILVER_KS_CONTROLLER=native-midi` opts in;
+  unset/recreate to disable. The worker-only toggle remains available and the
+  `live-cpp-midi-hybrid` backend name is preserved. No K engine behavior changes.
+  A separate fingerprint verifies every newly ported range before activation.
+- Shared boundary helper retains registers/flags, call stack, fetch/data clocks,
+  pairing and in-flight PC visible to mapped devices. The latter matters now
+  that C++ accesses actual DSP ports: original H8 exposes entry PC + 1 during
+  the remainder of each instruction. The isolated oracle now compares PC and
+  cycle at **every** bus access, as well as final machine state and RAM.
+- Validation actually run: Windows Release `ksLiveMidiController_test`,
+  `ksControllerProbe_test`, VST3 and Standalone built successfully. Private
+  OS 2.1.02 differential test passed: 12,626 live bytes, 6,288 messages,
+  315,950 decoder boundaries, 14,784 note/pedal boundaries and **20,480 new
+  voice/transport boundaries** (640 x 32 varied operand/flag sets). Revision
+  guard rejects changed voice code; pending-interrupt guards cover host access,
+  voice selection/start and allocation. No DSP voice engine is stubbed.
+- Internal whole-Board smoke ID: **`output/perf-live-controller/20261015-174241/`**.
+  Probe EXE SHA-256:
+  `d8fd0ddb22c44fb761d5fa3f11ec89fd6294c757813c50990de6e2c309185117`.
+  Private synthetic Flash and zero wave bank; same setup as prior entry;
+  single process at a time, sequential DSPs. Four scenarios, 2 s / **90,681
+  native frames** each; original/native bus controls plus one unrecorded pair
+  each (16 processes). Full tapes are byte-identical, including read responses,
+  writes/acceptance, PC, cycle, slice and checkpoint; all 24-stream integer
+  audio hashes/peaks, guest/DSP counters and serial state match exactly.
+
+| Scenario | 24-stream hash | DSP port events | Native allocation/start/release calls | Remaining original-core calls |
+| --- | --- | ---: | --- | ---: |
+| Single | `58781405289897816` | 736,364 | 152 / 152 / 167 | 2,987,534 |
+| Multi | `13074848859789201745` | 537,112 | 152 / 152 / 212 | 3,019,849 |
+| MIDI | `3819855541230884524` | 579,064 | 9 / 9 / 9 | 3,389,358 |
+| Pedal | `17487164177108066277` | 352,175 | 40 / 40 / 35 | 3,312,608 |
+
+- The probe now reports native voice/transport execution and actual calls to
+  original H8. Detailed page counts are explicitly enabled only in recording
+  fixtures; normal plugin and unrecorded timing runs keep that vector empty.
+  Counts are calls to the core, including interrupt arbitration, **not CPU
+  time, instructions or percentage of features ported**. Toggle resets the
+  current controller/counter segment. These nonzero calls demonstrate that
+  this stage is not a standalone replacement.
+- Preflight retained privately at `output/perf-live-controller/20261015-174041/`:
+  audio, data, cycles, slices and counts matched, but all port records showed
+  PC one byte behind the original. This run failed exact-tape comparison and
+  is excluded from passing evidence. Fixed the shared native boundary's
+  in-flight PC, strengthened the isolated oracle, rebuilt and reran all four
+  scenarios successfully; no recorder normalization or comparison relaxation.
+- Toggle/helper smoke ID: **`output/perf-live-controller/20261015-174405/`**,
+  Pedal scenario, 2 s, two DSP workers, disable at 0.65 s/re-enable at 0.95 s;
+  four processes (bus pair + unrecorded pair). Full bus tapes and all audio,
+  clocks/serial counters match uninterrupted original H8. Native voice code
+  executed after re-enable. Counter/page totals describe only that final
+  enabled segment; this check does not measure a CPU benefit.
+- Performance is **pending**: the short, single-pair smoke runner records CPU
+  seconds but is only correctness evidence here. No CPU saving, DAW stability,
+  real-time dropout fix or Ryzen 3 3100 improvement is claimed. User-facing
+  listening/host tests and repeated performance measurements remain the next
+  validation phase. No macOS build, audio or performance evidence this round.
+- Remaining implementation before full migration: oscillator/filter/envelope/
+  LFO/effects calculators; periodic voice maintenance and DSP feedback; all
+  channel/part and remaining CC/NRPN/bend/pressure handling; clock/arpeggiator;
+  preset/performance/SysEx/state/Flash loaders; main-loop, interrupt/UART
+  servicing, plus native boot if required. These need original-H8 command,
+  state and audio oracles; stopping H8 now would break supported behavior.
+- Publication: source/tests/docs only to the existing `origin/Optimized`.
+  Final commit/push identity and verification are reported in the chat.
+
 ## Entry template
 
 Copy for each next round:
