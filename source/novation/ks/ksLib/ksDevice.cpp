@@ -8,8 +8,12 @@
 #include "dsp56kBase/threadtools.h"
 #include "dsp56kBase/audioworkgroup.h"
 namespace ks {
-Device::Device(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,const std::vector<uint8_t>& flash,double hostRate,int block,const std::vector<uint8_t>& program,baseLib::performance::Diagnostics* diagnostics)
-:performance(diagnostics),parallelDSPs([]{const auto* v=std::getenv("SILVER_KS_DSP_THREADS");return v&&std::strcmp(v,"2")==0;}()),nativeMidi([]{const auto* v=std::getenv("SILVER_KS_CONTROLLER");return v&&std::strcmp(v,"native-midi")==0;}()),nativeRuntime([]{const auto* v=std::getenv("SILVER_KS_CONTROLLER");return v&&std::strcmp(v,"native")==0;}()),baseLead(std::min(4096,std::max(256,block+128))),lead(baseLead),rate(hostRate){
+ControllerMode Device::environmentControllerMode(){
+ const auto* v=std::getenv("SILVER_KS_CONTROLLER");
+ return v&&std::strcmp(v,"native")==0?ControllerMode::Native:v&&std::strcmp(v,"native-midi")==0?ControllerMode::Hybrid:ControllerMode::H8;
+}
+Device::Device(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,const std::vector<uint8_t>& flash,double hostRate,int block,const std::vector<uint8_t>& program,baseLib::performance::Diagnostics* diagnostics,ControllerMode controller)
+:performance(diagnostics),parallelDSPs([]{const auto* v=std::getenv("SILVER_KS_DSP_THREADS");return v&&std::strcmp(v,"2")==0;}()),currentController(controller==ControllerMode::Environment?environmentControllerMode():controller),baseLead(std::min(4096,std::max(256,block+128))),lead(baseLead),rate(hostRate){
  realtimeBlock.store(unsigned(std::max(64,block)));
  const auto* cores=std::getenv("SILVER_KS_WORKER_CORES");
  const bool performanceCores=cores&&std::strcmp(cores,"p")==0;
@@ -20,7 +24,7 @@ Device::Device(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,c
   dsp56k::ThreadTools::setCurrentThreadPriority(dsp56k::ThreadPriority::High);
   dsp56k::AudioWorkgroup::Member audioWorkgroup;
   try{board=std::make_unique<Board>(os,bank,flash,true);if(!board->boot())throw std::runtime_error("KS controller boot timeout");
-   if(nativeRuntime)board->enableNativeController();else if(nativeMidi)board->enableLiveMidiController();
+   if(controllerMode()==ControllerMode::Native)board->enableNativeController();else if(controllerMode()==ControllerMode::Hybrid)board->enableLiveMidiController();
    if(program.size()==270 || program.size()==1038){
     const uint8_t select[]{uint8_t(0xb0|(flash[0x1ff08]&15)),32,uint8_t(program.size()==1038?65:33),uint8_t(0xc0|(flash[0x1ff08]&15)),0};
     board->enqueueMidi(select,sizeof(select));board->enqueueMidi(program.data(),program.size());
@@ -73,6 +77,18 @@ Device::Device(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,c
    baseLib::performance::WorkerSegment workTiming(performance);
    while(!stopping.load()){
     if(pause.load()){workTiming.flush();paused.store(true);while(pause.load() && !stopping.load())std::this_thread::sleep_for(std::chrono::microseconds(50));paused.store(false);continue;}
+    const int request=requestedController.load();
+    if(request>=0){
+     requestedController.store(-1);
+     workTiming.flush();std::string error;
+     try{const auto mode=ControllerMode(request);
+      if(mode==ControllerMode::Native)board->enableNativeController();
+      else if(mode==ControllerMode::Hybrid)board->enableLiveMidiController();
+      else board->enableNativeController(false);
+      currentController.store(mode);
+     }catch(const std::exception& e){error=e.what();}
+     {std::lock_guard lock(controllerMutex);controllerError=std::move(error);controllerCompleted=true;}controllerCV.notify_one();
+    }
     const auto block=realtimeBlock.load();if(block!=configuredBlock){dsp56k::ThreadTools::setCurrentThreadRealtimeParameters(int(rate),int(block));board->configureDspWorkers(int(rate),block);configuredBlock=block;}
     audioWorkgroup.update();
     // Event parking reduced wake latency but regressed KS throughput in repeated
@@ -91,9 +107,19 @@ Device::Device(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,c
     if(!(produced&1023))publish();
     workTiming.frame();
    }
-  }catch(const std::exception& e){failure=e.what();running.store(false);{std::lock_guard lock(startMutex);started=true;}startCV.notify_one();}
+  }catch(const std::exception& e){{std::lock_guard lock(controllerMutex);failure=e.what();running.store(false);}controllerCV.notify_one();{std::lock_guard lock(startMutex);started=true;}startCV.notify_one();}
  });
  std::unique_lock lock(startMutex);startCV.wait(lock,[this]{return started;});
+}
+bool Device::setControllerMode(ControllerMode mode,std::string& error){
+ if(mode!=ControllerMode::H8 && mode!=ControllerMode::Native && mode!=ControllerMode::Hybrid){error="Invalid KS controller selection";return false;}
+ std::lock_guard serial(coldMutex);std::unique_lock lock(controllerMutex);error.clear();
+ if(!running.load() || stopping.load()){error=failure.empty()?"KS engine is stopped":failure;return false;}
+ if(mode==controllerMode())return true;
+ controllerCompleted=false;controllerError.clear();requestedController.store(int(mode));
+ controllerCV.wait(lock,[this]{return controllerCompleted || !running.load() || stopping.load();});
+ if(!controllerCompleted){error=failure.empty()?"KS engine stopped before switching controller":failure;return false;}
+ error=controllerError;return error.empty();
 }
 void Device::setAudioBuffer(unsigned block,unsigned floor){baseLead=std::min(4096u,std::max(256u,block+128));realtimeBlock.store(std::max(64u,block));setBufferFloor(floor);}
 void Device::ensureAudioBlock(unsigned block) noexcept{const auto needed=std::min(4096u,std::max(256u,block+128));auto current=lead.load(std::memory_order_relaxed);for(unsigned attempt=0;attempt<4 && current<needed;++attempt)if(lead.compare_exchange_weak(current,needed)){realtimeBlock.store(std::max(64u,block));break;}}

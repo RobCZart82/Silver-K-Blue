@@ -72,7 +72,7 @@ void Processor::rebuild(){
  controlChannel.store(flash.size()>0x1ff08?flash[0x1ff08]&15:0);
  stopEngines();
  if(os.empty()||bank.size()!=ks::Board::WaveSize||flash.size()!=0x80000)return;
- auto d=std::make_unique<ks::Device>(os,bank,flash,hostRate,hostBlock,programToRestore,&performanceDiagnostics);
+ auto d=std::make_unique<ks::Device>(os,bank,flash,hostRate,hostBlock,programToRestore,&performanceDiagnostics,ksController.load());
  if(!d->valid()){message=d->error();return;}
  ownedDevice=std::move(d);applyBufferProfile();auto* dReady=ownedDevice.get();
  const auto state=dReady->fullSnapshot();wireShadow=state.parts;for(auto& mask:wirePendingMask)mask.fill(0);multi.store(state.performance);activeMask.store(state.activeMask);
@@ -166,7 +166,7 @@ void Processor::processBlock(juce::AudioBuffer<float>& audio,juce::MidiBuffer& m
 juce::String Processor::status()const{if(isFirmwareLoading())return "Loading firmware...";std::lock_guard guard(controlMutex);return message;}
 uint64_t Processor::underruns()const{std::lock_guard guard(controlMutex);return ownedK?ownedK->device.getUnderrunCount():ownedDevice?ownedDevice->underruns():0;}
 void Processor::getStateInformation(juce::MemoryBlock& out){std::lock_guard guard(controlMutex);
- auto state=parameters.copyState();state.setProperty("bufferProfile",buffering.load(),nullptr);state.setProperty("dataFolder",dataFolder.getFullPathName(),nullptr);for(const auto& asset:{std::pair<const char*,juce::File>{"os",osFile},{"bank",bankFile},{"flash",flashFile}})if(asset.second.isAChildOf(dataFolder))state.setProperty(juce::String(asset.first)+"Relative",asset.second.getRelativePathFrom(dataFolder),nullptr);state.setProperty("romFolder",romFolder.getFullPathName(),nullptr);state.setProperty("skinChoice",skinChoice,nullptr);state.setProperty("editorScale",editorScale.load(),nullptr);state.setProperty("browserState",browserState,nullptr);state.setProperty("customSkin",customSkin,nullptr);state.setProperty("currentPatch",currentPatch,nullptr);state.setProperty("editorChannel",int(controlChannel.load()),nullptr);state.setProperty("kModel",isKStation(),nullptr);state.setProperty("bank",bankFile.getFullPathName(),nullptr);state.setProperty("flash",flashFile.getFullPathName(),nullptr);
+ auto state=parameters.copyState();state.setProperty("bufferProfile",buffering.load(),nullptr);state.setProperty("ksControllerMode",ksControllerMode(),nullptr);state.setProperty("dataFolder",dataFolder.getFullPathName(),nullptr);for(const auto& asset:{std::pair<const char*,juce::File>{"os",osFile},{"bank",bankFile},{"flash",flashFile}})if(asset.second.isAChildOf(dataFolder))state.setProperty(juce::String(asset.first)+"Relative",asset.second.getRelativePathFrom(dataFolder),nullptr);state.setProperty("romFolder",romFolder.getFullPathName(),nullptr);state.setProperty("skinChoice",skinChoice,nullptr);state.setProperty("editorScale",editorScale.load(),nullptr);state.setProperty("browserState",browserState,nullptr);state.setProperty("customSkin",customSkin,nullptr);state.setProperty("currentPatch",currentPatch,nullptr);state.setProperty("editorChannel",int(controlChannel.load()),nullptr);state.setProperty("kModel",isKStation(),nullptr);state.setProperty("bank",bankFile.getFullPathName(),nullptr);state.setProperty("flash",flashFile.getFullPathName(),nullptr);
  if(ownedK){std::vector<uint8_t> saved;ownedK->device.getState(saved,synthLib::StateTypeGlobal);state.setProperty("os",osFile.getFullPathName(),nullptr);state.setProperty("osHash",juce::String(baseLib::SHA256(kRom).toString()),nullptr);state.setProperty("underruns",juce::int64(ownedK->device.getUnderrunCount()),nullptr);state.setProperty("kState",juce::MemoryBlock(saved.data(),saved.size()).toBase64Encoding(),nullptr);if(auto xml=state.createXml())copyXmlToBinary(*xml,out);return;}
  state.setProperty("os",osFile.getFullPathName(),nullptr);state.setProperty("bank",bankFile.getFullPathName(),nullptr);state.setProperty("flash",flashFile.getFullPathName(),nullptr);state.setProperty("osHash",os.empty()?juce::String{}:juce::String(baseLib::SHA256(os).toString()),nullptr);state.setProperty("bankHash",bank.empty()?juce::String{}:juce::String(baseLib::SHA256(bank).toString()),nullptr);state.setProperty("placeholder",placeholder,nullptr);state.setProperty("selectedPart",int(selectedPart.load()),nullptr);
  auto d=device.load();if(d){auto stats=d->diagnostics();state.setProperty("produced",juce::int64(stats[0]),nullptr);state.setProperty("consumed",juce::int64(stats[1]),nullptr);state.setProperty("midiReceived",juce::int64(stats[2]),nullptr);state.setProperty("waveReads",juce::int64(stats[3]),nullptr);state.setProperty("underruns",juce::int64(d->underruns()),nullptr);state.setProperty("midiOverflows",juce::int64(d->overflows()),nullptr);auto p=d->dumpProgram(),f=d->saveFlash();state.setProperty("program",juce::MemoryBlock(p.data(),p.size()).toBase64Encoding(),nullptr);
@@ -190,6 +190,7 @@ void Processor::setStateInformation(const void* data,int size){
  if(state.hasProperty("dataFolder") && juce::File(state.getProperty("dataFolder").toString()).isDirectory())dataFolder=juce::File(state.getProperty("dataFolder").toString());
  browserState=state.getProperty("browserState",browserState).toString();
  const double savedScale=double(state.getProperty("editorScale",editorScale.load()));editorScale.store(savedScale>=.5&&savedScale<=1.5?savedScale:.75);
+ const int controller=int(state.getProperty("ksControllerMode",0));ksController.store(controller>=0 && controller<=2?ks::ControllerMode(controller):ks::ControllerMode::H8);
  buffering.store(juce::jlimit(0,3,int(state.getProperty("bufferProfile",1))));bankFile=resolveAsset(state,"bank");flashFile=resolveAsset(state,"flash");skinChoice=state.getProperty("skinChoice","Auto").toString();customSkin=state.getProperty("customSkin").toString();currentPatch=state.getProperty("currentPatch").toString();controlChannel.store(uint8_t(int(state.getProperty("editorChannel",0))&15));if(!state.hasProperty("dataFolder") && firmwares.empty())romFolder=juce::File(state.getProperty("romFolder").toString());if(!state.hasProperty("dataFolder") && firmwares.empty() && romFolder.isDirectory()){juce::String ignored;setRomFolder(romFolder,ignored);}
  if(bool(state.getProperty("kModel"))){auto o=resolveAsset(state,"os");auto rom=readK(o);if(!rom.isValid() || baseLib::SHA256(rom.data()).toString()!=state.getProperty("osHash").toString().toStdString()){message="K-Station firmware missing or hash mismatch";return;}juce::MemoryBlock saved;if(!saved.fromBase64Encoding(state.getProperty("kState").toString()))return;auto* b=static_cast<const uint8_t*>(saved.getData());kState.assign(b,b+saved.getSize());kRom=rom.data();osFile=o;parameters.replaceState(state);rebuildK();return;}
  juce::String e;auto o=resolveAsset(state,"os"),b=bankFile,f=flashFile;
@@ -232,6 +233,20 @@ void Processor::timerCallback(){
  notifyHostLatency();
 }
 void Processor::setBufferProfile(int profile){{std::lock_guard lock(controlMutex);buffering.store(juce::jlimit(0,3,profile));applyBufferProfile();}notifyHostLatency();savePreferences();}
+bool Processor::setKSControllerMode(int mode,juce::String& error){
+ error.clear();if(mode<0 || mode>2){error="Invalid KS controller selection";return false;}
+ {
+  std::lock_guard lock(controlMutex);
+  if(isFirmwareLoading()){error="Wait for firmware loading to finish";return false;}
+  if(mode==ksControllerMode())return true;
+  if(performanceDiagnostics.mode()){
+   performanceDiagnostics.stop();performanceStoppedMs=juce::Time::getMillisecondCounterHiRes();performanceStopReason="controller_changed";
+  }
+  if(ownedDevice){std::string failure;if(!ownedDevice->setControllerMode(ks::ControllerMode(mode),failure)){error=failure;return false;}}
+  ksController.store(ks::ControllerMode(mode));
+ }
+ savePreferences();return true;
+}
 void Processor::stopEngines(){if(performanceDiagnostics.mode()){performanceDiagnostics.stop();performanceStoppedMs=juce::Time::getMillisecondCounterHiRes();performanceStopReason="engine_rebuilt_or_stopped";}pendingHostLatency.store(-1);resetClock.store(true);device.store(nullptr);kDevice.store(nullptr);while(activeAudio.load())std::this_thread::yield();observedBlock.store(0);lastObservedBlock=0;ownedDevice.reset();ownedK.reset();}
 void Processor::rebuildK(){stopEngines();kMode.store(true);multi.store(false);activeMask.store(1);selectedPart.store(0);resetPending();{std::lock_guard lock(uiMidiMutex);uiMidi.reset();}
  try{auto k=std::make_unique<KEngine>(kRom,hostRate,hostBlock,kState,buffering.load()==0?0u:256u<<buffering.load(),&performanceDiagnostics);ownedK=std::move(k);applyBufferProfile();kWire.fill(0);kMask.fill(0);resetClock.store(true);kDevice.store(ownedK.get());message="K-Station OS 2.1.01";}catch(const std::exception& e){message=e.what();}}

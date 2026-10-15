@@ -499,7 +499,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
     juce::ComboBox mode,group,section,channel;
     std::array<juce::TextButton,5> pages;
     std::array<juce::TextButton,4> parts;
-    juce::ComboBox firmwareSelect,skinSelect,bufferSelect;
+    juce::ComboBox firmwareSelect,skinSelect,bufferSelect,controllerSelect;
     juce::TextButton rescanRoms{"Rescan ROMs"};
     juce::TextButton diagnostics{"Performance diagnostics"};
     juce::TextButton waveRom{"Wave ROM"},factory{"KS factory data"},customSkin{"Load skin JSON"};
@@ -559,6 +559,15 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         bufferSelect.setBounds(52,401,436,34);bufferSelect.setComponentID("audioBuffer");for(const auto& name:juce::StringArray{"Audio buffer: Low latency","Audio buffer: Balanced (recommended)","Audio buffer: Safe","Audio buffer: Maximum reserve"})bufferSelect.addItem(name,bufferSelect.getNumItems()+1);bufferSelect.setSelectedId(processor.bufferProfile()+1,juce::dontSendNotification);bufferSelect.onChange=[this]{processor.setBufferProfile(bufferSelect.getSelectedId()-1);};bufferSelect.setTooltip("Internal audio buffering. The audio interface buffer is set in your DAW.");
         addAndMakeVisible(diagnostics);diagnostics.setBounds(510,401,270,34);diagnostics.setComponentID("performanceDiagnostics");
         diagnostics.setTooltip("Record optional performance measurements and save a JSON report for Windows or macOS.");
+        addAndMakeVisible(controllerSelect);controllerSelect.setBounds(52,449,436,34);controllerSelect.setComponentID("ksController");
+        controllerSelect.addItem("KS controller: H8 (original)",1);controllerSelect.addItem("KS controller: C++ (experimental)",2);
+        controllerSelect.setTooltip("Compare KS playback with H8 or C++ (OS 2.1.02). Keeps the current sound; stops an active diagnostic measurement. K-Station is unchanged.");
+        refreshControllerSelection();
+        controllerSelect.onChange=[this]{
+            juce::String error;if(!processor.setKSControllerMode(controllerSelect.getSelectedId()-1,error))
+                juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::WarningIcon,"KS controller",error);
+            refreshControllerSelection();
+        };
         diagnostics.onClick=[this]{
             juce::PopupMenu menu;const bool ready=processor.firmwareReady()&&!processor.isFirmwareLoading();
             menu.addItem(1,"Start new summary measurement",ready);menu.addItem(2,"Start new detailed measurement",ready);
@@ -626,9 +635,9 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         auto advanced=skin["advanced"];mode.setBounds(rect(advanced["mode"]));group.setBounds(rect(advanced["group"]));section.setBounds(rect(advanced["section"]));viewport.setBounds(rect(advanced["viewport"]));
         auto setup=skin["setup"];status.setBounds(rect(setup["status"]));status.setFont(juce::Font(17.f));status.setColour(juce::Label::textColourId,ink);
         status.setText(processor.status(),juce::dontSendNotification);latency.setBounds(rect(setup["latency"]));latency.setColour(juce::Label::textColourId,ink);
-        loadRom.setBounds(rect(setup["firmware"]));folder.setBounds(rect(setup["folder"]));channel.setBounds(rect(setup["channel"]));channel.setComponentID("controlChannel");
+        loadRom.setBounds(rect(setup["firmware"]));folder.setBounds(rect(setup["folder"]));channel.setBounds(510,353,270,34);channel.setComponentID("controlChannel");
         for(int i=1;i<=16;++i)channel.addItem("Editor MIDI channel "+juce::String(i),i);channel.setSelectedId(int(processor.editorChannel())+1,juce::dontSendNotification);channel.onChange=[this]{processor.setEditorChannel(uint8_t(channel.getSelectedId()-1));};
-        help.setBounds(52,444,1120,84);help.setColour(juce::Label::textColourId,ink);help.setFont(juce::Font(15.f));
+        help.setBounds(52,494,1120,84);help.setColour(juce::Label::textColourId,ink);help.setFont(juce::Font(15.f));
         help.setText("Silver-K folder contains ROMs and Patches. KS synthetic data is created in ROMs.\nWithout a wave ROM, sampled oscillators are silent. The zero bank adapter is disabled for a real ROM.\nPatch folders, model, tags, favourites and compatibility are available on Patches.",juce::dontSendNotification);
         const juce::StringArray domains{"osc1","osc2","osc3","mixer","filter","envelopes","lfo","voice","arp","fx"};
         for(size_t i=0;i<extraButtons.size();++i)
@@ -886,7 +895,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         viewport.setBounds(page==2?juce::Rectangle<int>(24,146,int(skin["width"])-48,int(skin["height"])-170):rect(skin["advanced"]["viewport"]));
         for(juce::Component* c:std::array<juce::Component*,6>{&status,&latency,&loadRom,&folder,&channel,&help})c->setVisible(isSetup);
         rescanRoms.setVisible(isSetup);bufferSelect.setVisible(isSetup);waveRom.setVisible(isSetup);factory.setVisible(isSetup);skinSelect.setVisible(isSetup);customSkin.setVisible(isSetup);
-        diagnostics.setVisible(isSetup);
+        diagnostics.setVisible(isSetup);controllerSelect.setVisible(isSetup);refreshControllerSelection();
         loadRom.setBounds(52,245,200,38);folder.setBounds(266,245,170,38);
         if(page==1)rebuildSections();if(page==2)performancePanel->refresh();
         if(studioSkin())updateExtraVisibility();repaint();
@@ -958,6 +967,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
     }
     void timerCallback() override
     {
+        refreshControllerSelection();
         diagnostics.setButtonText(processor.performanceDiagnosticsMode()?"Diagnostics: recording":"Performance diagnostics");
         if(processor.isFirmwareLoading()){
             juce::String error;
@@ -981,6 +991,14 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         help.setText(processor.dataFolder.getFullPathName()+"\nROMs: firmware, KS Data and Wave ROM. Patches: automatically scanned patch banks.\nThe audio interface buffer is configured in your DAW.",juce::dontSendNotification);bufferSelect.setSelectedId(processor.bufferProfile()+1,juce::dontSendNotification);const auto rate=processor.getSampleRate();latency.setText(rate>0?"Plugin latency: "+juce::String(1000.*processor.getLatencySamples()/rate,1)+" ms":"",juce::dontSendNotification);
     }
     uint64_t lastFirmwareRevision=0;
+    void refreshControllerSelection(){
+        const int mode=processor.ksControllerMode();
+        // Reflect developer-only legacy environment/project selections without
+        // offering an extra experimental mode in the normal H8/C++ selector.
+        if(mode==2 && controllerSelect.getNumItems()==2){controllerSelect.addItem("KS controller: MIDI hybrid (legacy)",3);controllerSelect.setItemEnabled(3,false);}
+        controllerSelect.setSelectedId(mode+1,juce::dontSendNotification);
+        controllerSelect.setEnabled(!processor.isKStation()&&!processor.isFirmwareLoading());
+    }
     bool greyLower()const{return studioSkin()?!processor.isKStation():processor.skinChoice=="KS Grey" || (processor.skinChoice=="Auto"&&!processor.isKStation());}
     void refreshFirmwares(){if(processor.isFirmwareLoading())return;firmwareSelect.clear(juce::dontSendNotification);for(size_t i=0;i<processor.firmwares.size();++i){const auto& f=processor.firmwares[i];firmwareSelect.addItem(juce::String(f.kStation?"K-Station: ":"KS: ")+f.file.getFileName(),int(i)+1);if(f.file==processor.osFile)firmwareSelect.setSelectedId(int(i)+1,juce::dontSendNotification);}if(!firmwareSelect.getSelectedId())firmwareSelect.setText(processor.osFile.existsAsFile()?juce::String(processor.isKStation()?"K-Station: ":"KS: ")+processor.osFile.getFileName():"Choose firmware",juce::dontSendNotification);}
     void startFirmwareLoad(const juce::File& file,int targetPage){

@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Package only built products, authored KS substitutes and release documentation."""
 import argparse
+from contextlib import nullcontext
 import hashlib
 import json
 import plistlib
+import re
 import shutil
 import subprocess
 import tempfile
@@ -24,14 +26,26 @@ def main():
     parser.add_argument('--dependencies', type=Path, required=True)
     parser.add_argument('--platform', choices=['Windows-x64', 'macOS-arm64'], required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--variant', default='', help='Optional archive label for a separate experimental build')
+    parser.add_argument('--test-guide', type=Path, help='Optional tester instructions to include')
+    parser.add_argument('--staging-directory', type=Path, help='Keep a new staging directory instead of using/cleaning a system temporary folder')
     args = parser.parse_args()
+    if args.variant and not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9-]{0,79}', args.variant):
+        parser.error('Variant must be a short alphanumeric/hyphen label')
+    if args.test_guide and not args.test_guide.is_file():
+        parser.error('Test guide must exist')
     commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
     name = f'Silver-K-{VERSION}-{args.platform}'
+    if args.variant:
+        name += '-' + args.variant
     args.output.mkdir(parents=True, exist_ok=True)
     archive = args.output / (name + '.zip')
     if archive.exists():
         raise RuntimeError(f'Refusing to replace existing release archive: {archive}')
-    with tempfile.TemporaryDirectory(prefix='silver-package-') as temp:
+    if args.staging_directory:
+        args.staging_directory.mkdir(parents=True, exist_ok=False)
+    staging = nullcontext(str(args.staging_directory.resolve())) if args.staging_directory else tempfile.TemporaryDirectory(prefix='silver-package-')
+    with staging as temp:
         stage = Path(temp) / name
         stage.mkdir()
         def copy(src, relative):
@@ -79,6 +93,8 @@ def main():
                           ('doc/releases/0.2.4.md', 'RELEASE_NOTES.md'),
                           ('LICENSE.md', 'LICENSE.md'), ('THIRD_PARTY.md', 'THIRD_PARTY.md')]:
             copy(ROOT / src, dest)
+        if args.test_guide:
+            copy(args.test_guide, 'TEST_KS_CONTROLLER_RU.md')
         for dep in ['juce', 'dsp', 'asmjit']:
             copy(args.dependencies / f'silver_{dep}-src/LICENSE.md', f'Licenses/{dep}/LICENSE.md')
         for filename in ['LICENSE-BSD.txt', 'LICENSE-LGPL.txt']:
@@ -114,7 +130,7 @@ Bundled framework, H8S, libresample and ptypes source/notices are in Silver-K's 
 No original firmware or factory sounds are included in this binary archive.
 '''
         (stage / 'SOURCES.txt').write_text(sources, encoding='utf-8')
-        manifest = dict(version=VERSION, channel='beta', plugin_version='0.2.4', platform=args.platform,
+        manifest = dict(version=VERSION, channel='experimental' if args.variant else 'beta', variant=args.variant or None, plugin_version='0.2.4', platform=args.platform,
                         source_commit=commit, source_dirty=dirty, source_snapshot_sha256=digest(source_archive), firmware_included=False, factory_presets_included=False,
                         synthetic_ks_data=expected, synthetic_wave_rom=wave_manifest,
                         macos_signing='ad-hoc; not notarized' if args.platform.startswith('macOS') else None)

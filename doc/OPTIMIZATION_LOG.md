@@ -6,6 +6,12 @@ Raw local reports are not committed. A hypothesis is not a measured result.
 
 ## Current state — 2026-10-15
 
+- Windows tester follow-up: Setup now has a per-instance **KS controller:
+  H8 / C++** selector with worker-owned live handoff, project/default persistence
+  and separate diagnostic sessions. Windows x64 VST3/Standalone tester package
+  and Russian A/B instructions are prepared; final UI-switch, actual VST3 audio
+  and Processor integration checks passed. Ryzen results are still pending;
+  these binaries do not establish a new CPU saving or dropout remedy.
 - Full post-boot follow-up: `SILVER_KS_CONTROLLER=native` now runs normal KS
   playback control in C++, with H8 retained for original bootstrap only. Eight
   passages match complete DSP tapes, 24-stream integer audio, state/Flash and
@@ -1544,6 +1550,86 @@ build/tests/trace analysis during captures. Power/thermal state not controlled.
   No conclusion that the tester's stutter is fixed. Next: real host A/B tests,
   then profile native control vs DSP cost before considering any further
   controller batching; keep original H8 as the oracle.
+
+## 2026-10-15 — Windows tester build and H8/C++ Setup selector
+
+- Request: Windows x64 VST3 and Standalone for the Ryzen 3 3100 tester, with a
+  settings switch to compare sound/CPU, preserving JIT. Source: parent
+  **`9b81aaf9c3db6b9e3c3a140ccfc561b24b87a9bd`**, `Optimized` working-tree
+  patch/source snapshot. Windows x64, Core i5-13600KF; MSVC 19.44,
+  Release/NMake, `/O2 /MD`. Diagnostics embed that parent revision and dirty
+  state; the package includes the exact corresponding local source ZIP/hash.
+  DSP dependency/JIT, Windows settings, priorities, affinity, buffering,
+  resampling and DSP scheduling unchanged. No firmware or user files deleted.
+- **Setup -> KS controller -> H8 (original) / C++ (experimental)** now changes
+  the current instance without a firmware reboot. A serialized control request
+  is applied/acknowledged by the worker between host output samples, including
+  when its lead is full. Audio callbacks never wait for this command or access
+  its mutex. Current voices, sustain, DSP/effect state, queues and interpolation
+  history stay intact. Native validation failure is returned to the UI and
+  preserves running H8. Initial default remains H8; no implicit native fallback.
+- The choice is saved in project state and merged new-instance preferences.
+  Old projects without the new field use H8, independently of the current
+  default; opening a project does not replace new-instance defaults or another
+  running instance's choice. Developer environment selection remains the
+  fallback when no new-instance preference exists; the old hybrid path remains
+  available. K is unchanged and its selector is disabled.
+- Changing mode stops an active diagnostics session with
+  `stop_reason=controller_changed`. The recorded session retains its old
+  backend while the top-level report shows the current backend; new sessions
+  record the applied backend. No mixed-mode CPU/session comparison. Corrected
+  the existing Setup MIDI-channel/buffer overlap and visually inspected the
+  final Setup capture; the new selector is contained and readable.
+- Evidence root: **`output/tester-controller-20261015-193117/`**. Final builds
+  passed: `silverK_VST3`, `silverK_Standalone`, `silverController_test`,
+  `silverEditor_test`, `silverLatency_test`, `silver_vst3_check`. Affected header
+  consumers were recompiled; final source/artifact SHA-256 values are retained
+  in local `final-build.json`. Standalone EXE SHA-256:
+  **`5258110d54912cb524a93a7445be0b3593e651fdd946ddbb16ab358ff16427da`**;
+  VST3 module SHA-256:
+  **`e4fd2a2b065e1887248dcbe24ee05393cc41fd4acf3dc4c2de4f3564f4443ee7`**.
+- `silverController_test` passed: five real UI handoffs during held notes and
+  sustain, **61,440 exact float samples** (15,360 host frames x 4 buffer channels)
+  against an unchanged H8 Processor, nonsilent output, zero offline underruns,
+  no firmware-revision/latency change. Also checked instance isolation,
+  diagnostic segmentation/backend tags, global preferences, native project
+  restoration, old-project H8 default and stale-instance preference protection.
+  A separate Device with one changed inline LCD byte in its private in-memory
+  OS copy booted H8, rejected native fingerprint validation, acknowledged the
+  failure and kept H8 valid. No original input file was changed.
+- Preflight: the new test EXE initially exhausted its Windows stack because
+  its large Device fixture was a local variable (exit `0xc00000fd`). Moved
+  large fixtures to the heap, rebuilt and reran successfully. This failed
+  test-process run is excluded from passing evidence; no system change was
+  involved. Only final passing builds were used for packaging.
+- Actual final VST3 module loaded by `silver_vst3_check` in separate original/
+  native project states: two 4 s offline renders at 48 kHz / 256, **192,000
+  stereo frames** each, zero underruns and nonzero signal, 512-frame reported
+  latency in both modes. Both resulting 24-bit WAVs are byte-identical,
+  SHA-256 **`e5d814ae1e3a270a03198e7406967e4774528989ece98f595f60f131c81e8361`**.
+  Re-read the returned VST3 states to verify mode 0 / 1, not just the same
+  backend accidentally tested twice. Raw audio/state/screenshots remain private.
+- Final editor test passed with actual K/KS OS, correct selector visibility/
+  availability and non-overlapping settings. Final latency/reentry test passed
+  for K and KS with C++ selected and two DSP workers: rates/blocks/profiles,
+  sync/async firmware loads, state restoration, nonsilent offline audio and
+  return to realtime; 9 latency notifications per model. All test data writes
+  were isolated under the evidence root, not the user's active data directory.
+- Packaging: separate **`KS-Controller-Test-20261015`** Windows x64 variant,
+  VST3 bundle + Standalone, Russian test instructions, corresponding source,
+  licenses, manifest and SHA-256 checksums. The standard release packaging path
+  is preserved; experimental variants get a distinct archive name/channel.
+  Original firmware, factory/wave banks, private captures/reports and build
+  intermediates are excluded. Only authored synthetic init Flash and zero Wave
+  substitute are included as in the regular package; testers keep their own
+  existing ROM/data files. Products retain the same plugin identity/version,
+  documented in the tester guide rather than installing duplicate plugins.
+- No new CPU percentage is claimed from these functional checks; the previous
+  2.4–5.3% result belongs to the earlier exact binary and short Intel workload.
+  Next: tester's matched H8/C++ passages with unchanged DAW/buffer/patch and
+  separate summary JSON reports, then repeat CPU-meter comparison with
+  diagnostics off. Ryzen stability/CPU, real DAW deadlines, multiple instances,
+  real wave/patch corpus and macOS compilation/testing remain pending.
 
 ## Entry template
 

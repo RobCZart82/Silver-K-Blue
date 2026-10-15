@@ -85,6 +85,8 @@ bool isKStation()const{return kMode.load();}
  uint8_t editorChannel()const{return isKStation()?controlChannel.load():midiChannel();}
  int bufferProfile()const{return buffering.load();}
  void setBufferProfile(int);
+ int ksControllerMode()const{return int(ksController.load());}
+ bool setKSControllerMode(int,juce::String& error); // UI/control thread only.
  // Message/control thread only. Mode: 0 stop, 1 new summary, 2 new detailed session.
  bool setPerformanceDiagnostics(int mode);
  int performanceDiagnosticsMode()const{return performanceDiagnostics.mode();}
@@ -98,6 +100,7 @@ private:
  MidiNoteLearn noteLearn;
  pluginLib::HostAudioWorkgroup hostAudioWorkgroup;
  std::atomic<int> buffering{1};
+ std::atomic<ks::ControllerMode> ksController{ks::Device::environmentControllerMode()};
  void applyBufferProfile();
  void notifyHostLatency();
  std::atomic<int> pendingHostLatency{-1};

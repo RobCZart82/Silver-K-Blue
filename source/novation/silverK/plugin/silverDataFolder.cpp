@@ -20,7 +20,7 @@ bool Processor::updateSettings(const juce::NamedValueSet& edits,juce::String& er
  return true;
 }
 juce::NamedValueSet Processor::preferenceValues()const{
- juce::NamedValueSet values;values.set("editorScale",editorScale.load());values.set("skinChoice",skinChoice);values.set("customSkin",customSkin);values.set("bufferProfile",buffering.load());values.set("editorChannel",int(editorChannelPreference.load()));values.set("browserState",browserState);return values;
+ juce::NamedValueSet values;values.set("editorScale",editorScale.load());values.set("skinChoice",skinChoice);values.set("customSkin",customSkin);values.set("bufferProfile",buffering.load());values.set("ksControllerMode",ksControllerMode());values.set("editorChannel",int(editorChannelPreference.load()));values.set("browserState",browserState);return values;
 }
 void Processor::savePreferences(){
  if(isFirmwareLoading())return;
@@ -43,6 +43,7 @@ void Processor::initializeDataFolder(){
  osFile=selectedAsset("os");bankFile=selectedAsset("bank");flashFile=selectedAsset("flash");
  const double scale=double(settings.getProperty("editorScale",.75));editorScale.store(std::isfinite(scale)&&scale>=.5&&scale<=1.5?scale:.75);
  skinChoice=settings.getProperty("skinChoice","Auto").toString();customSkin=settings["customSkin"].toString();browserState=settings["browserState"].toString();
+ const int controller=int(settings.getProperty("ksControllerMode",ksControllerMode()));ksController.store(controller>=0 && controller<=2?ks::ControllerMode(controller):ks::ControllerMode::H8);
  buffering.store(juce::jlimit(0,3,int(settings.getProperty("bufferProfile",1))));controlChannel.store(uint8_t(int(settings["editorChannel"])&15));editorChannelPreference.store(controlChannel.load());
  juce::String error;setDataFolder(dataFolder,error);if(error.isNotEmpty())message=error;
  preferenceBaseline=preferenceValues();startupFirmware=osFile;startupPending.store(osFile!=juce::File{});

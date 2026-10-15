@@ -122,6 +122,10 @@ target_link_libraries(silverPersistence_test PRIVATE silverK jucePluginLib ksLib
 add_test(NAME silver_persistence_and_rescan COMMAND silverPersistence_test)
 
 add_executable(silverLatency_test silverLatency_test.cpp)
+add_executable(silverController_test silverController_test.cpp)
+target_link_libraries(silverController_test PRIVATE silverK jucePluginLib ksLib kstationLib juce::juce_audio_utils)
+add_test(NAME silver_controller_switch COMMAND silverController_test)
+set_tests_properties(silver_controller_switch PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)
 target_link_libraries(silverLatency_test PRIVATE silverK jucePluginLib ksLib kstationLib juce::juce_audio_utils)
 add_test(NAME silver_latency_reentry COMMAND silverLatency_test)
 set_tests_properties(silver_latency_reentry PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)

@@ -545,14 +545,26 @@ do not validate macOS, a real VST3 host or the tester's Ryzen 3 3100.
 
 ## Native KS playback controller
 
-`SILVER_KS_CONTROLLER=native` selects `native-cpp-runtime` for a newly created
-KS instance. H8 performs the original bootstrap and initial setup; the native
+**Setup -> KS controller -> H8 (original) / C++ (experimental)** selects the
+playback controller for this KS instance. The worker applies the change between
+samples without rebuilding firmware or clearing voices, effect tails, queues or
+resampler history. K-Station's selector is disabled. A rejected native handoff
+reports its error and preserves the running H8 controller.
+
+The choice is stored in DAW state and remembered for new instances. Old projects
+without `ksControllerMode` use original H8; restoring a project does not overwrite
+new-instance defaults. A fresh installation starts with H8. The developer
+`SILVER_KS_CONTROLLER=native` environment selection remains a fallback for new
+instances without a saved choice (and the low-level Device/probe workflows).
+Choose H8 explicitly in Setup to disable the experiment. `native-midi` still
+selects the historical hybrid through the developer path; recorded fixture
+playback remains separate.
+
+In `native-cpp-runtime`, H8 performs the original bootstrap and initial setup; the native
 controller takes over when `Board::boot()` returns, before the Device's program
 restore, voice warm-up and normal playback. The interpreter is then locked.
-Unset the variable and recreate the instance to return to original H8. This is
-process-local configuration, not a Windows setting or saved host preference.
-K is unchanged. `native-midi` still selects the historical hybrid; recorded
-fixture playback remains a separate mode.
+Normal playback then uses the selected controller. This is a plugin setting;
+Windows settings and K's engine are unchanged.
 
 The native implementation covers normal playback controller code for verified
 KS OS 2.1.02: MIDI/system/realtime/SysEx parsing and part routing, all CC/NRPN,
@@ -586,8 +598,12 @@ malformed SysEx stream, host or platform.
 The worker-owned `Board::enableNativeController(bool)` API enables/disables at
 quiescent boundaries. It is mutually exclusive with recorded playback. Explicit
 disable re-enables the interpreter and restores the mapped memory/fetch path;
-subsequent enable validates the current image again. Normal plugin selection
-is immutable per instance. Diagnostic backend strings distinguish all modes.
+subsequent enable validates the current image again. Device control requests
+are acknowledged by the worker; the audio callback never takes a controller
+lock or performs the handoff. Switching ends a running diagnostic recording
+with `stop_reason=controller_changed`. The report's `session.controller_backend`
+retains the recorded mode and the top-level field shows the current mode; start
+a separate session after switching. Diagnostic backend strings distinguish all modes.
 
 Private comparisons:
 

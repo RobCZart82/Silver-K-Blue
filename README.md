@@ -4,6 +4,8 @@ A beta release for continued development. CPU performance, latency and optimizat
 
 Optional **Setup → Performance diagnostics** records K/KS performance sessions and exports JSON on Windows and macOS. See the [measurement guide](doc/PERFORMANCE_DIAGNOSTICS.md) and shared [optimization journal](doc/OPTIMIZATION_LOG.md) for reproduction conditions, validation status and the next investigation.
 
+On `Optimized`, **Setup → KS controller** switches original H8 / experimental C++ playback for KS OS 2.1.02, keeping the current voices and state. H8 is the initial default; the choice is remembered and saved in DAW projects. See the [Windows tester instructions](doc/KS_CONTROLLER_TEST_WINDOWS_RU.md). JIT settings are unchanged; macOS validation of this experiment is pending.
+
 [Download 0.2.4 Beta](https://github.com/temaniak/Silver-K/releases/tag/v0.2.4). Installation and first-run instructions are provided below in English. See the [detailed installation guide](doc/INSTALL.md) and [release notes](doc/releases/0.2.4.md).
 
 This beta includes the patch-manager, V-Station import, host-clock, audio scheduling and data-folder fixes since 0.2 Alpha.

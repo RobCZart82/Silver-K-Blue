@@ -7,10 +7,11 @@
 #include <condition_variable>
 #include "baseLib/performanceDiagnostics.h"
 namespace ks {
+enum class ControllerMode {Environment=-1,H8=0,Native=1,Hybrid=2};
 // DSP/H8 ownership belongs to the worker. Host audio does bounded queue access.
 class Device {
 public:
-    Device(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,const std::vector<uint8_t>& flash,double hostRate,int block,const std::vector<uint8_t>& program={},baseLib::performance::Diagnostics* performance=nullptr);
+    Device(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,const std::vector<uint8_t>& flash,double hostRate,int block,const std::vector<uint8_t>& program={},baseLib::performance::Diagnostics* performance=nullptr,ControllerMode controller=ControllerMode::Environment);
     ~Device();
     bool valid() const{return running.load();}
     const std::string& error()const{return failure;}
@@ -28,7 +29,12 @@ public:
     unsigned latency()const{return lead.load();}
     const char* workerWaitBackend()const{return "poll-50us";}
     const char* dspExecutionBackend()const{return parallelDSPs?"two-workers-slice-barrier":"sequential";}
-    const char* controllerBackend()const{return nativeRuntime?"native-cpp-runtime":nativeMidi?"live-cpp-midi-hybrid":"original-h8";}
+    static ControllerMode environmentControllerMode();
+    ControllerMode controllerMode()const{return currentController.load();}
+    const char* controllerBackend()const{const auto mode=controllerMode();return mode==ControllerMode::Native?"native-cpp-runtime":mode==ControllerMode::Hybrid?"live-cpp-midi-hybrid":"original-h8";}
+    // Control thread only; the worker applies/acknowledges between samples.
+    // Failed native validation retains the current controller and state.
+    bool setControllerMode(ControllerMode,std::string& error);
     const WorkerPlacement& workerPlacement()const{return placement;}
     void setAudioBuffer(unsigned block,unsigned floor);
     void ensureAudioBlock(unsigned block) noexcept;
@@ -36,8 +42,12 @@ public:
 private:
     baseLib::performance::Diagnostics* performance;
     const bool parallelDSPs;
-    const bool nativeMidi;
-    const bool nativeRuntime;
+    std::atomic<ControllerMode> currentController;
+    std::atomic<int> requestedController{-1};
+    std::mutex controllerMutex;
+    std::condition_variable controllerCV;
+    bool controllerCompleted=false;
+    std::string controllerError;
     WorkerPlacement placement;
     struct Event{uint64_t due;uint8_t value;uint8_t part=255,length=0;};
     struct Frame{uint64_t due;std::array<float,OutputCount> value;};
