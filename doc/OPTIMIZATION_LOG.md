@@ -6,12 +6,14 @@ Raw local reports are not committed. A hypothesis is not a measured result.
 
 ## Current state — 2026-10-15
 
-- Live follow-up: opt-in **C++ Note/CC MIDI decoder** now accepts live values,
-  with byte-for-byte H8 bus traces and exact audio in three scenarios. It is a
-  **hybrid**: original H8 still handles UART, part routing, note/CC actions,
-  voices, parameter conversion and DSP block generation. Default remains H8;
-  select `SILVER_KS_CONTROLLER=native-midi` only for the experiment. Matched
-  CPU medians show **no measurable saving** from this small first live stage.
+- Live note/sustain follow-up: C++ now handles Note On/Off decisions, key and
+  velocity memory, held-key/mono priority, CC64 state and part/pedal release
+  decisions. Complete DSP bus tapes/audio match H8 in four scenarios, including
+  all four voice modes and pedal threshold/repeated-note cases. This remains a
+  **hybrid**: original H8 handles UART/part routing and DSP voice parameter
+  generation/upload. Default H8 unchanged; opt-in
+  `SILVER_KS_CONTROLLER=native-midi`. CPU medians are **0.8–1.6% higher**, no
+  saving on the local Windows Intel. Keep off by default; Mac/Ryzen pending.
 - Controller follow-up on branch **Optimized**: recorded original H8 traffic to
   both KS DSPs (boot, Single and four-part passage), and added an opt-in checked
   C++ recorded-scenario controller. Original H8 remains the plugin default.
@@ -1149,6 +1151,140 @@ build/tests/trace analysis during captures. Power/thermal state not controlled.
   generation. Continue exact command/audio comparison with H8 before replacing
   its periodic DSP reads or removing H8 from the live path. Keep this hybrid off
   by default; no CPU-efficiency claim from functional coverage alone.
+
+## 2026-10-15 — live C++ Note On/Off and sustain/key-state handlers
+
+- Request: move actual note/pedal handling beyond MIDI decoding, compare DSP
+  commands, audio and CPU with original H8, retain opt-in/no JIT changes,
+  update diary and push verified changes to GitHub **Optimized**. Starting
+  checkout clean at `865b2f8e85b3`, tracking origin/Optimized at the same commit.
+  Shared H8 CPU source, DSP source/JIT settings/dependency pin, clocks, slice
+  targets, serial ordering, buffer sizes, resampling, priorities and Windows
+  policy remain unchanged. Only in-plugin native controller dispatch changes.
+- Implemented `ksLiveNoteController`: C++ note handlers for range checks,
+  velocity-zero release, note/velocity list, per-key velocity, physical-down
+  and sustain-held bitmaps, ordered-key removal, mono replacement-key search,
+  pedal threshold (below 64 / 64..127), repeated pedal state, held-voice
+  release and part all-notes-off/reset decisions. Four voice modes retain
+  their original control flow. Remaining original voice code still performs
+  DSP allocation, parameter calculations and upload; boot/UART/part routing,
+  arpeggiator timing and other CC conversion remain H8. No claim of complete
+  native controller/H8 removal or recovered DSP-parameter implementation.
+- Conservative implementation: 462 fixed C++ state transitions preserve the
+  original interruptible guest ABI and fetch/data bus clocks. They execute
+  without decoding/executing the corresponding H8 instructions. Live control
+  state remains in guest memory, allowing original/native alternation inside
+  calls/messages. Remaining H8 voice-engine calls retain exact targets and
+  timing; the DSP comparison does not stub or shortcut that engine. Extended
+  firmware fingerprint rejects unknown note/pedal/helper revisions.
+- Default original loop retains no per-instruction native dispatch. Opt-in
+  uses a cheap page filter before exact controller-PC dispatch. Initial
+  private preflight (`20261015-155105`, one pair, 2 s pedal case) matched all
+  bus/audio checks but CPU was ~7.9% higher; excluded from final estimate.
+  Removed a redundant 128-vector interrupt scan when no IRQ is pending and
+  replaced the hot multi-range filter with a page bitmap. Neither changes
+  interrupt arbitration or guest semantics. Actual IRQ delivery still runs
+  through the unchanged H8 core.
+- Isolated differential verification: original H8 is the independent oracle
+  for 12,626 live bytes / 6,288 decoded messages / 315,950 decoder boundaries,
+  plus **14,784 note/pedal boundaries** (all 462 transitions, 32 varied
+  operand/flag sets each). Registers/flags/PC/clock, stack/call and bus-pair
+  bookkeeping, every bus read/write and final RAM match. Calls stop at their
+  actual ABI destination in the one-boundary test. Pending-interrupt,
+  firmware/status guards and alternating native/original execution checked.
+  First harness run had an unsynchronized starting CPU clock after its guard
+  test; corrected test setup before collecting this passing result.
+- Primary native comparison: **`output/perf-live-controller/20261015-155316/`**,
+  Windows x64 i5-13600KF (14 physical / 20 logical), MSVC 1944 Release/NMake,
+  source `865b2f8e85b3` dirty, DSP pin unchanged
+  `44353be2f0156cac970c6ab4f467ea1998b40605`. Archived fixture SHA-256
+  `2d6bf78483cf27ddaaeaf082f111c502a26b99d9a8aed88ddf4f7218b5355bf7`;
+  source hashes retained. Private KS OS 2.1.02, synthetic Init Flash and zero
+  wave bank. Raw tapes/binaries/private disassembly stay ignored and are not
+  part of the GitHub upload.
+- Work: **181,362 native frames** (~4.0000231 s), sequential DSPs for both
+  modes, all 24 integer streams. Same live MIDI to original H8 and native;
+  each fresh process boots/prepares/warms through original H8 before selecting
+  the measured path. `single` and `multi` extend the earlier chord passage to
+  four seconds; `midi` extends the earlier control passage with its release
+  tail. New `pedal` has four parts: Mono / Mono autoglide / Poly / Poly
+  retrigger, key range 36..84 with notes outside it, repeated notes, Note On
+  velocity zero, release velocity, CC64 values 63/64/127/0 and repeated values,
+  all-notes-off/all-sound-off interactions and two event cycles. No sampled
+  wave-bank/drum result inferred from the zero-wave fixture.
+- Exact comparison: original/native recorded tapes are **byte-identical**,
+  including host reads, writes, acceptance, guest cycle/PC and slice clocks.
+  All unrecorded pairs match audio hash/peak/frames, H8/DSP cycles/instructions
+  and serial depth/underflow/overflow. All 32 cases succeed (eight recorded
+  controls plus three interleaved H8/native pairs per scenario). No concurrent
+  build, other test suite or trace analysis during the measured renders.
+
+| Scenario | DSP bus events compared | All-24-stream audio hash | Native note-state boundaries |
+| --- | --- | --- | --- |
+| Single | 1,450,157 | `2387145891285364963` | 698,075 |
+| Four parts | 1,061,786 | `3176463666096680485` | 1,300,613 |
+| MIDI/CC | 1,125,213 | `1205626428641651500` | 785,283 |
+| Pedal / four voice modes | 703,901 | `3541542743908256581` | 1,548,572 |
+
+- Pedal corpus executes 120 Note On handler entries, 64 explicit Note Off
+  entries, 80 sustain actions and 24 pedal-up voice-release walks in native
+  code. Velocity-zero release branches inside Note On, so decoded Note Off
+  counts and explicit Note Off entry counts intentionally differ. Coverage
+  assertions require note, note-off and sustain handlers to run, not merely
+  that the option was requested. Audio equality is verified by hashes; no
+  listening or real DAW dropout test performed.
+- CPU: whole-process Windows GetProcessTimes user+kernel; wall via steady_clock.
+  Original boot/setup/warm-up, recording, file IO and formatting excluded;
+  common sample hashing and native execution counters included. Order per
+  scenario H8/native, native/H8, H8/native; three runs per mode. Process CPU
+  accounting is quantized (15.625 ms observed). Same equal-work render, no
+  host pacing/resampling/underrun substitute. New four-second figures are not
+  pooled with the earlier two-second decoder/replay measurements.
+
+| Scenario | H8 CPU seconds per run | C++ CPU seconds per run | Median H8 / C++ | CPU change | Median wall H8 / C++ s |
+| --- | --- | --- | --- | --- | --- |
+| Single | 1.984375, 2.000000, 1.968750 | 2.078125, 2.015625, 2.000000 | **1.984375 / 2.015625** | **+1.57%** | 1.984394 / 2.026747 |
+| Four parts | 1.937500, 1.953125, 1.968750 | 2.015625, 1.953125, 1.968750 | **1.953125 / 1.968750** | **+0.80%** | 1.986578 / 1.983301 |
+| MIDI/CC | 1.968750, 1.937500, 1.984375 | 1.984375, 2.015625, 1.984375 | **1.968750 / 1.984375** | **+0.79%** | 1.985780 / 1.992141 |
+| Pedal | 1.937500, 1.937500, 1.953125 | 1.968750, 1.968750, 1.968750 | **1.937500 / 1.968750** | **+1.61%** | 1.955155 / 1.975182 |
+
+- Result: functional note/sustain port verified, **no CPU saving**. Prototype
+  medians are slightly higher by one/two CPU-accounting quanta; three short
+  repeats do not establish an exact overhead or cause. Conservative boundary
+  dispatch/counters, cache/placement/frequency and remaining H8 work are not
+  separately profiled. No ETW in this round. Keep native mode off by default;
+  no claim that the Ryzen 3 3100 stutter is fixed or that a live H8-free
+  controller would match these costs. Previous replay CPU saving is unrelated.
+- Final validation: Release Standalone and VST3 built successfully. Refreshed
+  header consumers before the build because localized NMake dependency scanning
+  is unreliable; no shared H8/DSP source was edited. Final private differential
+  test passed, including new handler fingerprint and all native page-filter
+  entries. Default H8 regression retains 24-stream hash `3852514813786200426`
+  / peak 1,356,564 for 65,536 native frames, and passes saved-state, serial and
+  H8/DSP-clock checks.
+- Switching/helper validation: **`output/perf-live-controller/20261015-160226/`**,
+  Single and four-part pedal scenarios, two DSP workers, native disabled at
+  0.65 s and re-enabled at 0.95 s. All eight processes (recorded controls plus
+  one pair per scenario, two seconds each) passed full-tape/audio comparisons
+  with uninterrupted H8. Actual native note/pedal handlers ran after re-enable.
+  These compatibility/switching runs are separate from the primary CPU sample.
+  Rebuilt fixture archived with source hashes; SHA-256
+  `e04ef645a7c73331750b156bdeb75c7dffb1e7234aeb83bd65ffc2619da2280f`.
+- Full Processor checks: eight CTests passed with native mode and two DSP
+  workers (53.91 s): trace, DSP workers, placement, diagnostics, wake-up, host
+  clock, editor and latency/reentry. Private K/KS OS and fresh data directory
+  supplied; firmware checks executed, not skipped. Separate default-H8
+  latency/reentry also passed (51.87 s). Python syntax, staged whitespace and
+  source-only repository audit passed (574 tracked files). Private traces,
+  disassembly, firmware, executables and personal reports are all ignored and
+  excluded from the source commit. Normal CI cannot execute private-ROM checks.
+- Publication requested to existing `origin/Optimized` (source/tests/docs only);
+  final push receipt/commit identity is reported in the chat. Windows evidence
+  does not validate macOS; Mac compile/audio, real VST3 host/multiple instances,
+  other patches/waves and Ryzen remain open.
+- Next: port/measure the remaining DSP voice parameter engine or reduce ABI
+  transition cost while preserving exact clocks/interrupts. Note state now has
+  an independent C++ implementation and a strict H8 oracle for that work.
 
 ## Entry template
 

@@ -421,10 +421,10 @@ evidence for this finite playback prototype, **not** an estimate for a completed
 live native controller. Next work is to decode the observed flag/data protocol
 and implement live MIDI-to-DSP decisions against the H8 reference.
 
-## Opt-in live KS MIDI decoder (first hybrid stage)
+## Opt-in live KS note/sustain controller (hybrid)
 
 `SILVER_KS_CONTROLLER=native-midi` opts a newly created KS instance into the live
-C++ Note/CC decoder after original H8 boot. Unset it and recreate the instance
+C++ MIDI decoder and Note On/Off/sustain handlers after original H8 boot. Unset it and recreate the instance
 to return to original H8. K is unchanged. This process-local environment switch
 is not a saved preference and does not change Windows settings. The explicit
 worker-owned `Board::enableLiveMidiController(bool)` API can also switch at a
@@ -432,24 +432,26 @@ quiescent boundary: the guest ABI stays current, including partial messages.
 Recorded playback and this live mode are mutually exclusive.
 Performance session/root JSON records `controller_backend` as `original-h8`
 or `live-cpp-midi-hybrid` (K: not applicable). The existing H8 timing bucket
-includes this small C++ decoder when the hybrid is selected; it is not an
+includes this C++ controller work when the hybrid is selected; it is not an
 isolated measurement of H8 instructions in that mode.
 
-This stage ports the OS 2.1.02 byte decoder for Note On, Note Off and CC,
-including channel and running-status state, into C++. It accepts live values
-and does not load a tape. UART, channel/part routing, velocity-zero semantics,
-voice allocation, sustain actions, CC-to-parameter conversion, DSP block
-generation, arpeggiator and other controller tasks still run in original H8.
+This stage ports the OS 2.1.02 byte decoder, Note On/Off decisions and key/pedal
+state into C++. It handles keyboard range, velocity-zero release, ordered key
+and velocity memory, physical/held bitmaps, mono replacement-note search,
+sustain threshold 63/64, pedal-up held-voice release and part release/reset.
+It accepts live values and does not load a tape. UART, channel/part routing,
+DSP voice allocation/parameter calculations and upload, arpeggiator timing and
+other CC-to-parameter conversion still run in original H8.
 Other message types (program, pressure, bend, SysEx, system common/realtime)
 retain their original H8 paths. It is **not** a complete native DSP controller
 and cannot run with H8 stopped. No H8 CPU-core or DSP JIT source/config changed.
 
-The C++ decoder preserves original instruction boundaries, fetch/data bus
+The C++ controller preserves original instruction boundaries, fetch/data bus
 cycles, registers, flags and call ABI. Pending interrupts go through original
 H8 arbitration; both DSPs keep the same slice targets and serial ordering.
-A fingerprint rejects unverified parser/dispatch-table revisions. This
+A fingerprint rejects unverified parser, note/pedal and helper revisions. This
 conservative ABI bridge allows the original handlers to remain the oracle
-while later stages port voice/parameter logic. It is a compatibility step;
+while later stages port DSP voice/parameter logic. It is a compatibility step;
 do not reuse the recorded-playback saving as a live-controller result.
 
 `ksLiveMidiController_test` is a private-input isolated differential test:
@@ -465,6 +467,9 @@ every boundary (registers/flags/PC/clocks and each bus access), all 16 channels,
 all 128 data values, varied velocities/CC values and running status. No private
 firmware is embedded. The no-argument CTest returns skip 77; run it explicitly
 with private OS for evidence. Normal CI cannot validate this private-ROM case.
+It also compares all 462 fixed note/pedal transitions, 32 varied operand/flag
+sets each, at their real call boundaries. No DSP engine is stubbed to make the
+full-Board audio comparison pass.
 
 The runner first compares original-H8 `record` with `live-record`: complete
 binary tapes must match byte-for-byte, including reads, writes, acceptance,
@@ -474,7 +479,13 @@ counters. `single`/`multi` retain the earlier passage; `midi` adds fragmented
 messages, running status, repeated pitches, velocity zero, CC 1/7/10/11/64/
 105/120/123, program and system-message fallback. Eight notes total maximum in
 the chord passages; no claim for all possible patches/voices/CC combinations.
-Reports expose native byte/message/instruction-boundary counts. Add
+`pedal` exercises four parts with Mono, Mono autoglide, Poly and Poly retrigger,
+key range 36..84 plus out-of-range notes, repeated keys, velocity zero, pedal
+63/64/127/0 and repeated pedal changes, CC120/123 with and without sustain.
+Default `--seconds 4` renders 181,362 native frames for recordings and each
+CPU/audio run; `--seconds 2` reproduces the shorter work. Recording is bounded
+to 2..4 seconds to fit the existing trace capacities, with overflow rejected.
+Reports expose native decoder and actual note/pedal-handler counts. Add
 `--dsp-threads 2 --repeats 1` for separate helper compatibility validation.
 Raw tapes/failed trials stay ignored, following the same private-data rules.
 Add `--toggle --repeats 1` to verify disabling at 0.65 s and re-enabling at

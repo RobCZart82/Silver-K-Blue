@@ -241,7 +241,7 @@ void Board::advance(uint32_t budget){
         if(liveMidi){
             while(h8->cycles-begin<budget){auto before=h8->cycles;
                 const unsigned pc=h8->getPC();
-                if(pc<0x2de8 || pc>=0x2efc || !liveMidi->step(*h8))h8->step();
+                if(!LiveMidiController::candidate(pc) || !liveMidi->step(*h8))h8->step();
                 tick(before);if(h8->getPC()==0x41e2)mainEntered=true;if(mainEntered && h8->getPC()==0x4334)ready=true;}
         }else{
             // Default H8 loop has no per-instruction experiment dispatch.

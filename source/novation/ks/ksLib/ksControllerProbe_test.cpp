@@ -41,13 +41,16 @@ struct Stats {
 };
 }
 int main(int argc,char** argv){try{
-    if(argc!=8){std::cout<<"SKIP: KS OS, Flash, wave, report JSON, h8|record|replay|boot|live|live-record, single|multi|midi, trace path required\n";return 77;}
+    if(argc!=8 && argc!=9){std::cout<<"SKIP: KS OS, Flash, wave, report JSON, mode, single|multi|midi|pedal, trace path, optional seconds (up to 4) required\n";return 77;}
+    const double duration=argc==9?std::stod(argv[8]):2.;
+    check(std::isfinite(duration)&&duration>=2.&&duration<=4.,"Controller probe duration must be 2..4 seconds");
     const std::string mode=argv[5],scenario=argv[6];
     const bool liveMode=mode=="live" || mode=="live-record" || mode=="live-toggle" || mode=="live-toggle-record";
     const bool recording=mode=="record" || mode=="live-record" || mode=="live-toggle-record";
     const bool toggling=mode=="live-toggle" || mode=="live-toggle-record";
     check(mode=="h8" || mode=="record" || mode=="replay" || mode=="boot" || liveMode,"Unknown controller probe mode");
-    check(scenario=="single" || scenario=="multi" || scenario=="midi","Unknown controller probe scenario");
+    check(scenario=="single" || scenario=="multi" || scenario=="midi" || scenario=="pedal","Unknown controller probe scenario");
+    const bool multi=scenario=="multi" || scenario=="pedal";
     const auto* threads=std::getenv("SILVER_KS_DSP_THREADS");const bool parallel=threads&&std::string(threads)=="2";
     const auto setup=Clock::now();ks::Rom os(argv[1]);check(os.isValid(),"Invalid KS OS");
     auto board=std::make_unique<ks::Board>(os.data(),bytes(argv[3]),bytes(argv[2]),true);
@@ -64,20 +67,21 @@ int main(int argc,char** argv){try{
     }else{
         send({0xb0,7,127,108,0,111,0,110,127,91,0,92,0,93,0,72,127,73,0,74,0,105,127});discard(8192);
         // Use original MIDI for setup; no controller replacement during boot.
-        if(scenario=="multi"){
+        if(multi){
             auto state=board->state();state.performance=true;state.activeMask=15;
             for(unsigned i=0;i<4;++i){state.parts[i]=state.parts[0];auto& p=state.parts[i];p[179]=100;p[181]=uint8_t(i);p[182]=0;p[183]=127;}
+            if(scenario=="pedal")for(unsigned i=0;i<4;++i){auto& p=state.parts[i];p[0]=uint8_t((p[0]&~24)|(i<<3));p[88]&=~4;p[182]=36;p[183]=84;}
             state.parts[0][189]=1;state.parts[0][190]=15;
             send({0xb0,32,65,0xc0,0});send(ks::stateMessage(state));discard(24000);
         }
-        const unsigned parts=scenario=="multi"?4:1,perPart=8/parts;
+        const unsigned parts=multi?4:1,perPart=8/parts;
         for(unsigned p=0;p<parts;++p)for(unsigned n=0;n<perPart;++n)send({uint8_t(0x90|p),uint8_t(36+7*(p*perPart+n)),90});discard(8192);
         for(unsigned p=0;p<parts;++p){for(unsigned n=0;n<perPart;++n)send({uint8_t(0x80|p),uint8_t(36+7*(p*perPart+n)),0});send({uint8_t(0xb0|p),120,0});}discard(16384);
         if(parallel)board->enableDspWorkers(48000,128);discard(4096);
         struct Event {uint64_t frame;std::vector<uint8_t> bytes;};std::vector<Event> events;
         auto native=[](double seconds){return uint64_t(std::llround(seconds*ks::DSP::SampleRate));};
-        frames=native(2.0);
-        for(unsigned tick=0;.1+tick*.1<2.;++tick){std::vector<uint8_t> packet;
+        frames=native(duration);
+        for(unsigned tick=0;.1+tick*.1<duration;++tick){std::vector<uint8_t> packet;
             // Include sustain and original per-part Program Change/control paths.
             if(tick==4)packet.insert(packet.end(),{0xb0,64,127});
             if(tick==8)packet.insert(packet.end(),{0xc0,1});
@@ -101,6 +105,26 @@ int main(int argc,char** argv){try{
                 {0xf8,0x90,76,99},{0xf1,0,0x90,79,72},{0xb0,123,0},{120,0}};
             for(size_t n=0;n<packets.size();++n)events.push_back({native(.04+n*.06),packets[n]});
         }
+        if(scenario=="pedal"){
+            events.clear();
+            const std::vector<std::vector<uint8_t>> packets{
+                {0x90,36,92,60,101,84,87,35,109,85,110},{0xb0,64,63},
+                {0x90,64,96},{0xb0,64,64},{0x80,60,127},{0x90,64,0},
+                {0x90,36,103},{0xb0,64,127},{0x80,36,0,84,0},{0xb0,64,64},
+                {0xb0,64,63},{64,0},{0x90,55,88,59,99,67,111},{0xb0,64,127},
+                {123,0},{0x80,55,0,59,0,67,0},{0xb0,64,0},{0x90,65,104},
+                {0xb0,120,0},{0x90,65,0},{0xb0,64,127},{64,0},
+                {0x90,0,90,127,91},{0x80,0,0,127,0}};
+            for(unsigned cycle=0;.04+cycle*2.<duration;++cycle)for(size_t n=0;n<packets.size();++n){
+                const double at=.04+cycle*2.+n*.08;if(at>=duration)continue;
+                std::vector<uint8_t> packet;
+                for(unsigned part=0;part<4;++part){bool hasStatus=false;
+                    for(auto v:packets[n]){if(v&128){v=uint8_t((v&0xf0)|part);hasStatus=true;}
+                        else if(!hasStatus){packet.push_back(uint8_t(0xb0|part));hasStatus=true;}
+                        packet.push_back(v);}}
+                events.push_back({native(at),std::move(packet)});
+            }
+        }
         if(liveMode)board->enableLiveMidiController();
         if(recording)board->startControllerTrace();
         if(mode=="replay"){tape=ks::ControllerTape::load(argv[7]);board->startRecordedController(tape);}
@@ -115,7 +139,8 @@ int main(int argc,char** argv){try{
         cost=cpu()-before;wall=std::chrono::duration<double>(Clock::now()-begin).count();
         check(peak>1000,"Controller probe rendered silence");
         if(recording){tape=board->finishControllerTrace();tape->validate();tape->save(argv[7]);}
-        if(liveMode)check(board->liveMidiController()->messages>0,"Live controller handled no MIDI messages");
+        if(liveMode){const auto& live=*board->liveMidiController();
+            check(live.messages>0 && live.noteActions.noteOnCalls>0 && live.noteActions.noteOffCalls>0 && live.noteActions.pedalCalls>0,"Live note/sustain handlers were not exercised");}
         if(mode=="replay"){
             check(board->cpu().cycles==h8Start,"Prototype executed H8 instructions");
             check(board->controllerCycles()==tape->endCycle && board->checkedControllerPorts()==tape->events.size(),"Prototype did not consume exact trace");
@@ -134,8 +159,11 @@ int main(int argc,char** argv){try{
         <<",\"checked_ports\":"<<board->checkedControllerPorts();
     if(tape)report<<",\"trace_events\":"<<tape->events.size()<<",\"trace_slices\":"<<tape->slices.size()<<",\"trace_digest\":\""<<tape->digest()<<"\",\"bus\":"<<Stats(*tape).json();
     if(const auto* live=board->liveMidiController())report<<",\"native_midi_steps\":"<<live->nativeSteps<<",\"native_midi_bytes\":"<<live->bytes
-        <<",\"native_midi_messages\":"<<live->messages<<",\"native_note_on\":"<<live->noteOn<<",\"native_note_off\":"<<live->noteOff<<",\"native_cc\":"<<live->controls;
-    report<<",\"notes\":\"Original H8 always boots/prepares. Live mode ports only Note/CC byte decoding; UART/routing/voice/parameter handlers remain H8. Replay is separate finite tape playback, with no live MIDI/state API. CPU counts whole process user+kernel on Windows, no boot/setup/trace file IO. Raw trace may contain private firmware/presets. No complete native-controller saving claimed.\"}";
+        <<",\"native_midi_messages\":"<<live->messages<<",\"native_note_on\":"<<live->noteOn<<",\"native_note_off\":"<<live->noteOff<<",\"native_cc\":"<<live->controls
+        <<",\"native_note_steps\":"<<live->noteActions.steps<<",\"native_note_on_calls\":"<<live->noteActions.noteOnCalls
+        <<",\"native_note_off_calls\":"<<live->noteActions.noteOffCalls<<",\"native_sustain_calls\":"<<live->noteActions.pedalCalls
+        <<",\"native_sustain_release_calls\":"<<live->noteActions.pedalReleaseCalls;
+    report<<",\"notes\":\"Original H8 always boots/prepares. Live mode ports MIDI decoding, note/key/pedal state and release decisions; UART/routing/DSP voice parameter generation remain H8. Replay is separate finite tape playback. CPU counts whole process user+kernel on Windows, no boot/setup/trace file IO. Raw trace may contain private firmware/presets. No complete H8 replacement claimed.\"}";
     std::ifstream existing(argv[4]);check(!existing.good(),"Refusing to overwrite controller report");std::ofstream out(argv[4]);out<<report.str();check(bool(out),"Cannot save controller report");
     std::cout<<report.str()<<'\n';return 0;
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}

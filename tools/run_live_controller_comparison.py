@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Private KS live C++ MIDI decoder vs original H8; no prerecorded playback.
+"""Private KS live C++ note/sustain controller vs original H8; no tape playback.
 
-This is a hybrid: original H8 still handles UART, routing, voices and parameter
-generation. Compare full bus tapes AND all audio; never label it H8 removal.
+This is a hybrid: C++ handles notes, key state and sustain; original H8 still
+handles UART/routing and DSP voice generation. Compare full bus tapes AND all
+audio; never label it H8 removal.
 """
 import argparse
 from datetime import datetime, timezone
@@ -21,19 +22,20 @@ def main():
         p.add_argument('--' + name, type=Path, required=True)
     p.add_argument('--output', type=Path, default=Path('output/perf-live-controller'))
     p.add_argument('--repeats', type=int, default=3)
-    p.add_argument('--scenarios', nargs='+', choices=['single', 'multi', 'midi'], default=['single', 'multi', 'midi'])
+    p.add_argument('--scenarios', nargs='+', choices=['single', 'multi', 'midi', 'pedal'], default=['single', 'multi', 'midi', 'pedal'])
+    p.add_argument('--seconds', type=float, default=4., help='Same bounded 2..4 s work for bus/audio/CPU')
     p.add_argument('--dsp-threads', choices=['1', '2'], default='1')
     p.add_argument('--toggle', action='store_true', help='Disable at 0.65 s and re-enable at 0.95 s')
     args = p.parse_args()
-    if args.repeats < 1 or any(not v.is_file() for v in [args.executable, args.ks_rom, args.flash, args.wave]):
+    if args.repeats < 1 or not 2 <= args.seconds <= 4 or any(not v.is_file() for v in [args.executable, args.ks_rom, args.flash, args.wave]):
         p.error('Positive repeats and existing executable/private inputs required')
     root = args.output.resolve() / time.strftime('%Y%m%d-%H%M%S')
     root.mkdir(parents=True, exist_ok=False)
     exe = args.executable.resolve()
     (root / 'metadata.json').write_text(json.dumps(dict(
         executable_sha256=hashlib.sha256(exe.read_bytes()).hexdigest(),
-        started_utc=datetime.now(timezone.utc).isoformat(), dsp_threads=args.dsp_threads, toggle=args.toggle,
-        comparison='original H8 vs live C++ MIDI decoder / original H8 handlers'), indent=2))
+        started_utc=datetime.now(timezone.utc).isoformat(), dsp_threads=args.dsp_threads, toggle=args.toggle, seconds=args.seconds,
+        comparison='original H8 vs live C++ notes/key/sustain state; original DSP voice parameter generation'), indent=2))
     print('Local results:', root, flush=True)
     rows, summaries = [], []
 
@@ -48,7 +50,7 @@ def main():
         print('Running', tag, flush=True)
         with (folder / 'fixture.log').open('w', encoding='utf-8') as log:
             r = subprocess.run([str(exe), str(args.ks_rom.resolve()), str(args.flash.resolve()),
-                                str(args.wave.resolve()), str(report), mode, scenario, str(tape)],
+                                str(args.wave.resolve()), str(report), mode, scenario, str(tape), str(args.seconds)],
                                stdout=log, stderr=subprocess.STDOUT, env=env, timeout=120)
         row = dict(test_id=tag, returncode=r.returncode, mode=mode, scenario=scenario)
         if report.is_file():
@@ -90,7 +92,10 @@ def main():
                        audio_hash=before['audio_hash'], trace_events=before['trace_events'],
                        tape_sha256=hashlib.sha256(original_tape.read_bytes()).hexdigest(),
                        native_steps=after['native_midi_steps'], native_messages=after['native_midi_messages'],
-                       note_on=after['native_note_on'], note_off=after['native_note_off'], cc=after['native_cc'], modes={})
+                       note_on=after['native_note_on'], note_off=after['native_note_off'], cc=after['native_cc'], modes={},
+                       note_steps=after['native_note_steps'], note_on_calls=after['native_note_on_calls'],
+                       note_off_calls=after['native_note_off_calls'], sustain_calls=after['native_sustain_calls'],
+                       sustain_release_calls=after['native_sustain_release_calls'])
         for mode in ['h8', candidate]:
             group = [r['report'] for r in rows if r['scenario'] == scenario and r['mode'] == mode]
             summary['modes'][mode] = dict(runs=len(group),

@@ -7,6 +7,7 @@ constexpr unsigned Entry=0x2de8,Status=0x15c1b,Data=0x15c1f;
 void flag(H8SEmulator& h,unsigned mask,bool set){h.ccr=uint8_t((h.ccr&~mask)|(set?mask:0));}
 void value(H8SEmulator& h,int32_t v){h.ccr=uint8_t((h.ccr&~14)|(v<0?8:0)|(!v?4:0));}
 bool interruptReady(const H8SEmulator& h){
+    if(!(h.pending_irqs||h.pending_irqs_high))return false;
     if(!h.interruptMode2)return (h.pending_irqs!=0)&&(!(h.ccr&128)||!(h.ccr&16));
     for(unsigned n=0;n<128;++n)if(((n<64?h.pending_irqs:h.pending_irqs_high)>>(n&63))&1)
         if(h.interruptPriority[n]>(h.exr&7))return true;
@@ -20,9 +21,11 @@ LiveMidiController::LiveMidiController(const H8SEmulator& h){
     for(auto range:{std::pair<unsigned,unsigned>{0x2de8,0x2efc},{0xf250,0xf2da}})
         for(unsigned n=range.first;n<range.second;++n){hash^=h.memory[n];hash*=1099511628211ull;}
     if(hash!=0x883c476e3df41f22ull)throw std::runtime_error("Native KS MIDI decoder requires verified OS 2.1.02");
+    LiveNoteController::verify(h);
 }
 bool LiveMidiController::step(ControllerCpu& h){
     const unsigned pc=h.getPC();
+    if(LiveNoteController::candidate(pc))return !interruptReady(h)&&noteActions.step(h);
     if(pc<0x2de8 || pc>=0x2efc || (!decoding && pc!=Entry))return false;
     // Interrupt arbitration stays in H8. Native instructions may be interrupted
     // between ANY two boundaries, including inside a partial running-status message.

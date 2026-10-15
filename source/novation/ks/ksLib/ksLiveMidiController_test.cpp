@@ -77,7 +77,34 @@ int main(int argc,char**argv){try{
     native->pending_irqs=0;check(controller.step(*native),"Native parser did not resume");
     native->memory[0x2de8]^=1;bool rejected=false;try{ks::LiveMidiController bad(*native);}catch(const std::exception&){rejected=true;}
     check(rejected,"Unverified decoder revision accepted");
+    // Independently execute each fixed note/pedal transition against original
+    // H8 with varied operands/flags. No DSP routines are stubbed in this check:
+    // calls stop at their real ABI target after one boundary.
+    native->memory[0x2de8]^=1;
+    native->memory[0x3426]^=1;rejected=false;
+    try{ks::LiveMidiController bad(*native);}catch(const std::exception&){rejected=true;}
+    check(rejected,"Unverified note-handler revision accepted");native->memory[0x3426]^=1;
+    ks::LiveNoteController actions;
+    native->cycles=original->cycles;native->lastread=original->lastread;
+    native->lastwrite=original->lastwrite;native->indent=original->indent;
+    uint64_t noteBoundaries=0;
+    for(unsigned pc=0;pc<0xa67e;pc+=2)if(ks::LiveNoteController::candidate(pc)){
+        for(unsigned sample=0;sample<32;++sample){
+            for(unsigned i=0;i<8;++i)original->regs[i].er=native->regs[i].er=int(random()&0xffffff);
+            original->setSP(0xfff000);native->setSP(0xfff000);
+            original->pc=original->makepc(pc);native->pc=native->makepc(pc);
+            original->ccr=native->ccr=uint8_t(random());original->exr=native->exr=0;
+            original->pending_irqs=native->pending_irqs=0;
+            x.accesses.clear();y.accesses.clear();
+            if(!actions.step(*native))break;
+            check(ks::LiveMidiController::candidate(pc),"Hot page filter excludes a native note transition");
+            original->step();++noteBoundaries;
+            try{same(*original,*native,x,y);}catch(const std::exception&){std::cerr<<"Note transition PC="<<std::hex<<pc<<std::dec<<" sample="<<sample<<'\n';throw;}
+        }
+    }
+    check(noteBoundaries==462*32,"Note transition coverage differs");
+    check(x.ram==y.ram,"Note transition RAM differs");
     std::cout<<"PASS: "<<bytes<<" live bytes, "<<controller.messages<<" Note/CC messages, "<<steps
-        <<" instruction boundaries: original H8 vs C++ registers/flags/clocks/PC and every bus access; toggle mid-message, unsupported statuses, interrupts and firmware guard\n";
+        <<" decoder boundaries + "<<noteBoundaries<<" note/pedal boundaries: original H8 vs C++ registers/flags/clocks/PC and every bus access; toggle mid-message, unsupported statuses, interrupts and firmware guard\n";
     return 0;
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}

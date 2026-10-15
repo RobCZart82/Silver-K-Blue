@@ -4,6 +4,7 @@ target_compile_features(ksLib PUBLIC cxx_std_17)
 target_sources(ksLib PRIVATE ksDspWorkers.cpp ksDspWorkers.h)
 target_sources(ksLib PRIVATE ksControllerTrace.cpp ksControllerTrace.h)
 target_sources(ksLib PRIVATE ksLiveMidiController.cpp ksLiveMidiController.h)
+target_sources(ksLib PRIVATE ksLiveNoteController.cpp ksLiveNoteController.h)
 target_include_directories(ksLib PUBLIC ${CMAKE_CURRENT_LIST_DIR}/..)
 target_link_libraries(ksLib PUBLIC baseLib dsp56kEmu h8s)
 

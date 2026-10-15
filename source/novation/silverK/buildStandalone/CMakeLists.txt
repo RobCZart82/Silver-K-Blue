@@ -60,6 +60,7 @@ target_include_directories(ksLib PUBLIC "${ROOT}/source/novation/ks" "${ROOT}/so
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksDspWorkers.cpp")
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksControllerTrace.cpp")
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksLiveMidiController.cpp")
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksLiveNoteController.cpp")
 target_link_libraries(ksLib PUBLIC baseLib dsp56kEmu h8s)
 # Opt-in checks require user-supplied KS OS, zero wave bank and Flash paths.
 add_executable(ksPartMidi_test "${ROOT}/source/novation/ks/ksLib/ksPartMidi_test.cpp")
