@@ -22,6 +22,13 @@ void Processor::buildLibrary(){
 }
 std::vector<Processor::Preset> Processor::presets()const{std::lock_guard guard(controlMutex);return library;}
 std::vector<Processor::Performance> Processor::performances()const{std::lock_guard guard(controlMutex);return performanceLibrary;}
+void Processor::publishFactoryPresets(){
+ if(!firmwareReady() || isKStation())return;
+ std::vector<std::vector<uint8_t>> factory;
+ for(const auto& p:presets()){factory.emplace_back(p.data.begin(),p.data.end());auto& bytes=factory.back();bytes[7]=1;bytes[11]=p.bank;bytes[12]=p.number;}
+ for(const auto& p:performances())factory.emplace_back(p.data.begin(),p.data.end());
+ if(!factory.empty())patchLibrary.addFactory(factory,"KS Factory");
+}
 bool Processor::queueUiMidi(const uint8_t* data,size_t n){std::lock_guard guard(uiMidiMutex);return uiMidi.push(data,n);}
 bool Processor::sendShortMidi(uint8_t status,uint8_t a,uint8_t b){const uint8_t bytes[]{status,a,b};return queueUiMidi(bytes,(status&0xf0)==0xc0?2:3);}
 void Processor::resetPending(){for(auto& v:pending)v.store(-1);for(auto& v:awaiting)v.store(-1);resetWire.store(true);}
@@ -33,6 +40,13 @@ bool Processor::queueState(const ks::State& state,bool selectMode,juce::String& 
  const auto dump=ks::stateMessage(state);bytes.insert(bytes.end(),dump.begin(),dump.end());
  if(!state.performance){const auto metadata=ks::singleMetadata(state.parts[0].data(),controlChannel.load());bytes.insert(bytes.end(),metadata.begin(),metadata.end());}
  if(!queueUiMidi(bytes.data(),bytes.size())){error="Preset queue is full";return false;}resetPending();return true;
+}
+std::array<juce::String,4> Processor::partNames()const{
+ std::array<juce::String,4> names{};std::lock_guard guard(controlMutex);
+ if(isFirmwareLoading())return names;
+ if(ownedDevice){const auto state=ownedDevice->fullSnapshot();for(unsigned n=0;n<4;++n)names[n]=patchName(state.parts[n].data());}
+ else if(ownedK)names[0]=currentPatch;
+ return names;
 }
 bool Processor::setPerformanceMode(bool enabled,juce::String& error){
  std::lock_guard guard(controlMutex);if(!ownedDevice){error="Load firmware, wave bank and factory data first";return false;}

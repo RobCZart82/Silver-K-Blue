@@ -36,8 +36,9 @@ namespace pluginLib::patchDB
 		void uiProcess();
 
 		DataSourceNodePtr addDataSource(const DataSource& _ds, const DataSourceLoadedCallback& = [](bool, std::shared_ptr<DataSourceNode>) {});
-		void removeDataSource(const DataSource& _ds, bool _save = true);
+		void removeDataSource(const DataSource& _ds, bool _save = true, bool _removeChildren = false);
 		void refreshDataSource(const DataSourceNodePtr& _ds);
+		void replaceLocalStorage(const DataSource&, const std::vector<PatchPtr>&);
 		void renameDataSource(const DataSourceNodePtr& _ds, const std::string& _newName);
 		DataSourceNodePtr getDataSource(const DataSource& _ds);
 		std::set<DataSourceNodePtr> getDataSourcesOfSourceType(SourceType _type);
@@ -111,6 +112,7 @@ namespace pluginLib::patchDB
 		virtual bool loadFile(DataList& _results, const std::string& _file);
 		virtual bool loadLocalStorage(DataList& _results, const DataSource& _ds);
 		virtual bool loadFolder(const DataSourceNodePtr& _folder);
+		virtual bool isSourceEnabled(const DataSource&) const { return true; }
 		virtual PatchPtr initializePatch(Data&& _sysex, const std::string& _defaultPatchName) = 0;
 		// initializePatch() plus the check that it set Patch::hash, which patch modifications, duplicate detection and
 		// search by content all rely on. The DB and the patch manager create every patch through this.
@@ -133,6 +135,7 @@ namespace pluginLib::patchDB
 		void runOnUiThread(const std::function<void()>& _func);
 
 	private:
+		void removeDataSourceNow(const DataSource&, bool _save, bool _removeChildren);
 		void addDataSource(const DataSourceNodePtr& _ds);
 
 		bool addPatches(const std::vector<PatchPtr>& _patches);

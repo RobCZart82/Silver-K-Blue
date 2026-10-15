@@ -6,6 +6,7 @@
 #include "../../kstation/kstationJucePlugin/kstationControls.h"
 #include "silverLibrary.h"
 #include "silverClock.h"
+#include "silverMidiLearn.h"
 #include "jucePluginLib/hostAudioWorkgroup.h"
 namespace silverK {
 using namespace ksPlugin;
@@ -32,6 +33,7 @@ public:
  std::vector<Preset> presets()const;
  bool importPresets(const juce::File&,juce::String&);
  bool selectPreset(int,juce::String&);
+ void publishFactoryPresets(); // UI/cold load: expose restored KS factory data to the browser.
  std::vector<Performance> performances()const;
  bool selectPerformance(int,juce::String&);
  bool setPerformanceMode(bool,juce::String&);
@@ -49,17 +51,24 @@ public:
 
 bool isKStation()const{return kMode.load();}
  bool loadFirmware(const juce::File&,juce::String&);
- bool beginFirmwareLoad(const juce::File&); // Message thread: boot off the UI/audio threads.
+ bool beginFirmwareLoad(const juce::File&,bool automatic=false); // Message thread: boot off the UI/audio threads.
  bool finishFirmwareLoad(juce::String& error); // Message thread: consume a completed load.
  bool isFirmwareLoading()const{return firmwareLoading.load();}
  bool setRomFolder(const juce::File&,juce::String&);
  bool setDataFolder(const juce::File&,juce::String&);
+ bool setWaveRom(const juce::File&,juce::String&);
+ bool setFlashRom(const juce::File&,juce::String&);
+ void savePreferences(); // UI/cold paths only; never called by processBlock.
+ juce::String browserState;
+ uint64_t firmwareLoadRevision()const{return firmwareRevision.load();}
  juce::File dataFolder;
  juce::File patchesFolder()const{return dataFolder.getChildFile("Patches");}
  struct FirmwareChoice {juce::File file;bool kStation;};
  std::vector<FirmwareChoice> firmwares;
  juce::File romFolder;
  juce::String skinChoice="Auto",customSkin,currentPatch;
+ // UI preference, separate from sound parameters and host/DPI scaling.
+ std::atomic<double> editorScale{.75};
  std::shared_ptr<Library> libraryOwner;
  Library& patchLibrary;
  std::vector<Control> visibleControls()const;
@@ -67,12 +76,18 @@ bool isKStation()const{return kMode.load();}
  juce::RangedAudioParameter* uiParameter(const juce::String&);
  juce::String uiParameterId(const juce::String& id)const;
  bool activatePatch(const pluginLib::patchDB::PatchPtr&,juce::String&);
+ bool activatePatchForPart(const pluginLib::patchDB::PatchPtr&,unsigned,juce::String&);
+ std::array<juce::String,4> partNames()const;
+ uint64_t beginNoteLearn()noexcept{return noteLearn.arm();}
+ void cancelNoteLearn(uint64_t token)noexcept{noteLearn.cancel(token);}
+ int takeLearnedNote(uint64_t token)noexcept{return noteLearn.take(token);}
  bool saveCurrentPatch(const juce::File&,juce::String&);
  uint8_t editorChannel()const{return isKStation()?controlChannel.load():midiChannel();}
  int bufferProfile()const{return buffering.load();}
  void setBufferProfile(int);
- void setEditorChannel(uint8_t c){controlChannel.store(c&15);}
+ void setEditorChannel(uint8_t c){controlChannel.store(c&15);editorChannelPreference.store(c&15);savePreferences();}
 private:
+ MidiNoteLearn noteLearn;
  pluginLib::HostAudioWorkgroup hostAudioWorkgroup;
  std::atomic<int> buffering{1};
  void applyBufferProfile();
@@ -82,8 +97,13 @@ private:
  std::atomic<int> observedBlock{0};
  int lastObservedBlock=0;
  std::thread firmwareLoader;
+ std::mutex firmwareLoadMutex;
  std::atomic<bool> firmwareLoading{false},firmwareLoadDone{false};
  juce::String firmwareLoadError;
+ std::atomic<bool> startupPending{false};
+ std::atomic<bool> hostStateRestored{false};
+ std::atomic<uint64_t> firmwareRevision{0};
+ juce::File startupFirmware;
  std::atomic<bool> kMode{false};
  std::atomic<KEngine*> kDevice{nullptr};
  std::unique_ptr<KEngine> ownedK;
@@ -107,6 +127,7 @@ private:
  template<class Emit> void sendTimedMidi(const juce::MidiBuffer& midi,Emit emit){
   HostClock::Event clock{};bool hasClock=hostClock.next(clock);
   for(const auto m:midi){
+   noteLearn.observe(m.data,size_t(m.numBytes));
    const int offset=std::max(0,m.samplePosition);
    while(hasClock && clock.offset<=offset){emit(&clock.status,1,clock.offset);hasClock=hostClock.next(clock);}
    if(m.numBytes<=65536 && !(hostClock.ownsTransport() && HostClock::transport(m.data[0]))){
@@ -148,6 +169,7 @@ private:
  mutable std::mutex controlMutex;
  std::vector<uint8_t> os,bank,flash,programToRestore;
  std::atomic<uint8_t> controlChannel{0};
+ std::atomic<uint8_t> editorChannelPreference{0};
  std::atomic<uint8_t> volume{127};
  juce::String message="Load KS OS, external wave bank and user Flash. Zero bank is supported.";
  double hostRate=48000;int hostBlock=256;
@@ -155,6 +177,10 @@ private:
  void rebuild();
  void initializeDataFolder();
  bool rememberDataFolder(juce::String&);
+ bool rememberAssets(juce::String&);
+ bool updateSettings(const juce::NamedValueSet&,juce::String&)const;
+ juce::NamedValueSet preferenceValues()const;
+ juce::NamedValueSet preferenceBaseline;
  juce::File settingsFile()const;
  juce::File resolveAsset(const juce::ValueTree&,const char*)const;
 };

@@ -84,7 +84,7 @@ static void vStationProgramChecks(Library& library){
  const auto file=fxpFixture();DataList frames;check(library.parseFileData(frames,file,"v.fxp") && frames.size()==1,"V-Station FXP import");
  auto patch=library.createPatch(Data(frames[0]),{});check(patch && patch->name=="Named V sound" && patchModel(*patch)==Model::VStation,"FXP chunk name and source model");
  check(std::equal(patch->sysex.begin()+13,patch->sysex.end()-1,file.begin()+60),"FXP sound bytes changed");
- for(int damage=0;damage<7;++damage){auto invalid=file;if(damage==0)invalid.pop_back();if(damage==1)invalid[16]='X';if(damage==2)invalid[15]=2;if(damage==3)invalid[60]=128;if(damage==4)invalid[59]=148;if(damage==5)invalid[188]=128;if(damage==6)invalid[27]=2;DataList rejected;check(!library.parseFileData(rejected,invalid,"bad.fxp") && rejected.empty(),"Malformed FXP accepted");}
+ for(int damage=0;damage<7;++damage){auto invalid=file;if(damage==0)invalid.pop_back();if(damage==1)invalid[16]='X';if(damage==2)invalid[15]=2;if(damage==3)invalid[60]=128;if(damage==4)invalid[59]=148;if(damage==5)invalid[188]=31;if(damage==6)invalid[27]=2;DataList rejected;check(!library.parseFileData(rejected,invalid,"bad.fxp") && rejected.empty(),"Malformed FXP accepted");}
  patch->tags.erase(TagType::Tag,"V-Station");check(patchModel(*patch)==Model::VStation,"User tags must not determine new V-Station type");
  const auto legacyBytes=program(Model::KStation);auto legacy=library.createPatch(Data(legacyBytes.begin(),legacyBytes.end()),{});legacy->tags.add(TagType::Tag,"V-Station");check(patchModel(*legacy)==Model::VStation,"Legacy V-Station bank classification");
  const auto folder=juce::SystemStats::getEnvironmentVariable("SILVER_TEST_VSTATION_FOLDER",{});
@@ -113,7 +113,7 @@ static void cacheMigrationChecks(const juce::File& root){
   patch->name=" 0";check(db.getChildFile("silver-import-version.txt").deleteFile(),"Reset disposable old-cache marker");
  }
  {
-  Library library(db);auto patch=wait(library,true);check(patch->getTags(TagType::Favourites).containsAdded("Favourite"),"Source migration lost favourites");check(db.getChildFile("silver-import-version.txt").loadFileAsString().trim()=="3","Migration completion not remembered");
+  Library library(db);auto patch=wait(library,true);check(patch->getTags(TagType::Favourites).containsAdded("Favourite"),"Source migration lost favourites");check(db.getChildFile("silver-import-version.txt").loadFileAsString().trim()=="4","Migration completion not remembered");
  }
  std::cout<<"PASS: old zero-name cache refreshed from source, favourites preserved, migration remembered\n";
 }
@@ -135,7 +135,7 @@ static void folderChecks(Processor& p,const juce::File& dir){
  data[0]=19;check(zero.replaceWithData(data.getData(),data.getSize()),"Replace local Wave ROM");check(p.setDataFolder(folder,error),"Reopen managed folder");juce::MemoryBlock reread;zero.loadFileAsData(reread);check(reread[0]==19,"Existing Wave ROM overwritten");
  {Processor next;check(next.dataFolder==folder,"Main folder preference not remembered");}
  const auto preference=juce::File(juce::SystemStats::getEnvironmentVariable("SILVER_K_DATA",{})).getChildFile("settings.json");
- auto cached=juce::JSON::parse(preference);juce::DynamicObject::Ptr choice=new juce::DynamicObject;choice->setProperty("file","cached-os.bin");choice->setProperty("kStation",true);juce::Array<juce::var> choices;choices.add(juce::var(choice.get()));cached.getDynamicObject()->setProperty("firmwares",choices);check(preference.replaceWithText(juce::JSON::toString(cached)),"Write cached index fixture");
+ auto cached=juce::JSON::parse(preference);juce::DynamicObject::Ptr choice=new juce::DynamicObject;choice->setProperty("file","cached-os.bin");choice->setProperty("kStation",true);juce::Array<juce::var> choices;choices.add(juce::var(choice.get()));cached.getDynamicObject()->setProperty("firmwares",choices);check(folder.getChildFile("ROMs/cached-os.bin").replaceWithText("Invalid firmware"),"Write cached file fixture");check(preference.replaceWithText(juce::JSON::toString(cached)),"Write cached index fixture");
  {Processor next;check(next.firmwares.size()==1 && next.firmwares[0].file.getFileName()=="cached-os.bin","Startup rescanned ROMs instead of restoring the saved index");juce::String invalid;check(!next.loadFirmware(next.firmwares[0].file,invalid),"Cached metadata bypassed firmware validation");}
  check(p.setRomFolder(folder.getChildFile("ROMs"),error)==false && p.firmwares.empty(),"Explicit ROM rescan did not replace the cached index");
  check(p.setDataFolder(original,error),"Restore test folder");
@@ -179,6 +179,7 @@ static void browserChecks(Processor& p,const juce::File& dir){
 static void vStationPlayback(Processor& p,const juce::File& archive){
  DataList frames;check(p.patchLibrary.loadFile(frames,archive.getFullPathName().toStdString()) && frames.size()==400,"V-Station playback bank");
  p.patchLibrary.addPath(archive);Browser browser(p);browser.setBounds(0,0,1280,600);
+ auto* all=dynamic_cast<juce::ToggleButton*>(find(browser,"showAllBankSlots"));check(all!=nullptr,"All bank slots control");all->setToggleState(true,juce::dontSendNotification);all->onClick();
  auto* source=dynamic_cast<juce::ComboBox*>(find(browser,"patchSource"));auto* table=dynamic_cast<juce::TableListBox*>(find(browser,"patchTable"));check(source && table,"V-Station browser controls");auto* model=table->getTableListBoxModel();
  bool selected=false;for(int attempt=0;attempt<400;++attempt){std::this_thread::sleep_for(std::chrono::milliseconds(20));browser.pollLibrary();if(!selected)for(int n=0;n<source->getNumItems();++n)if(source->getItemText(n)==archive.getFileName()){source->setSelectedId(source->getItemId(n),juce::dontSendNotification);source->onChange();selected=true;break;}if(selected && model->getNumRows()==400)break;}
  std::cout<<"V-Station browser model="<<(p.isKStation()?"K":"KS")<<" rows="<<model->getNumRows()<<" sources="<<source->getNumItems()<<" source="<<source->getText()<<" selected="<<selected<<" revision="<<p.patchLibrary.revision.load()<<std::endl;check(selected && model->getNumRows()==400,"V-Station browser lost bank slots");int bass=-1;for(int n=0;n<400;++n)if(model->getCellTooltip(n,1)=="BAS-Bittersweet")bass=n;check(bass>=0,"Named demo patch absent from browser");table->selectRow(bass);check(p.currentPatch=="BAS-Bittersweet","V-Station single-click load");

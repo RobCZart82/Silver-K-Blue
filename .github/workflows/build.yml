@@ -14,11 +14,11 @@ jobs:
       - name: Configure Win64
         run: cmake -S . -B build -A x64 -DCMAKE_BUILD_TYPE=RelWithDebInfo
       - name: Build Standalone, VST3 and checks
-        run: cmake --build build --config RelWithDebInfo --target silverK_Standalone silverK_VST3 silver_check silverClock_test silverWorkflow_test ksPartMidi_test dsp56kTestRunner --parallel 4
+        run: cmake --build build --config RelWithDebInfo --target silverK_Standalone silverK_VST3 silver_check silverClock_test silverWorkflow_test silverPersistence_test silverEditor_test silverPerformance_test ksPartMidi_test dsp56kTestRunner --parallel 4
       - name: Run DSP JIT, patch, browser and editor checks without ROMs
         env:
           SILVER_K_DATA: '${{ runner.temp }}/silver-k-tests'
-        run: ctest --test-dir build -C RelWithDebInfo --output-on-failure -R '^(silver_conversion|silver_host_clock|silver_patch_workflow|ks_part_midi|dsp56300_unitTests)$'
+        run: ctest --test-dir build -C RelWithDebInfo --output-on-failure -R '^(silver_conversion|silver_host_clock|silver_patch_workflow|silver_persistence_and_rescan|silver_native_editor|silver_performance_editor|ks_part_midi|dsp56300_unitTests)$'
       - name: Verify synthetic flash
         shell: pwsh
         run: |

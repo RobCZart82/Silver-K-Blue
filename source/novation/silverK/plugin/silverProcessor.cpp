@@ -41,7 +41,7 @@ Processor::Processor():AudioProcessor(BusesProperties().withInput("Vocoder / ext
  for(size_t n=0;n<TotalCount;++n){parameterIds[n]=n<ParameterCount?parameterId(controls[n%controls.size()],unsigned(n/controls.size())):"k_"+juce::String(kstation::controls::Catalog[n-ParameterCount].id);pending[n].store(-1);awaiting[n].store(-1);editTime[n].store(0);parameters.addParameterListener(parameterIds[n],this);}
  initializeDataFolder();startTimerHz(10);
 }
-Processor::~Processor(){stopTimer();if(firmwareLoader.joinable())firmwareLoader.join();for(const auto& id:parameterIds)parameters.removeParameterListener(id,this);stopEngines();}
+Processor::~Processor(){stopTimer();if(firmwareLoader.joinable())firmwareLoader.join();firmwareLoading.store(false);savePreferences();for(const auto& id:parameterIds)parameters.removeParameterListener(id,this);stopEngines();}
 bool Processor::isBusesLayoutSupported(const BusesLayout& l)const{
  if(l.inputBuses.size()>1 || (l.inputBuses.size()==1 && !l.inputBuses[0].isDisabled() && l.inputBuses[0]!=juce::AudioChannelSet::mono()) || l.outputBuses.isEmpty())return false;
  // JUCE's standalone player describes physical device channels as one bus.
@@ -86,7 +86,7 @@ void Processor::rebuild(){
 bool Processor::load(const juce::File& o,const juce::File& b,const juce::File& f,juce::String& e){
  std::lock_guard guard(controlMutex);
  auto rom=firmware(o);if(!rom.isValid()){e=rom.error();return false;}
- auto waves=bytes(b),storage=bytes(f);if(!b.existsAsFile())waves.assign(ks::Board::WaveSize,0);
+ auto waves=bytes(b),storage=bytes(f);if(!b.existsAsFile()){if(b!=juce::File{}){e="Selected Wave ROM is missing: "+b.getFullPathName();return false;}waves.assign(ks::Board::WaveSize,0);}
  if(f.hasFileExtension("mid;midi")){
   juce::MidiFile midi;auto in=f.createInputStream();if(!in || !midi.readFrom(*in)){e="Cannot read factory MIDI";return false;}
   storage.assign(0x80000,0xff);unsigned programs=0;
@@ -157,7 +157,7 @@ void Processor::processBlock(juce::AudioBuffer<float>& audio,juce::MidiBuffer& m
 juce::String Processor::status()const{if(isFirmwareLoading())return "Loading firmware...";std::lock_guard guard(controlMutex);return message;}
 uint64_t Processor::underruns()const{std::lock_guard guard(controlMutex);return ownedK?ownedK->device.getUnderrunCount():ownedDevice?ownedDevice->underruns():0;}
 void Processor::getStateInformation(juce::MemoryBlock& out){std::lock_guard guard(controlMutex);
- auto state=parameters.copyState();state.setProperty("bufferProfile",buffering.load(),nullptr);state.setProperty("dataFolder",dataFolder.getFullPathName(),nullptr);for(const auto& asset:{std::pair<const char*,juce::File>{"os",osFile},{"bank",bankFile},{"flash",flashFile}})if(asset.second.isAChildOf(dataFolder))state.setProperty(juce::String(asset.first)+"Relative",asset.second.getRelativePathFrom(dataFolder),nullptr);state.setProperty("romFolder",romFolder.getFullPathName(),nullptr);state.setProperty("skinChoice",skinChoice,nullptr);state.setProperty("customSkin",customSkin,nullptr);state.setProperty("currentPatch",currentPatch,nullptr);state.setProperty("editorChannel",int(controlChannel.load()),nullptr);state.setProperty("kModel",isKStation(),nullptr);state.setProperty("bank",bankFile.getFullPathName(),nullptr);state.setProperty("flash",flashFile.getFullPathName(),nullptr);
+ auto state=parameters.copyState();state.setProperty("bufferProfile",buffering.load(),nullptr);state.setProperty("dataFolder",dataFolder.getFullPathName(),nullptr);for(const auto& asset:{std::pair<const char*,juce::File>{"os",osFile},{"bank",bankFile},{"flash",flashFile}})if(asset.second.isAChildOf(dataFolder))state.setProperty(juce::String(asset.first)+"Relative",asset.second.getRelativePathFrom(dataFolder),nullptr);state.setProperty("romFolder",romFolder.getFullPathName(),nullptr);state.setProperty("skinChoice",skinChoice,nullptr);state.setProperty("editorScale",editorScale.load(),nullptr);state.setProperty("browserState",browserState,nullptr);state.setProperty("customSkin",customSkin,nullptr);state.setProperty("currentPatch",currentPatch,nullptr);state.setProperty("editorChannel",int(controlChannel.load()),nullptr);state.setProperty("kModel",isKStation(),nullptr);state.setProperty("bank",bankFile.getFullPathName(),nullptr);state.setProperty("flash",flashFile.getFullPathName(),nullptr);
  if(ownedK){std::vector<uint8_t> saved;ownedK->device.getState(saved,synthLib::StateTypeGlobal);state.setProperty("os",osFile.getFullPathName(),nullptr);state.setProperty("osHash",juce::String(baseLib::SHA256(kRom).toString()),nullptr);state.setProperty("underruns",juce::int64(ownedK->device.getUnderrunCount()),nullptr);state.setProperty("kState",juce::MemoryBlock(saved.data(),saved.size()).toBase64Encoding(),nullptr);if(auto xml=state.createXml())copyXmlToBinary(*xml,out);return;}
  state.setProperty("os",osFile.getFullPathName(),nullptr);state.setProperty("bank",bankFile.getFullPathName(),nullptr);state.setProperty("flash",flashFile.getFullPathName(),nullptr);state.setProperty("osHash",os.empty()?juce::String{}:juce::String(baseLib::SHA256(os).toString()),nullptr);state.setProperty("bankHash",bank.empty()?juce::String{}:juce::String(baseLib::SHA256(bank).toString()),nullptr);state.setProperty("placeholder",placeholder,nullptr);state.setProperty("selectedPart",int(selectedPart.load()),nullptr);
  auto d=device.load();if(d){auto stats=d->diagnostics();state.setProperty("produced",juce::int64(stats[0]),nullptr);state.setProperty("consumed",juce::int64(stats[1]),nullptr);state.setProperty("midiReceived",juce::int64(stats[2]),nullptr);state.setProperty("waveReads",juce::int64(stats[3]),nullptr);state.setProperty("underruns",juce::int64(d->underruns()),nullptr);state.setProperty("midiOverflows",juce::int64(d->overflows()),nullptr);auto p=d->dumpProgram(),f=d->saveFlash();state.setProperty("program",juce::MemoryBlock(p.data(),p.size()).toBase64Encoding(),nullptr);
@@ -169,9 +169,17 @@ state.setProperty("userFlash",juce::MemoryBlock(f.data(),f.size()).toBase64Encod
  juce::ValueTree multis("PerformanceLibrary");for(size_t n=performanceBaseCount;n<performanceLibrary.size();++n){juce::ValueTree entry("Performance");entry.setProperty("name",performanceLibrary[n].name,nullptr);entry.setProperty("data",juce::MemoryBlock(performanceLibrary[n].data.data(),1038).toBase64Encoding(),nullptr);multis.appendChild(entry,nullptr);}state.appendChild(multis,nullptr);
  if(auto xml=state.createXml())copyXmlToBinary(*xml,out);
 }
-void Processor::setStateInformation(const void* data,int size){std::lock_guard guard(controlMutex);
+void Processor::setStateInformation(const void* data,int size){
  auto xml=getXmlFromBinary(data,size);if(!xml)return;auto state=juce::ValueTree::fromXml(*xml);if(!state.isValid()||state.getType()!=juce::Identifier("SilverParameters"))return;
- if(state.hasProperty("dataFolder") && juce::File(state.getProperty("dataFolder").toString()).isDirectory()){juce::String ignored;setDataFolder(juce::File(state.getProperty("dataFolder").toString()),ignored);}
+ // A host restore takes precedence over the delayed new-instance default boot.
+ std::lock_guard loadGuard(firmwareLoadMutex);hostStateRestored.store(true);startupPending.store(false);
+ if(firmwareLoader.joinable())firmwareLoader.join();firmwareLoadDone.store(false);firmwareLoading.store(false);++firmwareRevision;
+ std::lock_guard guard(controlMutex);
+ struct PreferenceRestore{std::function<void()> finish;~PreferenceRestore(){finish();}} restore{[this]{preferenceBaseline=preferenceValues();}};
+ stopEngines();os.clear();kRom.clear();kState.clear();bank.clear();flash.clear();programToRestore.clear();
+ if(state.hasProperty("dataFolder") && juce::File(state.getProperty("dataFolder").toString()).isDirectory())dataFolder=juce::File(state.getProperty("dataFolder").toString());
+ browserState=state.getProperty("browserState",browserState).toString();
+ const double savedScale=double(state.getProperty("editorScale",editorScale.load()));editorScale.store(savedScale>=.5&&savedScale<=1.5?savedScale:.75);
  buffering.store(juce::jlimit(0,3,int(state.getProperty("bufferProfile",1))));bankFile=resolveAsset(state,"bank");flashFile=resolveAsset(state,"flash");skinChoice=state.getProperty("skinChoice","Auto").toString();customSkin=state.getProperty("customSkin").toString();currentPatch=state.getProperty("currentPatch").toString();controlChannel.store(uint8_t(int(state.getProperty("editorChannel",0))&15));if(!state.hasProperty("dataFolder") && firmwares.empty())romFolder=juce::File(state.getProperty("romFolder").toString());if(!state.hasProperty("dataFolder") && firmwares.empty() && romFolder.isDirectory()){juce::String ignored;setRomFolder(romFolder,ignored);}
  if(bool(state.getProperty("kModel"))){auto o=resolveAsset(state,"os");auto rom=readK(o);if(!rom.isValid() || baseLib::SHA256(rom.data()).toString()!=state.getProperty("osHash").toString().toStdString()){message="K-Station firmware missing or hash mismatch";return;}juce::MemoryBlock saved;if(!saved.fromBase64Encoding(state.getProperty("kState").toString()))return;auto* b=static_cast<const uint8_t*>(saved.getData());kState.assign(b,b+saved.getSize());kRom=rom.data();osFile=o;parameters.replaceState(state);rebuildK();return;}
  juce::String e;auto o=resolveAsset(state,"os"),b=bankFile,f=flashFile;
@@ -199,25 +207,31 @@ void Processor::observeAudioBlock(int samples)noexcept{
  auto previous=observedBlock.load(std::memory_order_relaxed);for(unsigned attempt=0;attempt<4 && previous<samples;++attempt)if(observedBlock.compare_exchange_weak(previous,samples,std::memory_order_relaxed))break;
 }
 void Processor::timerCallback(){
+ if(startupPending.exchange(false) && !isFirmwareLoading())beginFirmwareLoad(startupFirmware,true);
+ if(isFirmwareLoading()){juce::String error;finishFirmwareLoad(error);if(isFirmwareLoading())return;}
+ savePreferences();
  const auto block=observedBlock.exchange(0);if(block<=0)return;
  int latency=-1;{std::lock_guard lock(controlMutex);if(lastObservedBlock==block)return;lastObservedBlock=block;if(buffering.load()==0)latency=configureBufferProfile();}
  if(latency>=0 && latency!=getLatencySamples())setLatencySamples(latency);
 }
-void Processor::setBufferProfile(int profile){int latency;{std::lock_guard lock(controlMutex);buffering.store(juce::jlimit(0,3,profile));latency=configureBufferProfile();}if(latency!=getLatencySamples())setLatencySamples(latency);}
+void Processor::setBufferProfile(int profile){int latency;{std::lock_guard lock(controlMutex);buffering.store(juce::jlimit(0,3,profile));latency=configureBufferProfile();}if(latency!=getLatencySamples())setLatencySamples(latency);savePreferences();}
 void Processor::stopEngines(){resetClock.store(true);device.store(nullptr);kDevice.store(nullptr);while(activeAudio.load())std::this_thread::yield();observedBlock.store(0);lastObservedBlock=0;ownedDevice.reset();ownedK.reset();}
 void Processor::rebuildK(){stopEngines();kMode.store(true);multi.store(false);activeMask.store(1);selectedPart.store(0);resetPending();{std::lock_guard lock(uiMidiMutex);uiMidi.reset();}
  try{auto k=std::make_unique<KEngine>(kRom,hostRate,hostBlock,kState,buffering.load()==0?0u:256u<<buffering.load());ownedK=std::move(k);applyBufferProfile();kWire.fill(0);kMask.fill(0);resetClock.store(true);kDevice.store(ownedK.get());message="K-Station OS 2.1.01";}catch(const std::exception& e){message=e.what();}}
 bool Processor::loadFirmware(const juce::File& file,juce::String& error){
+ startupPending.store(false);
  if(file.getSize()<=0 || file.getSize()>2*1024*1024){error="Firmware file is too large or empty";return false;}
- auto rom=readK(file);if(rom.isValid()){if(std::none_of(firmwares.begin(),firmwares.end(),[&](const auto& f){return f.file==file;}))firmwares.push_back({file,true});std::lock_guard lock(controlMutex);kRom=rom.data();kState.clear();osFile=file;rebuildK();if(!ownedK){error=message;return false;}return true;}
+ auto rom=readK(file);if(rom.isValid()){if(std::none_of(firmwares.begin(),firmwares.end(),[&](const auto& f){return f.file==file;}))firmwares.push_back({file,true});std::lock_guard lock(controlMutex);kRom=rom.data();kState.clear();osFile=file;rebuildK();if(!ownedK){error=message;return false;}return rememberAssets(error);}
  auto ksRom=firmware(file);if(!ksRom.isValid()){error="Not a supported K-Station 2.1.01 or KS 2.1.02 firmware";return false;}
  if(std::none_of(firmwares.begin(),firmwares.end(),[&](const auto& f){return f.file==file;}))firmwares.push_back({file,false});
  if(!flashFile.existsAsFile()){error="Select KS factory data in Setup first (.MID or user Flash .bin).";return false;}
  if(!load(file,bankFile,flashFile,error))return false;
- std::vector<std::vector<uint8_t>> factory;for(const auto& p:presets()){factory.emplace_back(p.data.begin(),p.data.end());auto& bytes=factory.back();bytes[7]=1;bytes[11]=p.bank;bytes[12]=p.number;}for(const auto& p:performances())factory.emplace_back(p.data.begin(),p.data.end());patchLibrary.addFactory(factory,"KS Factory");return true;
+ publishFactoryPresets();return rememberAssets(error);
 }
-bool Processor::beginFirmwareLoad(const juce::File& file){
- if(firmwareLoading.exchange(true))return false;
+bool Processor::beginFirmwareLoad(const juce::File& file,bool automatic){
+ std::lock_guard guard(firmwareLoadMutex);if(automatic && hostStateRestored.load())return false;
+ startupPending.store(false);if(firmwareLoading.exchange(true))return false;
+ if(firmwareLoader.joinable())firmwareLoader.join();
  firmwareLoadDone.store(false);firmwareLoadError.clear();
  try{firmwareLoader=std::thread([this,file]{
   try{juce::String error;if(!loadFirmware(file,error))firmwareLoadError=error;}
@@ -227,14 +241,15 @@ bool Processor::beginFirmwareLoad(const juce::File& file){
  return true;
 }
 bool Processor::finishFirmwareLoad(juce::String& error){
+ std::lock_guard loadGuard(firmwareLoadMutex);
  if(!firmwareLoadDone.exchange(false))return false;
  if(firmwareLoader.joinable())firmwareLoader.join();
- error=firmwareLoadError;firmwareLoading.store(false);return true;
+ error=firmwareLoadError;firmwareLoading.store(false);if(error.isNotEmpty()){std::lock_guard guard(controlMutex);message=error;}++firmwareRevision;return true;
 }
 bool Processor::setRomFolder(const juce::File& folder,juce::String& error){
  if(!folder.isDirectory()){error="Choose an existing ROM folder";return false;}std::vector<FirmwareChoice> found;
  auto files=folder.findChildFiles(juce::File::findFiles,true,"*");files.sort();
- for(const auto& f:files){if(f.getSize()>2*1024*1024)continue;if(f.hasFileExtension("bin;os;syx;zip")){if(readK(f).isValid())found.push_back({f,true});else if(firmware(f).isValid())found.push_back({f,false});else if(f.getSize()==ks::Board::WaveSize && !bankFile.existsAsFile())bankFile=f;else if(f.getSize()==0x80000 && !flashFile.existsAsFile())flashFile=f;}if(f.hasFileExtension("mid;midi") && f.getFileName().containsIgnoreCase("all data") && !flashFile.existsAsFile())flashFile=f;}
+ for(const auto& f:files){if(f.getSize()>2*1024*1024)continue;if(f.hasFileExtension("bin;os;syx;zip")){if(readK(f).isValid())found.push_back({f,true});else if(firmware(f).isValid())found.push_back({f,false});else if(f.getSize()==ks::Board::WaveSize && bankFile==juce::File{})bankFile=f;else if(f.getSize()==0x80000 && flashFile==juce::File{})flashFile=f;}if(f.hasFileExtension("mid;midi") && f.getFileName().containsIgnoreCase("all data") && flashFile==juce::File{})flashFile=f;}
  romFolder=folder;firmwares=std::move(found);if(folder==dataFolder.getChildFile("ROMs") && !rememberDataFolder(error))return false;if(firmwares.empty()){error="No supported OS images in this folder";return false;}return true;
 }
 std::vector<Control> Processor::visibleControls()const{if(isKStation())return kControls();return {std::begin(controls),std::end(controls)};}
@@ -250,15 +265,17 @@ void Processor::processK(KEngine& engine,juce::AudioBuffer<float>& audio,juce::M
  sendTimedMidi(midi,[&](const uint8_t* data,size_t size,int offset){engine.midi(data,size,uint32_t(offset));});
  engine.process(audio.getWritePointer(0),audio.getWritePointer(1),audio.getNumSamples(),isNonRealtime(),getTotalNumInputChannels()?audio.getReadPointer(0):nullptr);for(int ch=2;ch<audio.getNumChannels();++ch)audio.clear(ch,0,audio.getNumSamples());midi.clear();
 }
-bool Processor::activatePatch(const pluginLib::patchDB::PatchPtr& patch,juce::String& error){
- if(!patch || !firmwareReady()){error="Load firmware first";return false;}auto converted=convertPatch(patch->sysex,isKStation()?Model::KStation:Model::KS,currentPart());if(converted.data.empty()){error="Unsupported or malformed program dump";return false;}
+bool Processor::activatePatch(const pluginLib::patchDB::PatchPtr& patch,juce::String& error){return activatePatchForPart(patch,currentPart(),error);}
+bool Processor::activatePatchForPart(const pluginLib::patchDB::PatchPtr& patch,unsigned part,juce::String& error){
+ if(part>=ks::PartCount){error="Invalid part";return false;}
+ if(!patch || !firmwareReady()){error="Load firmware first";return false;}auto converted=convertPatch(patch->sysex,isKStation()?Model::KStation:Model::KS,part);if(converted.data.empty()){error="Unsupported or malformed program dump";return false;}
  // V-Station banks can drive the K fixed-point effect sum to its ceiling.
  // Reserve firmware program level; preserve the authored filter/drive and the
  // untouched library payload. A post-output limiter cannot undo that clipping.
  if(isKStation() && patchModel(*patch)==Model::VStation){converted.data[13+125]=uint8_t(std::max(0,int(converted.data[13+125])-6));converted.changes.add("V-Station level: -6 dB");}
- if(!isKStation() && patchModel(*patch)==Model::VStation){std::fill_n(converted.data.begin()+13+151,16,' ');const auto name=patch->getName();std::copy_n(name.begin(),std::min(size_t(16),name.size()),converted.data.begin()+13+151);}
- bool ok=false;{std::lock_guard lock(controlMutex);if(ownedK)ok=queueUiMidi(converted.data.data(),converted.data.size());else if(ownedDevice){if(converted.data.size()==1038){ks::State state;state.performance=true;for(unsigned i=0;i<4;++i)std::copy_n(converted.data.data()+13+256*i,256,state.parts[i].begin());state.activeMask=state.parts[0][190]&15;ok=queueState(state,true,error);}else{auto state=ownedDevice->fullSnapshot();std::copy_n(converted.data.data()+13,179,state.parts[currentPart()].begin());ok=queueState(state,false,error);}}}
- if(!ok){if(error.isEmpty())error="MIDI queue full";return false;}resetPending();currentPatch=patchName(*patch);error=converted.changes.joinIntoString("\n");return true;
+ if(!isKStation() && patchModel(*patch)==Model::VStation){std::fill_n(converted.data.begin()+13+151,16,' ');const juce::String name(patch->getName());for(int n=0;n<std::min(16,name.length());++n){const auto c=name[n];converted.data[13+151+n]=uint8_t(c>=32 && c<127?c:'?');}}
+ bool ok=false;{std::lock_guard lock(controlMutex);if(ownedK)ok=queueUiMidi(converted.data.data(),converted.data.size());else if(ownedDevice){if(converted.data.size()==1038){ks::State state;state.performance=true;for(unsigned i=0;i<4;++i)std::copy_n(converted.data.data()+13+256*i,256,state.parts[i].begin());state.activeMask=state.parts[0][190]&15;ok=queueState(state,true,error);}else{auto state=ownedDevice->fullSnapshot();std::copy_n(converted.data.data()+13,179,state.parts[part].begin());ok=queueState(state,false,error);}}}
+ if(!ok){if(error.isEmpty())error="MIDI queue full";return false;}resetPending();if(part==currentPart())currentPatch=patchName(*patch);error=converted.changes.joinIntoString("\n");return true;
 }
 bool Processor::saveCurrentPatch(const juce::File& file,juce::String& error){std::lock_guard lock(controlMutex);std::vector<uint8_t> data;if(ownedDevice)data=ownedDevice->dumpProgram();else if(ownedK){std::array<uint8_t,128> patch;std::array<uint8_t,2048> cc;uint64_t rev;if(!ownedK->device.getControlSnapshot(patch,cc,rev)){error="Snapshot unavailable; try again";return false;}data={0xf0,0,0x20,0x29,1,0x41,0x7f,0,0,0x11,1,0,0};data.insert(data.end(),patch.begin(),patch.end());data.push_back(0xf7);}if(data.empty() || !file.replaceWithData(data.data(),data.size())){error="Cannot save current sound";return false;}patchLibrary.addPath(file);return true;}
 }
