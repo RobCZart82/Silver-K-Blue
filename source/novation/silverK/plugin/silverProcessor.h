@@ -91,6 +91,8 @@ private:
  pluginLib::HostAudioWorkgroup hostAudioWorkgroup;
  std::atomic<int> buffering{1};
  void applyBufferProfile();
+ void notifyHostLatency();
+ std::atomic<int> pendingHostLatency{-1};
  int configureBufferProfile();
  void timerCallback()override;
  void observeAudioBlock(int)noexcept;

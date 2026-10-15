@@ -84,6 +84,7 @@ void Processor::rebuild(){
  message=placeholder?"KS OS 2.1.02 - temporary zero wave ROM; sampled waves are silent":"KS OS 2.1.02 - external wave bank loaded";
 }
 bool Processor::load(const juce::File& o,const juce::File& b,const juce::File& f,juce::String& e){
+ const juce::ScopeGuard notify{[this]{notifyHostLatency();}};
  std::lock_guard guard(controlMutex);
  auto rom=firmware(o);if(!rom.isValid()){e=rom.error();return false;}
  auto waves=bytes(b),storage=bytes(f);if(!b.existsAsFile()){if(b!=juce::File{}){e="Selected Wave ROM is missing: "+b.getFullPathName();return false;}waves.assign(ks::Board::WaveSize,0);}
@@ -107,7 +108,9 @@ bool Processor::load(const juce::File& o,const juce::File& b,const juce::File& f
  programToRestore.clear();os=rom.data();bank=std::move(waves);flash=std::move(storage);osFile=o;bankFile=b;flashFile=f;
  placeholder=std::all_of(bank.begin(),bank.end(),[](uint8_t v){return v==0;});buildLibrary();rebuild();if(!device.load()){e=message;return false;}return true;
 }
-void Processor::prepareToPlay(double r,int b){std::lock_guard guard(controlMutex);
+void Processor::prepareToPlay(double r,int b){
+ const juce::ScopeGuard notify{[this]{notifyHostLatency();}};
+ std::lock_guard guard(controlMutex);
  if(hostRate==r && hostBlock==b && firmwareReady())return;
  if(ownedK){std::vector<uint8_t> saved;if(ownedK->device.getState(saved,synthLib::StateTypeGlobal))kState=std::move(saved);hostRate=r;hostBlock=b;rebuildK();return;}
  if(ownedDevice){programToRestore=ownedDevice->dumpProgram();auto saved=ownedDevice->saveFlash();if(saved.size()==0x60000-0x1fc00)std::copy(saved.begin(),saved.end(),flash.begin()+0x1fc00);}
@@ -172,6 +175,7 @@ state.setProperty("userFlash",juce::MemoryBlock(f.data(),f.size()).toBase64Encod
 void Processor::setStateInformation(const void* data,int size){
  auto xml=getXmlFromBinary(data,size);if(!xml)return;auto state=juce::ValueTree::fromXml(*xml);if(!state.isValid()||state.getType()!=juce::Identifier("SilverParameters"))return;
  // A host restore takes precedence over the delayed new-instance default boot.
+ const juce::ScopeGuard notify{[this]{notifyHostLatency();}};
  std::lock_guard loadGuard(firmwareLoadMutex);hostStateRestored.store(true);startupPending.store(false);
  if(firmwareLoader.joinable())firmwareLoader.join();firmwareLoadDone.store(false);firmwareLoading.store(false);++firmwareRevision;
  std::lock_guard guard(controlMutex);
@@ -202,7 +206,14 @@ int Processor::configureBufferProfile(){
  else if(ownedDevice){ownedDevice->setAudioBuffer(unsigned(block),frames);return int(ownedDevice->latency());}
  return getLatencySamples();
 }
-void Processor::applyBufferProfile(){setLatencySamples(configureBufferProfile());}
+void Processor::applyBufferProfile(){pendingHostLatency.store(configureBufferProfile());}
+void Processor::notifyHostLatency(){
+ // Firmware workers only queue changes. Their caller publishes after joining,
+ // outside firmwareLoadMutex as well as controlMutex. Hosts may reenter here.
+ if(isFirmwareLoading())return;
+ const auto latency=pendingHostLatency.exchange(-1);
+ if(latency>=0 && latency!=getLatencySamples())setLatencySamples(latency);
+}
 void Processor::observeAudioBlock(int samples)noexcept{
  auto previous=observedBlock.load(std::memory_order_relaxed);for(unsigned attempt=0;attempt<4 && previous<samples;++attempt)if(observedBlock.compare_exchange_weak(previous,samples,std::memory_order_relaxed))break;
 }
@@ -211,14 +222,15 @@ void Processor::timerCallback(){
  if(isFirmwareLoading()){juce::String error;finishFirmwareLoad(error);if(isFirmwareLoading())return;}
  savePreferences();
  const auto block=observedBlock.exchange(0);if(block<=0)return;
- int latency=-1;{std::lock_guard lock(controlMutex);if(lastObservedBlock==block)return;lastObservedBlock=block;if(buffering.load()==0)latency=configureBufferProfile();}
- if(latency>=0 && latency!=getLatencySamples())setLatencySamples(latency);
+ {std::lock_guard lock(controlMutex);if(lastObservedBlock==block)return;lastObservedBlock=block;if(buffering.load()==0)applyBufferProfile();}
+ notifyHostLatency();
 }
-void Processor::setBufferProfile(int profile){int latency;{std::lock_guard lock(controlMutex);buffering.store(juce::jlimit(0,3,profile));latency=configureBufferProfile();}if(latency!=getLatencySamples())setLatencySamples(latency);savePreferences();}
-void Processor::stopEngines(){resetClock.store(true);device.store(nullptr);kDevice.store(nullptr);while(activeAudio.load())std::this_thread::yield();observedBlock.store(0);lastObservedBlock=0;ownedDevice.reset();ownedK.reset();}
+void Processor::setBufferProfile(int profile){{std::lock_guard lock(controlMutex);buffering.store(juce::jlimit(0,3,profile));applyBufferProfile();}notifyHostLatency();savePreferences();}
+void Processor::stopEngines(){pendingHostLatency.store(-1);resetClock.store(true);device.store(nullptr);kDevice.store(nullptr);while(activeAudio.load())std::this_thread::yield();observedBlock.store(0);lastObservedBlock=0;ownedDevice.reset();ownedK.reset();}
 void Processor::rebuildK(){stopEngines();kMode.store(true);multi.store(false);activeMask.store(1);selectedPart.store(0);resetPending();{std::lock_guard lock(uiMidiMutex);uiMidi.reset();}
  try{auto k=std::make_unique<KEngine>(kRom,hostRate,hostBlock,kState,buffering.load()==0?0u:256u<<buffering.load());ownedK=std::move(k);applyBufferProfile();kWire.fill(0);kMask.fill(0);resetClock.store(true);kDevice.store(ownedK.get());message="K-Station OS 2.1.01";}catch(const std::exception& e){message=e.what();}}
 bool Processor::loadFirmware(const juce::File& file,juce::String& error){
+ const juce::ScopeGuard notify{[this]{notifyHostLatency();}};
  startupPending.store(false);
  if(file.getSize()<=0 || file.getSize()>2*1024*1024){error="Firmware file is too large or empty";return false;}
  auto rom=readK(file);if(rom.isValid()){if(std::none_of(firmwares.begin(),firmwares.end(),[&](const auto& f){return f.file==file;}))firmwares.push_back({file,true});std::lock_guard lock(controlMutex);kRom=rom.data();kState.clear();osFile=file;rebuildK();if(!ownedK){error=message;return false;}return rememberAssets(error);}
@@ -241,6 +253,7 @@ bool Processor::beginFirmwareLoad(const juce::File& file,bool automatic){
  return true;
 }
 bool Processor::finishFirmwareLoad(juce::String& error){
+ const juce::ScopeGuard notify{[this]{notifyHostLatency();}};
  std::lock_guard loadGuard(firmwareLoadMutex);
  if(!firmwareLoadDone.exchange(false))return false;
  if(firmwareLoader.joinable())firmwareLoader.join();
