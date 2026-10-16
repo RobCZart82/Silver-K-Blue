@@ -1,3 +1,4 @@
+#include "h8s/h8s.hpp"
 #include "ksLiveMidiController.h"
 #include <algorithm>
 #include <array>
@@ -7,30 +8,31 @@
 #include <stdexcept>
 
 namespace {
+struct Original final:H8SEmulator {using H8SEmulator::lastread;using H8SEmulator::lastwrite;};
 void check(bool v,const char* why){if(!v)throw std::runtime_error(why);}
-struct Memory final:H8SDevice {
+template<class Bus>struct Memory final:Bus {
     bool overlay=true,rejectCode=false;std::array<uint8_t,4096> rom{};uint64_t ioReads=0,ioWrites=0;
     static bool ram(unsigned a){return (a>=0xa00000 && a<0xc00000)||(a>=0xffdc00 && a<0xfffc00);}
     static bool io(unsigned a){return a>=0xfffe00||(a>=0x400000 && a<0x400010)||(a>=0x600000 && a<0x600010);}
     uint8_t read(uint32_t a)override{
-        if(a<0x200000)return overlay?state->memory[0xa00000+a]:a<rom.size()?rom[a]:0xff;
-        if(ram(a))return state->memory[a];
-        if(io(a))return uint8_t(state->memory[a]^uint8_t(ioReads++));
+        if(a<0x200000)return overlay?this->state->memory[0xa00000+a]:a<rom.size()?rom[a]:0xff;
+        if(ram(a))return this->state->memory[a];
+        if(io(a))return uint8_t(this->state->memory[a]^uint8_t(ioReads++));
         throw std::runtime_error("Unmapped test memory");
     }
     void write(uint32_t a,uint8_t v)override{
         auto code=a>=0xa00000 && a<0xc00000?a-0xa00000:a;
         if(rejectCode && code>=0x490 && code<0xb8e8)throw std::logic_error("Protected code");
-        if(a<0x200000){if(overlay)state->memory[0xa00000+a]=v;return;}
-        if(ram(a)){state->memory[a]=v;return;}
-        if(io(a)){++ioWrites;state->memory[a]=v;return;}
+        if(a<0x200000){if(overlay)this->state->memory[0xa00000+a]=v;return;}
+        if(ram(a)){this->state->memory[a]=v;return;}
+        if(io(a)){++ioWrites;this->state->memory[a]=v;return;}
         throw std::runtime_error("Unmapped test memory");
     }
 };
 }
 int main(){try{
-    auto reference=std::make_unique<ks::ControllerCpu>(),native=std::make_unique<ks::ControllerCpu>();
-    Memory x,y;for(unsigned n=0;n<x.rom.size();++n)x.rom[n]=y.rom[n]=uint8_t(n*17);
+    auto reference=std::make_unique<Original>();auto native=std::make_unique<ks::ControllerCpu>();
+    Memory<H8SDevice> x;Memory<ks::ControllerBus> y;for(unsigned n=0;n<x.rom.size();++n)x.rom[n]=y.rom[n]=uint8_t(n*17);
     reference->memmap(&x,0,1<<24);native->memmap(&y,0,1<<24);
     std::mt19937 random(0x4b534d45);uint64_t operations=0;
     for(bool overlay:{true,false,true}){

@@ -1,3 +1,4 @@
+#include "h8s/h8s.hpp"
 #include "ksRuntimeController.h"
 #include "ksLiveMidiController.h"
 #include "ksDspTransport.h"
@@ -13,7 +14,7 @@
 namespace {
 void check(bool v,const char* why){if(!v)throw std::runtime_error(why);}
 std::unique_ptr<H8SDisassembler> lengthOracle;
-struct Bus final:H8SDevice {
+struct Bus final:ks::ControllerBus {
     explicit Bus(const std::vector<uint8_t>& image):rom(image),ram(1<<24){}
     const std::vector<uint8_t>& rom;std::vector<uint8_t> ram;
     std::vector<std::tuple<bool,uint32_t,uint8_t,uint64_t,uint32_t>> accesses;

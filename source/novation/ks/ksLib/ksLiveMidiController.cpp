@@ -4,9 +4,9 @@
 namespace ks {
 namespace {
 constexpr unsigned Entry=0x2de8,Status=0x15c1b,Data=0x15c1f;
-void flag(H8SEmulator& h,unsigned mask,bool set){h.ccr=uint8_t((h.ccr&~mask)|(set?mask:0));}
-void value(H8SEmulator& h,int32_t v){h.ccr=uint8_t((h.ccr&~14)|(v<0?8:0)|(!v?4:0));}
-bool interruptReady(const H8SEmulator& h){
+void flag(ControllerCpu& h,unsigned mask,bool set){h.ccr=uint8_t((h.ccr&~mask)|(set?mask:0));}
+void value(ControllerCpu& h,int32_t v){h.ccr=uint8_t((h.ccr&~14)|(v<0?8:0)|(!v?4:0));}
+bool interruptReady(const ControllerCpu& h){
     if(!(h.pending_irqs||h.pending_irqs_high))return false;
     if(!h.interruptMode2)return (h.pending_irqs!=0)&&(!(h.ccr&128)||!(h.ccr&16));
     for(unsigned n=0;n<128;++n)if(((n<64?h.pending_irqs:h.pending_irqs_high)>>(n&63))&1)
@@ -15,7 +15,7 @@ bool interruptReady(const H8SEmulator& h){
 }
 }
 bool LiveMidiController::supported(uint8_t status){const auto kind=status&0xf0;return kind==0x80||kind==0x90||kind==0xb0;}
-LiveMidiController::LiveMidiController(const H8SEmulator& h){
+LiveMidiController::LiveMidiController(const ControllerCpu& h){
     // Reject unverified parser/table revisions. No firmware bytes are embedded.
     uint64_t hash=14695981039346656037ull;
     for(auto range:{std::pair<unsigned,unsigned>{0x2de8,0x2efc},{0xf250,0xf2da}})

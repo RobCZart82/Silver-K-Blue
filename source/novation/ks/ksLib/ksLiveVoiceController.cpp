@@ -4,7 +4,7 @@
 
 namespace ks {
 using namespace controllerDetail;
-void LiveVoiceController::verify(const h8state& h){
+void LiveVoiceController::verify(const ControllerCpu& h){
     uint64_t hash=14695981039346656037ull;
     for(auto range:{std::pair<unsigned,unsigned>{0x2416,0x25fe},{0x77dc,0x7872},
                    {0x8fc0,0x9374},{0xa338,0xa656},{0xa67e,0xa69e}})

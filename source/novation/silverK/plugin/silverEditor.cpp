@@ -560,8 +560,13 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         addAndMakeVisible(diagnostics);diagnostics.setBounds(510,401,270,34);diagnostics.setComponentID("performanceDiagnostics");
         diagnostics.setTooltip("Record optional performance measurements and save a JSON report for Windows or macOS.");
         addAndMakeVisible(controllerSelect);controllerSelect.setBounds(52,449,436,34);controllerSelect.setComponentID("ksController");
-        controllerSelect.addItem("KS controller: H8 (original)",1);controllerSelect.addItem("KS controller: C++ (experimental)",2);
-        controllerSelect.setTooltip("Compare KS playback with H8 or C++ (OS 2.1.02). Keeps the current sound; stops an active diagnostic measurement. K-Station is unchanged.");
+        if(ks::controllerReferenceAvailable()){
+            controllerSelect.addItem("KS controller: H8 (original)",1);controllerSelect.addItem("KS controller: C++ (experimental)",2);
+            controllerSelect.setTooltip("Compare KS playback with H8 or C++ (OS 2.1.02). Keeps the current sound; stops an active diagnostic measurement. K-Station is unchanged.");
+        }else{
+            controllerSelect.addItem("KS controller: C++",2);
+            controllerSelect.setTooltip("KS uses the C++ controller. K-Station is unchanged.");
+        }
         refreshControllerSelection();
         controllerSelect.onChange=[this]{
             juce::String error;if(!processor.setKSControllerMode(controllerSelect.getSelectedId()-1,error))
@@ -997,7 +1002,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         // offering an extra experimental mode in the normal H8/C++ selector.
         if(mode==2 && controllerSelect.getNumItems()==2){controllerSelect.addItem("KS controller: MIDI hybrid (legacy)",3);controllerSelect.setItemEnabled(3,false);}
         controllerSelect.setSelectedId(mode+1,juce::dontSendNotification);
-        controllerSelect.setEnabled(!processor.isKStation()&&!processor.isFirmwareLoading());
+        controllerSelect.setEnabled(ks::controllerReferenceAvailable()&&!processor.isKStation()&&!processor.isFirmwareLoading());
     }
     bool greyLower()const{return studioSkin()?!processor.isKStation():processor.skinChoice=="KS Grey" || (processor.skinChoice=="Auto"&&!processor.isKStation());}
     void refreshFirmwares(){if(processor.isFirmwareLoading())return;firmwareSelect.clear(juce::dontSendNotification);for(size_t i=0;i<processor.firmwares.size();++i){const auto& f=processor.firmwares[i];firmwareSelect.addItem(juce::String(f.kStation?"K-Station: ":"KS: ")+f.file.getFileName(),int(i)+1);if(f.file==processor.osFile)firmwareSelect.setSelectedId(int(i)+1,juce::dontSendNotification);}if(!firmwareSelect.getSelectedId())firmwareSelect.setText(processor.osFile.existsAsFile()?juce::String(processor.isKStation()?"K-Station: ":"KS: ")+processor.osFile.getFileName():"Choose firmware",juce::dontSendNotification);}

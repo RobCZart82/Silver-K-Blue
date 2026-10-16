@@ -4,7 +4,7 @@
 
 namespace ks {
 using namespace controllerDetail;
-void LiveNoteController::verify(const h8state& h){
+void LiveNoteController::verify(const ControllerCpu& h){
     uint64_t hash=14695981039346656037ull;
     for(auto range:{std::pair<unsigned,unsigned>{0x2efc,0x31dc},{0x33b8,0x349c},{0x352c,0x358a},
                    {0x3642,0x36d2},{0x4000,0x4016},{0x9374,0x9484},{0xa656,0xa67e}})

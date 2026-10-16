@@ -43,7 +43,7 @@ static void parserChecks(const juce::File& root){
  for(const auto& name:{"Second","First"}){auto entry=preset(name);list.insert(list.end(),entry.begin(),entry.end());}word(list,4,uint32_t(list.size()-8));parsed.clear();check(library.parseFileData(parsed,list,"program-list.fxb") && parsed.size()==2,"VST2 list bank rejected");
  check(library.createPatch(Data(parsed[0]),{})->name=="Second" && library.createPatch(Data(parsed[1]),{})->name=="First","List-bank order/names changed");
  list.pop_back();parsed.clear();check(!library.parseFileData(parsed,list,"truncated.fxb") && parsed.empty(),"Truncated list partially imported");
- parsed.clear();check(library.parseFileData(parsed,preset("Factory one"),"factory.fxp"),"Factory fixture");auto native=library.createPatch(Data(parsed[0]),{})->sysex;
+ parsed.clear();check(library.parseFileData(parsed,preset("Factory one"),"factory.fxp"),"Factory fixture");patch=library.createPatch(Data(parsed[0]),{});std::vector<uint8_t> native(patch->sysex.begin(),patch->sysex.end());
  library.addFactory({native},"Fixture Factory");idle(library);check(patches(library).size()==1,"Factory source creation");
  library.addFactory({native},"Fixture Factory");idle(library);check(patches(library).size()==1,"Factory source duplicated");
  native[13]=42;library.addFactory({native,native},"Fixture Factory");idle(library);check(patches(library).size()==2,"Factory source did not update");

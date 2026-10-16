@@ -52,7 +52,7 @@ Board::Board(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,con
     // preset over the guest UART used millions of emulated audio samples at
     // each activation. Keep the desired bytes for snapshots and state saves.
     if(placeholder.enabled)muteStoredPrograms();
-    if(nativeStartup){
+    if(nativeStartup || !controllerReferenceAvailable()){
         auto state=std::make_unique<LiveMidiController>(*h8);
         auto runtime=std::make_unique<RuntimeController>(*h8,*state,RuntimeController::Entry::Reset);
         // Read the admitted reset vector directly. The reference boot's four
@@ -433,12 +433,14 @@ void Board::startRecordedController(std::shared_ptr<const ControllerTape> tape){
     recordedController=std::make_unique<RecordedController>(std::move(tape),controllerCheckpoint(),h8->cycles);
 }
 void Board::enableLiveMidiController(bool enabled){
+    if(!controllerReferenceAvailable())throw std::logic_error("KS hybrid controller is available only in comparison tests");
     if(recordedController || !ready)throw std::logic_error("Live KS MIDI requires completed original boot, without replay");
     nativeRuntime.reset();h8->interpreterAllowed=true;h8->nativeFetchClocksOnly=false;h8->nativeLowBase=nullptr;
     if(enabled){if(!liveMidi)liveMidi=std::make_unique<LiveMidiController>(*h8);}
     else liveMidi.reset(); // All guest ABI state remains current; H8 can resume.
 }
 void Board::enableNativeController(bool enabled){
+    if(!enabled && !controllerReferenceAvailable())throw std::logic_error("KS H8 is available only in comparison tests");
     if(!enabled){enableLiveMidiController(false);return;}
     if(recordedController || !ready || !started[0] || !started[1])throw std::logic_error("Native KS runtime requires completed original boot without replay");
     if(nativeRuntime)return;

@@ -1,5 +1,5 @@
 #pragma once
-#include "h8s/h8s.hpp"
+#include "ksControllerState.h"
 #include <cstdint>
 
 namespace ks {
@@ -13,7 +13,7 @@ public:
             (pc>=0x8fc0 && pc<0x9374)||(pc>=0xa338 && pc<0xa656)||
             (pc>=0xa67e && pc<0xa69e);
     }
-    static void verify(const h8state&);
+    static void verify(const ControllerCpu&);
     bool step(ControllerCpu&);
     uint64_t steps=0,allocationCalls=0,startCalls=0,releaseCalls=0,transportSteps=0;
 };

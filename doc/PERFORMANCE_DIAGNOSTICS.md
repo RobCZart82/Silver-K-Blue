@@ -636,27 +636,21 @@ do not validate macOS, a real VST3 host or the tester's Ryzen 3 3100.
 
 ## Native KS playback controller
 
-**Setup -> KS controller -> H8 (original) / C++ (experimental)** selects the
-playback controller for this KS instance. The worker applies the change between
-samples without rebuilding firmware or clearing voices, effect tails, queues or
-resampler history. K-Station's selector is disabled. A rejected native handoff
-reports its error and preserves the running H8 controller.
+Production KS selects C++ from reset. H8 is compiled only into comparison
+executables via the separate `ksH8Reference` test object; `ksLib` has no H8
+implementation or link. Production Setup shows C++ without a comparison switch.
+Legacy project/controller preferences resolve to C++ in production. K-Station's
+separate controller is unchanged.
 
-The choice is stored in DAW state and remembered for new instances. Old projects
-without `ksControllerMode` use original H8; restoring a project does not overwrite
-new-instance defaults. A fresh installation starts with H8. The developer
-`SILVER_KS_CONTROLLER=native` environment selection remains a fallback for new
-instances without a saved choice (and the low-level Device/probe workflows).
-Choose H8 explicitly in Setup to disable the experiment. `native-midi` still
-selects the historical hybrid through the developer path; recorded fixture
-playback remains separate.
+Comparison executables retain the original H8/C++/hybrid choices, reversible
+worker-boundary switches and legacy preference tests. Their original H8 runs
+through a test-only synchronized adapter, so its host CPU is not comparable to
+historical direct-core runs. Use a frozen production binary for performance.
 
-In C++ mode, fresh Device instances execute reset, initial DSP setup and
-warm-up through fixed C++ compatibility control flow, with the interpreter
-locked before the first reset operation. Selecting C++ in an already-running
-H8 instance still uses the reversible post-boot handoff. The original H8 path
-remains selectable while semantic typed-state conversion is unfinished.
-This is a plugin setting; Windows settings and K's engine are unchanged.
+C++ Device instances execute reset, initial DSP setup and warm-up through fixed
+compatibility control flow, with interpreter entry locked before reset. The
+register/flags/stack/continuation model is still present in independent KS
+storage. Removing the H8 dependency does not finish the semantic port.
 
 The native implementation covers normal playback controller code for verified
 KS OS 2.1.02: MIDI/system/realtime/SysEx parsing and part routing, all CC/NRPN,
@@ -669,8 +663,8 @@ targets, resampling and buffers.
 This is a **native compatibility implementation**, not an event-batched
 OsTIrus-style architecture. It retains the register/RAM ABI and original guest
 clock grid to preserve exact commands/audio and allow a quiescent switch back
-to H8. The H8 object stores that frame and remains available for comparison;
-retaining it does not mean interpreting instructions during native playback.
+to H8 in comparison tests. Independent KS storage now holds that frame; the
+original H8 object exists only inside the test adapter.
 Fixed C++ control flow replaces opcode decoding; there is no new JIT or tape.
 Native fetches account for bus clocks without rereading instruction bytes.
 Ordinary controller RAM/stack accesses bypass the device map while preserving
@@ -733,8 +727,8 @@ Recorded replay estimates fixed-passage controller cost; it does not implement
 live MIDI/voice decisions or establish a future live-controller saving.
 
 The first live event-controller stage is opt-in with
-`SILVER_KS_DSP_TRANSPORT=events` and the C++ controller selected. The H8 default
-and native compatibility transport remain unchanged. In the comparison runner,
+`SILVER_KS_DSP_TRANSPORT=events` and the C++ controller selected. The native compatibility transport remains the default; production has no
+KS H8 backend. H8 comparisons are test-only. In the comparison runner,
 pass `--controller native --dsp-transport events`; the runner explicitly sets
 the transport and rejects a capture with no live jobs. HDI readiness observations,
 address requests, 24-bit writes and reply reads use native protocol jobs. They
@@ -859,7 +853,8 @@ remains pending.
 Fresh C++ Device instances now enter the C++ compatibility runtime at reset,
 not after original-H8 warm-up. Native probe modes reject any boot interpreter
 calls; report `h8_interpreted_steps_boot` separately from post-boot/toggle
-counts. The register/PC/flags/stack ABI still remains and H8 is still selectable.
+counts. The register/continuation/flags/stack ABI still remains. H8 selection
+is available only in the separate comparison executables.
 This is not the completed semantic controller replacement.
 
 ```sh
@@ -891,3 +886,28 @@ x64 too. Timing/timer/memory checks run without ROMs; private-input fixtures
 skip explicitly with 77 when no ROMs are supplied. A successful build of these
 fixtures does not establish Windows firmware/audio/CPU equivalence. No private
 ROM or capture is uploaded to CI. Inspect the actual run before claiming pass.
+
+### Test-only original H8 and arithmetic guards (2026-10-16)
+
+Build `ksControlArithmetic_test` and `ksProductionController_test` in addition to
+`ksRuntimeController_test`, `ksControllerBoot_test`, `ksControllerTiming_test`
+and `ksControllerMemory_test`. CTest names are `ks_control_arithmetic` and
+`ks_production_controller`; both run without private ROM inputs. The production
+guard deliberately does not link `ksH8Reference`. It checks C++ default, missing
+reference/locked-entry rejection without state mutation, and the absence of the
+old generic memory-map allocation. An `nm` audit of the actual `ksLib` archive
+must also contain no H8 core/decoder symbols. Whole-plugin H8 symbol checks are
+not meaningful because K-Station still legitimately includes its own core.
+
+The arithmetic oracle covers 283,113,088 cases and links the original core only
+inside its executable. `-fwrapv` applies solely to that original-reference test
+on Clang/GCC; no DSP/JIT flags change. The production code defines wrap with
+unsigned arithmetic and representable signed conversion. Memory/fetch timing
+oracles continue to call original H8 accessors directly.
+
+`ksResetVector_test` is a further ROM-free admission test. It invokes the
+original H8 boot directly for all 16,777,216 reset targets with varied upper
+vector bytes and prior state, comparing initialization with independent KS
+storage. It deliberately does not install the synchronized step adapter.
+CTest name: `ks_reset_vector`. This added test does not change production code
+or the measured binaries; see the dated journal entry and delivery audit.

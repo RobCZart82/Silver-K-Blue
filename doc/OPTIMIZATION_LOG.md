@@ -6,6 +6,19 @@ Raw local reports are not committed. A hypothesis is not a measured result.
 
 ## Current state — 2026-10-16
 
+- KS production is now independent of the H8 core. Original H8 is linked only
+  into comparison executables. The generic 128 MiB device-map table is removed;
+  the remaining compatibility frame is 16,777,472 bytes. Production starts C++
+  from reset and normalizes legacy H8/hybrid preferences to C++. The register,
+  flags, stack and continuation model is **still present**: the requested full
+  semantic port remains unfinished. Test ID `perf-ks-reference-isolation-20261016`
+  passes 16 final stages plus independent reset-vector and legacy-AU checks.
+  Matched AU Multi FX median is 46.65479 -> 46.02389% of one CPU (-1.35%
+  relative); Single median -1.73%, with one pair regressing. DSP/JIT are unchanged.
+
+Earlier admitted checkpoints are retained below; references to selectable or
+initial-default H8 describe those earlier builds, not current production.
+
 - KS C++ cold reset now runs without the H8 interpreter, including initial
   DSP upload and warm-up; the original reset path remains the independent
   selectable reference. Four cold timelines plus 4,128 reset boundary cases
@@ -2756,3 +2769,129 @@ Copy for each next round:
 - Metrics (units), audible outcome and interpretation:
 - Limitations / untested platform / instrumentation overhead:
 - Next step:
+
+## 2026-10-16 — Independent KS storage, test-only H8 and control arithmetic
+
+**Scope/source.** Isolated `codex/ks-native-controller` worktree based on
+`6fc9cad7b285847cad8b4d53b94c85fc3c56dca8`, arm64 Release on the same M1 Pro,
+AppleClang 21 / macOS 27.2 machine. Test ID
+`perf-ks-reference-isolation-20261016`. Engine source and candidate binaries
+were frozen before the matrix. Source-manifest SHA-256:
+`263ebdb02dad6e69cef228cbba938e9bcf2224b79829eacf35579ee0f780bcea`;
+measured AU executable SHA-256:
+`53a5ebc31803f29210b4fbabdd0a18f6dbad2395e5a0ce8e1a430a0e015677bf`.
+The executable was compiled before the commit containing this entry; embedded
+revision metadata therefore identifies parent `6fc9cad` plus dirty state.
+
+**Implementation.** KS storage no longer inherits the H8 emulator and has no
+16,777,216-entry device-pointer map. One explicit Board bus replaces that map;
+128 MiB of pointer storage is eliminated per KS instance. The retained frame
+is 16,777,472 bytes. Integer continuation tokens also avoid forming out-of-array
+PC pointers. `ksLib` has no `h8s` link, H8 type dependency or original decoder
+symbols. Production AU/VST3/Standalone link commands contain no KS reference
+object. K-Station retains its separate original controller.
+
+The unchanged original H8 is compiled in `ksH8Reference_test.cpp`, a test-only
+object. It synchronizes frame/Board observations around actual original-core
+steps. It adds host overhead to the reference and must not be treated as a
+historically comparable production CPU baseline. Production has no registered
+adapter: its interpreter entry rejects work without state mutation/counting.
+It always selects C++ before reset, including legacy projects with H8/hybrid
+settings, and Setup reflects C++ without an H8 selector. Comparison executables
+retain reversible H8/C++ selection and legacy preference tests.
+
+Add/subtract control arithmetic is pure C++17 code, independent of H8 methods.
+Unsigned intermediates define wrap; original status and sticky-zero behavior
+remain exact. Only the original-reference arithmetic test gets `-fwrapv` on
+Clang/GCC. No DSP/JIT compiler option or DSP algorithm changes.
+
+**Correctness.** All 16 frozen-matrix stages pass; source identity verified:
+
+- Four independently initialized cold timelines (Single, irregular budgets,
+  Performance, synthetic mapped wave endpoints), 96,000 exact 24-stream frames,
+  full command/slice files, RAM/IO/state/Flash/IRQ/serial checks; candidate H8
+  interpreter calls remain zero. Reference coordinator slice counts are
+  503,282 / 432,116 / 503,674 / 503,282 respectively.
+- 283,113,088 independent original-H8 arithmetic cases (268,435,456 byte,
+  12,451,840 word, 2,225,792 wide cases). 440,512 normal boundaries,
+  4,128 reset boundaries, 80 IRQ/mask/tie entries, 1,216 timed HDI jobs,
+  86,016 control-job cases equivalent to 471,684 original boundaries,
+  150,100 memory operations and 11,520 fetch-timing cases pass. The memory
+  and fetch oracles call original H8 accessors directly.
+- Nine full frozen H8 command tapes match 8,085,451 events and all scenario
+  state/counters. Fourteen raw-audio comparisons match 6,075,618 frames per
+  implementation x 24 streams (583,259,328 bytes per implementation), including
+  30-second Multi/pedal/clock and deliberate reference-toggle windows.
+- 61,440 exact floating-point samples through five test-build UI switches;
+  held notes/pedal, latency, diagnostics, project restore and instance isolation
+  pass. Paced 128/256 tests report no missing frames.
+- Twelve actual production AU CPU windows retain exact output/tails/programs,
+  correct Single/Multi channels and active parts, finite audible output,
+  zero missing frames and zero over-budget callbacks.
+
+After this matrix, a new reset-vector test and its CMake/CI target were
+added, and the test-container compile issue described below was repaired.
+No production source or measured binary changed. Delivery audit verifies
+that separation. Its direct original `H8SEmulator::boot()` independently admits
+the comparison starting state across all **16,777,216** 24-bit reset targets,
+varying all upper vector bytes, prior status/priority mask/pending IRQs and
+interrupt mode; clocks/history/retained working values match. This supplements
+the synchronized step adapter rather than using that adapter to admit itself.
+
+Two additional actual production AU runs restore paired legacy H8 and C++
+projects as C++, with identical output/tail/program and no lost/deadline failures.
+Strict ad-hoc signature validation passes AU, VST3 and Standalone. VST3 and
+Standalone were built but not separately hosted in this follow-up.
+
+**Total-process CPU.** Frozen preceding reset-stage C++ AU versus this AU;
+both use event transport and control jobs, sequential DSPs, profiling OFF,
+48 kHz/256, 16 held keys total with delay/reverb/chorus, three alternating
+pairs per case, 16-second windows (192 seconds measured audio in total).
+100% denotes one CPU. Neither benchmark side uses the synchronized H8 adapter.
+
+| AU / FX | Frozen preceding C++ median | Current C++ median | Relative change |
+| --- | ---: | ---: | ---: |
+| Single | 47.167506% | 46.351675% | -1.729647% |
+| Four-part Multi | 46.654788% | 46.023894% | -1.352259% |
+
+Single before [47.484756, 46.937313, 47.167506], after
+[46.328906, 46.351675, 47.850544]: two pairs improve and the third regresses;
+ranges overlap. Its median does **not** establish a consistent saving.
+Multi before [46.463694, 46.716456, 46.654788], after
+[46.079356, 45.960863, 46.023894]: all three improve with separated ranges
+in this local series. These are modest, workload-specific observations, not
+pooled with older series and not a promised universal speedup. The storage,
+bus and arithmetic changes are measured together, not attributed separately.
+
+**Limits/outstanding request.** The original register/flags/stack/continuation
+ABI and fixed compatibility control flow remain in independent KS storage.
+This is **not completion of the requested semantic controller conversion**.
+H8 confinement to tests and removal of its map/base class do not remove that
+model. Native typed foreground/IRQ/voice/parameter/Flash jobs remain necessary.
+Inputs use authenticated OS 2.1.02, synthetic Flash and zero wave bank; mapped
+endpoint testing does not validate the original sampled bank. No private ROM,
+PCM, bus tape or raw report is committed. Preset-manager algorithms and shared
+Optimized checkout are untouched; editor/Processor changes only handle the
+controller selection. Windows CI includes ROM-free arithmetic, production and
+reset-vector guards; Windows ROM/audio/CPU validation remains separate.
+
+**Additional final checks.** Both focused UART configurations (default and
+transport/control jobs enabled) pass after separation: each matches 252 exact-
+cycle bytes, 77,692 port events, 56,561 slices and 12,000 frames x 24 streams,
+including budgets 1..128, running-status/partial messages, realtime-byte priority
+and two deliberate H8 round trips. These are separate from the 14 audio totals.
+
+The broader check build exposed an existing PMR/std::vector mismatch in
+`silverPersistence_test.cpp`, present in parent `6fc9cad` and confirmed as the
+cause of the previous Windows CI failure
+[38829816025](https://github.com/temaniak/Silver-K/actions/runs/38829816025).
+Only its fixture now explicitly copies SysEx bytes into the std::vector expected
+by addFactory; no Library/Browser/Patch/preset-manager algorithm changes.
+All check targets then build. A fresh isolated CTest session reports **18 pass,
+5 expected skips, 0 failures** (23 selected tests); ROM-dependent tests omit
+private inputs in that session. Reusing the first session's preferences caused
+workflow/editor fixture failures, which disappear in a new session without
+source changes. Raw earlier logs are retained privately. The private-ROM KS
+runtime/reset/UART and live-plugin checks above run separately with their inputs.
+The new Windows CI run still has to establish its own result after publication;
+Mac passing does not claim Windows ROM/audio/CPU validation.

@@ -10,7 +10,7 @@
 
 namespace {
 void check(bool v,const char* why){if(!v)throw std::runtime_error(why);}
-struct Bus final:H8SDevice {
+struct Bus final:ks::ControllerBus {
     explicit Bus(const std::vector<uint8_t>& os):rom(os),ram(1<<24){}
     const std::vector<uint8_t>& rom;
     std::vector<uint8_t> ram;

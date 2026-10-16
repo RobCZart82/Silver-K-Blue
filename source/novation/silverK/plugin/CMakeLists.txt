@@ -35,6 +35,17 @@ endforeach()
 endif()
 enable_testing()
 add_executable(ksLiveMidiController_test EXCLUDE_FROM_ALL "${ROOT}/source/novation/ks/ksLib/ksLiveMidiController_test.cpp")
+# Standalone pure-control arithmetic oracle; it never links into the plugin.
+add_executable(ksControlArithmetic_test "${ROOT}/source/novation/ks/ksLib/ksControlArithmetic_test.cpp")
+target_include_directories(ksControlArithmetic_test PRIVATE "${ROOT}/source/cpu")
+target_compile_features(ksControlArithmetic_test PRIVATE cxx_std_17)
+# The independent H8 reference's signed 32-bit subtract predates this native
+# code. Define its wrap for this test target, without changing DSP/JIT options.
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+ target_compile_options(ksControlArithmetic_test PRIVATE -fwrapv)
+endif()
+add_test(NAME ks_control_arithmetic COMMAND ksControlArithmetic_test)
+set_tests_properties(ks_control_arithmetic PROPERTIES TIMEOUT 90)
 add_executable(ksControllerTimers_test "${ROOT}/source/novation/ks/ksLib/ksControllerTimers_test.cpp")
 add_executable(ksControllerMemory_test "${ROOT}/source/novation/ks/ksLib/ksControllerMemory_test.cpp")
 target_link_libraries(ksControllerMemory_test PRIVATE ksLib)
@@ -146,3 +157,31 @@ set_tests_properties(silver_controller_switch PROPERTIES TIMEOUT 180 SKIP_RETURN
 target_link_libraries(silverLatency_test PRIVATE silverK jucePluginLib ksLib kstationLib juce::juce_audio_utils)
 add_test(NAME silver_latency_reentry COMMAND silverLatency_test)
 set_tests_properties(silver_latency_reentry PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)
+
+add_executable(ksProductionController_test "${ROOT}/source/novation/ks/ksLib/ksProductionController_test.cpp")
+target_link_libraries(ksProductionController_test PRIVATE ksLib)
+add_test(NAME ks_production_controller COMMAND ksProductionController_test)
+
+# The original KS H8 exists only in test executables. Linking this object (not
+# a static archive) ensures its explicit pre-main registration is retained.
+add_library(ksH8Reference OBJECT EXCLUDE_FROM_ALL "${ROOT}/source/novation/ks/ksLib/ksH8Reference_test.cpp")
+target_include_directories(ksH8Reference PRIVATE "${ROOT}/source/cpu")
+target_compile_features(ksH8Reference PRIVATE cxx_std_17)
+get_property(SILVER_TEST_TARGETS DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
+foreach(check IN LISTS SILVER_TEST_TARGETS)
+ get_target_property(check_type ${check} TYPE)
+ if(check_type STREQUAL "EXECUTABLE" AND (check MATCHES "_test$" OR check STREQUAL "silver_check"))
+  if(NOT check STREQUAL "ksControlArithmetic_test" AND NOT check STREQUAL "ksProductionController_test")
+   target_sources(${check} PRIVATE $<TARGET_OBJECTS:ksH8Reference>)
+   target_link_libraries(${check} PRIVATE ksLib)
+   target_include_directories(${check} PRIVATE "${ROOT}/source/cpu")
+  endif()
+ endif()
+endforeach()
+
+# Direct original boot() admission, independent of the synchronized step adapter.
+add_executable(ksResetVector_test "${ROOT}/source/novation/ks/ksLib/ksResetVector_test.cpp")
+target_link_libraries(ksResetVector_test PRIVATE ksLib)
+target_include_directories(ksResetVector_test PRIVATE "${ROOT}/source/cpu")
+add_test(NAME ks_reset_vector COMMAND ksResetVector_test)
+set_tests_properties(ks_reset_vector PROPERTIES TIMEOUT 90)

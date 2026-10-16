@@ -26,7 +26,9 @@ not proof for every possible state or input.
 
 The full semantic conversion is **not complete**. Current live C++ playback
 executes fixed, verified C++ control flow without calling the H8 interpreter
-after handoff, but retains H8 register/flag/stack/PC and memory storage. The
+from reset, but retains a compatibility register/flag/stack/continuation model
+and address-based memory storage. The frame is now independent of H8 types;
+that separation is not the remaining semantic conversion. The
 13,766 compatibility boundaries are not a native event-controller design.
 Fresh C++ instances now execute reset/bootstrap and warm-up in C++ too, with
 zero H8 interpreter calls. This reset path still uses the same compatibility
@@ -46,7 +48,7 @@ Implemented opt-in live jobs:
   compatibility frame at yields. They use actual SRAM/return-stack data, exact reference
   flags, memory clocks and wrap behavior. They cannot change interrupt masks.
 
-Select C++ through Setup to exercise either flag. Both flags are independent
+Both flags apply to production C++ playback. They are independent
 and default off. The new diagnostic backend names are
 `native-cpp-control-jobs` and, with HDI jobs, `native-cpp-events-control`.
 No installed bundle is replaced by this research build.
@@ -111,10 +113,10 @@ an isolated verified stage, **not completion of the removal gates below**.
 3. Replace the generic CPU register/flag/stack/address-space frame with typed
    controller state and explicit bounded job storage; eliminate the large
    generic device-map allocation. Do not retain a hidden interpreter fallback.
-4. Remove H8 dependencies from the production KS target only after these
-   gates and broader musical/state/patch regression checks pass. Keep the
-   original separately compiled for differential verification. K-Station still
-   requires its own H8 implementation.
+4. Production KS no longer links or includes H8. `ksH8Reference` is a separate
+   test object and supplies the independent original core to comparison
+   executables only. Keep that separation while completing the semantic frame
+   conversion. K-Station still requires its own H8 implementation.
 5. Build and repeat the comparisons separately on Windows x64, then validate
    the actual host/plugin formats. The control-job source uses portable C++17;
    macOS results alone do not establish Windows correctness or CPU savings.
@@ -162,3 +164,43 @@ event-transport AU; it is not a measurement of reset alone. The exact tested
 AU and source snapshot are in ignored
 `build/optimized-mac-ks-native-reset-2026-10-16/`. This is still an intermediate
 compatibility implementation. H8 has not been restricted to test targets.
+
+## Independent KS storage and test-only H8 — 2026-10-16
+
+This follow-up removes the H8 base class and the 16,777,216-entry generic device
+map from KS production. `ksLib` has no `h8s` link and no original-core types or
+opcode-decoder symbols. It uses one explicit Board bus. The remaining temporary
+compatibility frame is **16,777,472 bytes**; the 128 MiB pointer-map allocation
+per KS instance is eliminated. The original K-Station engine is unaffected.
+This is a storage/dependency separation, not removal of the register model.
+
+The original unmodified H8 is compiled by `ksH8Reference_test.cpp` into a separate
+object linked only to comparison executables. The adapter synchronizes state at
+core/Board boundaries; actual H8 decode, arithmetic, clock charging and interrupt
+arbitration remain in that original core. Reference host CPU is no longer a
+historically comparable benchmark because this adapter adds synchronization.
+CPU comparisons must use frozen production plugins instead.
+
+Production chooses C++ before reset, including when loading a legacy project
+with an old H8/hybrid choice. Setup reflects that active choice and provides no
+H8 selector in production. Comparison executables retain the original switch
+and legacy preference/restore tests. Missing or locked reference execution fails
+without changing clocks or incrementing interpreter counts. The ROM fingerprint
+still rejects unsupported controller images; there is no silent fallback.
+
+Control add/subtract operations are now pure fixed-width C++ computations,
+independent of H8 methods. Unsigned intermediates define 32-bit wrap. They pass
+283,113,088 independent original-H8 comparisons: all byte operand/status pairs,
+carry masking and sticky zero, full word operands against signed/half-carry/wrap
+edges, and wide edge/random cases. The test-only original signed subtract is
+compiled with defined wrap; no DSP/JIT compile options change. Native bus/timing
+fixtures call the original H8 accessors directly, rather than reusing the new
+adapter as their timing oracle.
+
+Validation report: `perf-ks-reference-isolation-20261016` (private/ignored).
+All 16 frozen musical/plugin/CPU stages pass. A subsequent independent original
+boot test covers 16,777,216 reset targets; two actual AU legacy-project runs
+also pass. Details, the modest Multi CPU saving and mixed Single results are
+recorded in the journal. The implementation remains portable C++17, but Mac results do not
+establish Windows ROM/audio correctness or CPU gains. Full typed lifecycle,
+foreground/IRQ continuation and register/stack elimination remain outstanding.

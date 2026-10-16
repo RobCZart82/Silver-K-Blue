@@ -7,7 +7,6 @@
 #include "ksPlaceholderMidi.h"
 #include "ksState.h"
 #include "ksPartMidi.h"
-#include "h8s/h8s.hpp"
 #include <vector>
 #include <array>
 #include <memory>
@@ -18,7 +17,7 @@
 
 namespace ks {
 // Coordinator owns H8/IO. Optional DSP workers run only inside a joined slice.
-class Board final : public H8SDevice {
+class Board final : public ControllerBus {
 public:
     static constexpr uint32_t ControllerClockHz=25000000;
     // Quotient/remainder avoids an overflowing cycles*Hz intermediate in long sessions.
@@ -61,7 +60,7 @@ public:
     std::array<size_t,2> serialDepth()const{return {aToB.size(),bToA.size()};}
     uint8_t read(uint32_t address) override;
     void write(uint32_t address,uint8_t value) override;
-    H8SEmulator& cpu(){return *h8;}
+    ControllerCpu& cpu(){return *h8;}
     DSP& dsp(unsigned i){return *dsps.at(i);}
     uint64_t waveReads=0, hostWrites[2]{}, bankLow=0xffffff, bankHigh=0;
     bool overlay=false, mainEntered=false, ready=false;
