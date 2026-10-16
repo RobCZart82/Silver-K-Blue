@@ -11,9 +11,9 @@ namespace ks {
 Board::Board(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,const std::vector<uint8_t>& storage,bool isolateParts,bool nativeStartup)
  : h8(std::make_unique<ControllerCpu>()),rom(os),flash(0x80000,0xff),waves(bank) {
     const auto* transport=std::getenv("SILVER_KS_DSP_TRANSPORT");
-    eventDspTransport=transport && std::strcmp(transport,"events")==0;
+    eventDspTransport=!transport || std::strcmp(transport,"events")==0;
     const auto* jobs=std::getenv("SILVER_KS_CONTROL_JOBS");
-    eventControlJobs=jobs && std::strcmp(jobs,"1")==0;
+    eventControlJobs=!jobs || std::strcmp(jobs,"1")==0;
     if(os.size()!=87360 || bank.size()!=WaveSize)throw std::invalid_argument("KS OS/bank size mismatch");
     // Update excludes container checksum. Rebuild its transport field, which
     // original reset code verifies while copying Flash to SRAM.

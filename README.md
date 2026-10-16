@@ -1,5 +1,7 @@
 # Silver-K 0.2.4 Beta
 
+Windows continuation from the stable product basis: [handoff and measurement plan](doc/WINDOWS_STABLE_HANDOFF_20261016_RU.md). Full semantic KS controller migration is paused by user decision; Windows validation of this exact delivery is pending.
+
 A beta release for continued development. CPU performance, latency and optimization are still being refined.
 
 Optional **Setup → Performance diagnostics** records K/KS performance sessions and exports JSON on Windows and macOS. See the [measurement guide](doc/PERFORMANCE_DIAGNOSTICS.md) and shared [optimization journal](doc/OPTIMIZATION_LOG.md) for reproduction conditions, validation status and the next investigation.

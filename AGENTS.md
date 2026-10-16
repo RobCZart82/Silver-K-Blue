@@ -1,5 +1,9 @@
 # Project continuity
 
+- Latest user decision, 2026-10-16: the full semantic KS controller migration is PAUSED. Continue Windows performance work from the stable product basis on `codex/stable-windows-optimization`; read `doc/WINDOWS_STABLE_HANDOFF_20261016_RU.md` first. Do not resume the later controller migration, import its unfinished graphs or revive its old completion/push goal.
+- This stable branch starts at `1724c1b` with the two already admitted KS optimizations enabled by default. Production KS uses the C++ compatibility controller; original H8 is test-only, and the register/flag/stack/PC model remains. Older follow-up statements below about initial-default H8, product selectors and publishing to Optimized describe historical stages, not this delivery.
+- Windows build/audio/performance validation of this exact stable delivery is still pending. Reproduce the Windows baseline and matched OsTIrus comparison before evaluating a Windows optimization. Keep the Mac behavior, DSP/JIT, guest timing/IRQ/order, buffers and thread priorities unchanged. Do not merge into the concurrent preset-manager checkout automatically.
+
 - Read `README.md` for active build/runtime paths.
 - Before performance work, read `doc/OPTIMIZATION_LOG.md` and `doc/PERFORMANCE_DIAGNOSTICS.md`.
 - Keep the optimization log current in the same change as diagnostics or optimization work. Record the date, source/build identity, platform, scenario, actual validation, results, limitations and next step. Separate measured results from hypotheses and pending checks.

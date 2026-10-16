@@ -2895,3 +2895,119 @@ source changes. Raw earlier logs are retained privately. The private-ROM KS
 runtime/reset/UART and live-plugin checks above run separately with their inputs.
 The new Windows CI run still has to establish its own result after publication;
 Mac passing does not claim Windows ROM/audio/CPU validation.
+
+## 2026-10-16 — Stable macOS product delivery, migration paused
+
+User requested a working product on the last product-validated basis and a
+fresh OsTIrus comparison. Delivery source starts at 1724c1b, corresponding to
+perf-ks-reference-isolation-20261016. Its 72-file frozen manifest matches
+except the documented test-only plugin CMake addition. Migration checkpoint
+909aa2bff4cb4e42872bf01baf8ae5e1e81af8f5 remains preserved and paused.
+No later migration bodies/graphs or unfinished scratch deliveries are included.
+The concurrent preset-manager checkout is not modified.
+
+Only production change: missing environment overrides select the previously
+admitted event DSP transport and control jobs. Explicit overrides preserve
+old selection semantics. No algorithm, DSP/JIT, guest clock/IRQ/order, worker
+policy, buffer/rate or thread-priority change. Compatibility CPU state remains.
+
+Platform/build: macOS 27.2, Apple M1 Pro, arm64 Release, AppleClang 21,
+C++17, macOS deployment 12.0, dependency pins unchanged, profiling OFF,
+sequential DSPs. Fresh source build of AU/VST3/Standalone and check hosts.
+Embedded identity is 1724c1b plus dirty delivery defaults/docs.
+Actual AU executable SHA-256: 5a85eae3124a55b9e5f2a1082ff1a80ebdb178d9477b1003a7f794b761d72ca8.
+Test ID: stable-mac-delivery-20261016. Private reports are local only.
+
+Actual validation:
+- All three bundles compile, are arm64, pass strict ad-hoc signature checks,
+  and link no KS H8 reference object.
+- Public CTest: 24 PASS, seven private-input skips, zero unresolved failures.
+  Initial five dependency tests were Not Run because excluded targets were
+  unbuilt; built those targets and reran those five successfully.
+- Fresh private Single/Multi cold-start comparisons, runtime and controller/
+  preference/state checks pass. Original-H8 comparisons are finite fixtures.
+- Two Single/Multi FX AU pairs: clean base with explicit optimization flags
+  versus delivery with no flags. Audio and tails hash-exact, saved programs
+  exact, all parts audible, zero missing frames/deadline failures.
+- Actual VST3 realtime and offline note/editor checks pass.
+- Standalone window opens. Its preexisting JUCE-host-restored state reported
+  missing/hash-mismatched user assets; standalone physical-device audio and
+  recovery of that old host state were not admitted. AU/VST3 firmware/audio
+  checks above do pass; current valid assets must be selected for standalone.
+- One initial sandbox AU registration failure succeeded when the host was
+  permitted to access macOS audio services; no binary change was required.
+
+New matched total-process CPU series: same fresh AU host for both products,
+OsTIrus 2.2.16/TI2 local copy with original private firmware, 48 kHz/256,
+16 held notes total (16 in Single, four per part in Multi), basic saw programs,
+dry or delay/reverb/chorus, three alternating pairs per scenario, eight seconds
+per measured window. 24 windows /192 measured seconds; preparation, part probes,
+voice warm-up and tails are outside those windows. 100% means one CPU.
+Silver-K uses the delivery defaults, without optimization environment flags.
+
+| Scenario | Silver-K median (range) | OsTIrus median (range) | Silver-K relative CPU |
+| --- | ---: | ---: | ---: |
+| Single, dry | 46.703% (44.012–46.715) | 73.485% (62.996–76.821) | -36.45% |
+| Single, delay/reverb/chorus | 45.271% (44.957–46.065) | 72.702% (63.349–76.491) | -37.73% |
+| Four parts, dry | 45.469% (44.912–45.621) | 69.141% (65.629–82.173) | -34.24% |
+| Four parts, delay/reverb/chorus | 44.760% (44.474–44.765) | 84.010% (61.029–88.811) | -46.72% |
+
+All 24 windows pass: finite audible output, effective parameter overrides,
+per-channel part probes and zero over-budget callbacks. All 12 Silver-K windows
+have zero lost frames and exact within-scenario audio/tail hashes across repeats.
+OsTIrus internal lost-frame counts are unavailable (-1), not measured zero.
+Host and AU executable hashes remain unchanged through the series.
+
+Limits: different synthesis/FX algorithms, native rates and effect levels;
+equal input/feature classes do not establish equal DSP work or identical sound.
+Observed background processes include mds (24.6% CPU) and RustDesk (37.5%) in
+one snapshot; no competing compiler was observed in that snapshot. Core placement,
+frequency and thermal state were not captured. OsTIrus ranges are wide.
+This is a new local series, not pooled with earlier absolute numbers and not
+an attribution of its difference to the two default selectors. No universal
+speed ranking, Windows proof or physical-instrument equivalence is claimed.
+Synthetic Flash/zero Wave limits remain. Raw ROMs, states, audio, binaries and
+personal diagnostic reports are not committed; release products are local only.
+
+Delivery includes corresponding source, licenses, synthetic assets, checksums,
+and Russian instructions. Installed plugins and preset-manager source remain
+unchanged. Next: user evaluation of this working baseline; migration stays paused.
+
+## 2026-10-16 — AU install, local cleanup and Windows handoff
+
+User requested installation of the stable AU, cleanup of unnecessary test
+artifacts, and publication of this stable work for Windows optimization and
+a new Windows OsTIrus comparison. Full controller migration stays paused.
+
+The previously verified Mac AU was installed in the user's Components folder;
+its strict signature and executable hash match the package. The prior user AU
+is backed up locally outside the plugin scan folder. The system-wide AU and
+other plugin formats were not replaced. AU executable identity remains
+5a85eae3124a55b9e5f2a1082ff1a80ebdb178d9477b1003a7f794b761d72ca8.
+
+Stopped the owned temporary Standalone. Removed 298 known generated paths,
+21,847 files /8,349,212,630 logical bytes, including 60 WAV/PCM/raw-extension
+files, old native-controller test products, reports/traces and temporary build
+caches. Logical size is not a claim about physical APFS blocks freed.
+Preserved the final package/public report, previous AU backup, pinned dependency
+source cache, original user firmware/banks, and the paused-migration source
+archive (2356 entries; SHA-256
+d9ed23623197e3e3d7ef901d7a00f092628115c87decea121648183d6b00a1dd).
+Migration worktree remains clean at 909aa2b; preset-manager source is untouched.
+Older private proof/scratch paths in this diary may no longer exist. The new
+stable source clone is retained until publication, then may be removed too.
+
+Windows handoff: doc/WINDOWS_STABLE_HANDOFF_20261016_RU.md; intended delivery
+branch codex/stable-windows-optimization. Base is 1724c1b plus the two previously
+validated default-selector changes and delivery/continuity documentation.
+Later migration work is not included. This follow-up changes no additional
+production algorithm or measured Mac executable, so no new audio/CPU test is
+claimed for the documentation change.
+
+Windows state: build, firmware/audio/state, host/device and CPU comparison are
+PENDING. The handoff requires a real Windows baseline and one common Windows
+VST3 process-CPU host for Silver-K/OsTIrus, alternating repeats and correctness
+gates, without DSP/JIT/guest timing/buffer/priority/Windows policy changes.
+Existing Windows GetProcessTimes helpers support own-engine comparisons;
+the Mac AudioToolbox benchmark is not a Windows host. Next step belongs on
+the Windows machine; no remote build/test or controller migration was started.
