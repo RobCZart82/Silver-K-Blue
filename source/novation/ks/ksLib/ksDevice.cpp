@@ -23,8 +23,9 @@ Device::Device(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,c
   // only after warm-up, so a long cold compile cannot demote the live worker.
   dsp56k::ThreadTools::setCurrentThreadPriority(dsp56k::ThreadPriority::High);
   dsp56k::AudioWorkgroup::Member audioWorkgroup;
-  try{board=std::make_unique<Board>(os,bank,flash,true);if(!board->boot())throw std::runtime_error("KS controller boot timeout");
+  try{board=std::make_unique<Board>(os,bank,flash,true,controllerMode()==ControllerMode::Native);if(!board->boot())throw std::runtime_error("KS controller boot timeout");
    if(controllerMode()==ControllerMode::Native)board->enableNativeController();else if(controllerMode()==ControllerMode::Hybrid)board->enableLiveMidiController();
+   activeControllerBackend.store(board->controllerBackend());
    if(program.size()==270 || program.size()==1038){
     const uint8_t select[]{uint8_t(0xb0|(flash[0x1ff08]&15)),32,uint8_t(program.size()==1038?65:33),uint8_t(0xc0|(flash[0x1ff08]&15)),0};
     board->enqueueMidi(select,sizeof(select));board->enqueueMidi(program.data(),program.size());
@@ -85,6 +86,7 @@ Device::Device(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,c
       if(mode==ControllerMode::Native)board->enableNativeController();
       else if(mode==ControllerMode::Hybrid)board->enableLiveMidiController();
       else board->enableNativeController(false);
+      activeControllerBackend.store(board->controllerBackend());
       currentController.store(mode);
      }catch(const std::exception& e){error=e.what();}
      {std::lock_guard lock(controllerMutex);controllerError=std::move(error);controllerCompleted=true;}controllerCV.notify_one();

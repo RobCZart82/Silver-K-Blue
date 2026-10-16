@@ -1,11 +1,19 @@
 #include "ksBoard.h"
 #include "ksControllerTimers.h"
+#include "ksDspTransport.h"
+#include "ksControllerJobs.h"
+#include <cstdlib>
+#include <cstring>
 #include <algorithm>
 #include <stdexcept>
 #include <sstream>
 namespace ks {
-Board::Board(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,const std::vector<uint8_t>& storage,bool isolateParts)
+Board::Board(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,const std::vector<uint8_t>& storage,bool isolateParts,bool nativeStartup)
  : h8(std::make_unique<ControllerCpu>()),rom(os),flash(0x80000,0xff),waves(bank) {
+    const auto* transport=std::getenv("SILVER_KS_DSP_TRANSPORT");
+    eventDspTransport=transport && std::strcmp(transport,"events")==0;
+    const auto* jobs=std::getenv("SILVER_KS_CONTROL_JOBS");
+    eventControlJobs=jobs && std::strcmp(jobs,"1")==0;
     if(os.size()!=87360 || bank.size()!=WaveSize)throw std::invalid_argument("KS OS/bank size mismatch");
     // Update excludes container checksum. Rebuild its transport field, which
     // original reset code verifies while copying Flash to SRAM.
@@ -44,7 +52,18 @@ Board::Board(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,con
     // preset over the guest UART used millions of emulated audio samples at
     // each activation. Keep the desired bytes for snapshots and state saves.
     if(placeholder.enabled)muteStoredPrograms();
-    h8->boot();
+    if(nativeStartup){
+        auto state=std::make_unique<LiveMidiController>(*h8);
+        auto runtime=std::make_unique<RuntimeController>(*h8,*state,RuntimeController::Entry::Reset);
+        // Read the admitted reset vector directly. The reference boot's four
+        // vector bytes leave read history at 3, then reset its clock to zero.
+        const uint32_t reset=(uint32_t(rom[0])<<24)|(uint32_t(rom[1])<<16)|(uint32_t(rom[2])<<8)|rom[3];
+        h8->pc=h8->makepc(reset&0xffffff);h8->cycles=0;h8->lastread=3;
+        h8->pending_irqs=h8->pending_irqs_high=0;h8->ccr=128;h8->exr=0;
+        liveMidi=std::move(state);nativeRuntime=std::move(runtime);nativeCodeSealed=false;
+        h8->interpreterAllowed=false;h8->nativeFetchClocksOnly=true;
+        h8->nativeLowBase=rom.data();h8->nativeLowSize=unsigned(rom.size());
+    }else h8->boot();
 }
 uint8_t Board::read(uint32_t a){
     if(a<0x200000){if(overlay)return h8->memory[0xa00000+a];return a<rom.size()?rom[a]:0xff;}
@@ -67,7 +86,7 @@ uint8_t Board::read(uint32_t a){
     std::ostringstream s;s<<"Unmapped KS read 0x"<<std::hex<<a<<" pc="<<h8->getPC();throw std::runtime_error(s.str());
 }
 void Board::write(uint32_t a,uint8_t v){
-    if(nativeRuntime){
+    if(nativeRuntime && nativeCodeSealed){
         const uint32_t code=a>=0xa00000 && a<0xc00000?a-0xa00000:a;
         if((code>=0x170 && code<0x172)||(code>=0x490 && code<0x2a0c)||(code>=0x2a18 && code<0xb8e8))
             throw std::runtime_error("Native KS controller cannot modify verified executable SRAM");
@@ -132,10 +151,32 @@ void Board::tick(uint64_t previous){
 }
 // Native timers preserve the reference UART/ADC boundaries. TPU0 advances
 // arithmetically; the original per-clock loop above remains the H8 control.
+uint64_t Board::nextControllerEvent(uint64_t limit)const {
+    const auto now=h8->cycles;
+    if(txDue)limit=std::min(limit,txDue);
+    if(nativeQueuedMidi && (io[0x18a]&0x10) && !(io[0x18c]&0x40))
+        limit=std::min(limit,rxDue);
+    if(adcDue && (io[0x198]&0x20) && !(io[0x198]&0x80))
+        limit=std::min(limit,adcDue);
+    if((io[0x1c0]&1) && (io[0x1d1]&15)==0) {
+        const unsigned shift=unsigned(io[0x1d0]&7)*2;
+        const unsigned count=(unsigned(io[0x1d6])<<8)|io[0x1d7];
+        const unsigned compare=(unsigned(io[0x1d8])<<8)|io[0x1d9];
+        if(shift<8 && compare) {
+            const uint64_t distance=compare>count?compare-count:65536ull+compare-count;
+            limit=std::min(limit,((now>>shift)+distance)<<shift);
+        }
+    }
+    if((io[0x1c0]&2) && (io[0x1e1]&15)==0 && io[0x1e0]==6) {
+        const unsigned count=(unsigned(io[0x1e6])<<8)|io[0x1e7];
+        limit=std::min(limit,((now>>8)+65536-count)<<8);
+    }
+    return limit;
+}
 void Board::tickNative(uint64_t previous){
     auto now=h8->cycles;
     if(txDue && now>=txDue){txDue=0;io[0x18c]|=0x84;if(io[0x18a]&0x80)h8->interrupt(90);if(io[0x18a]&4)h8->interrupt(91);}
-    if((io[0x18a]&0x10) && now>=rxDue && !(io[0x18c]&0x40)){uint8_t b;if(midiIn.pop(b)){io[0x18d]=b;io[0x18c]|=0x40;rxDue=now+8000;++midiReceived;if(io[0x18a]&0x40)h8->interrupt(89);}}
+    if(nativeQueuedMidi && (io[0x18a]&0x10) && now>=rxDue && !(io[0x18c]&0x40)){uint8_t b;if(midiIn.pop(b)){--nativeQueuedMidi;io[0x18d]=b;io[0x18c]|=0x40;rxDue=now+8000;++midiReceived;if(io[0x18a]&0x40)h8->interrupt(89);}}
 
     if((io[0x1c0]&1) && (io[0x1d1]&15)==0){
         unsigned shift=unsigned(io[0x1d0]&7)*2;
@@ -264,6 +305,13 @@ State Board::state() {
     return result;
 }
 Board::AudioFrame Board::renderSample(){AudioFrame a{};const auto begin=controllerCycles();while(!audio.pop(a)){advance();if(controllerCycles()-begin>ControllerClockHz)throw std::runtime_error("KS serial output timeout");}return a;}
+void Board::nativeStartupBoundary(){
+    if(!nativeCodeSealed && overlay){RuntimeController::verifyImage(*h8);nativeCodeSealed=true;}
+}
+void Board::nativeReadyBoundary(){
+    if(h8->getPC()==0x41e2)mainEntered=true;
+    if(mainEntered && h8->getPC()==0x4334)ready=true;
+}
 void Board::advance(uint32_t budget){
     using namespace baseLib::performance;
     const bool sample=performance && performance->mode()==2 && ((++diagnosticAdvances&255)==0);
@@ -274,7 +322,38 @@ void Board::advance(uint32_t budget){
     }else{
         const auto begin=h8->cycles;if(controllerRecorder)controllerRecorder->beginSlice(begin);
         if(nativeRuntime){
-            while(h8->cycles-begin<budget){auto before=h8->cycles;nativeRuntime->step(*h8);tickNative(before);}
+            // Host MIDI reaches this Board only on the coordinator, outside
+            // this slice. Empty UART polls have no guest-visible side effect.
+            nativeQueuedMidi=uint32_t(midiIn.size());
+            if(!ready){
+                while(h8->cycles-begin<budget){
+                    const auto before=h8->cycles;nativeStartupBoundary();
+                    nativeRuntime->stepStartup(*h8);tickNative(before);nativeReadyBoundary();
+                }
+            }else if(!eventDspTransport && !eventControlJobs){
+                // Preserve the original tight compatibility loop when the
+                // transport experiment is disabled.
+                while(h8->cycles-begin<budget){auto before=h8->cycles;nativeRuntime->step(*h8);tickNative(before);}
+            }else{
+            while(h8->cycles-begin<budget){
+                const auto before=h8->cycles;
+                unsigned batched=0;
+                const unsigned pc=h8->getPC();
+                if(eventDspTransport && pc>=0x2416 && pc<=0x25e4 && DspTransport::candidate(pc))
+                    batched=DspTransport::service(*h8,nextControllerEvent(begin+budget));
+                if(batched){
+                    ++transportJobs;transportBoundaries+=batched;
+                    nativeRuntime->steps+=batched;
+                    liveMidi->voiceActions.steps+=batched;
+                    liveMidi->voiceActions.transportSteps+=batched;
+                }else if(eventControlJobs && ControllerJobs::candidate(pc)){
+                    const auto job=ControllerJobs::service(*h8,nextControllerEvent(begin+budget));
+                    if(job.steps){++controlJobs;controlBoundaries+=job.steps;nativeRuntime->steps+=job.steps;liveMidi->noteActions.steps+=job.noteSteps;}
+                    else nativeRuntime->step(*h8);
+                }else nativeRuntime->step(*h8);
+                tickNative(before);
+            }
+            }
         }else if(liveMidi){
             while(h8->cycles-begin<budget){auto before=h8->cycles;
                 const unsigned pc=h8->getPC();
@@ -296,7 +375,7 @@ void Board::advance(uint32_t budget){
         Scope dspTiming(performance,i?Metric::DspB:Metric::DspA,0,0,true,sample);
         if(!started[i]){epochs[i]=int64_t(dspTime(nowController))-int64_t(dsps[i]->cycles());started[i]=true;if(i==1)aToB.reset();}
         const auto target=int64_t(dspTime(nowController))-epochs[i];
-        while(int64_t(dsps[i]->cycles())<target){dsps[i]->discardAudio();dsps[i]->step(1);}
+        dsps[i]->catchUpToCycle(target);
     }}
     // Both DSPs share the master's serial clock and frame sync. Independent
     // peripheral clocks can stretch differently when interrupt work is pending.
@@ -324,7 +403,7 @@ void Board::catchUpDsp(unsigned i,int64_t target,bool sampled){
     Scope dspTiming(performance,i?Metric::DspB:Metric::DspA,0,0,true,sampled);
     // ESAI clocks stay disabled; all cross-DSP callbacks are serviced by the
     // coordinator AFTER both catch-ups, exactly as in sequential advance().
-    while(int64_t(dsps[i]->cycles())<target){dsps[i]->discardAudio();dsps[i]->step(1);}
+    dsps[i]->catchUpToCycle(target);
 }
 uint64_t Board::controllerCheckpoint()const {
     uint64_t hash=14695981039346656037ull;

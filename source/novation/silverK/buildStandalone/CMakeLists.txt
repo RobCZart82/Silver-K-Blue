@@ -59,10 +59,11 @@ add_library(ksLib STATIC "${ROOT}/source/novation/ks/ksLib/ksBoard.cpp" "${ROOT}
 target_include_directories(ksLib PUBLIC "${ROOT}/source/novation/ks" "${ROOT}/source/cpu" "${ROOT}/source/framework")
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksDspWorkers.cpp")
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksControllerTrace.cpp")
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksDspTransport.cpp" "${ROOT}/source/novation/ks/ksLib/ksControllerJobs.cpp")
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksLiveMidiController.cpp")
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksLiveNoteController.cpp")
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksLiveVoiceController.cpp")
-target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksRuntimeController.cpp")
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksRuntimeController.cpp" "${ROOT}/source/novation/ks/ksLib/ksRuntimeStartup.cpp")
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksRuntimeIo.cpp")
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksRuntimeMidi.cpp")
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksRuntimeState.cpp")
@@ -71,6 +72,12 @@ target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksRuntimeVoices.c
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksRuntimeExtended.cpp")
 
 target_link_libraries(ksLib PUBLIC baseLib dsp56kEmu h8s)
+# Frequency tracing is a separate diagnostic build; no per-boundary profile
+# checks or storage are present in an ordinary Release controller.
+option(SILVER_KS_CONTROLLER_PROFILING "Compile KS boundary-frequency diagnostics" OFF)
+if(SILVER_KS_CONTROLLER_PROFILING)
+ target_compile_definitions(ksLib PUBLIC SILVER_KS_CONTROLLER_PROFILING=1)
+endif()
 # Opt-in checks require user-supplied KS OS, zero wave bank and Flash paths.
 add_executable(ksPartMidi_test "${ROOT}/source/novation/ks/ksLib/ksPartMidi_test.cpp")
 target_compile_features(ksPartMidi_test PRIVATE cxx_std_17)

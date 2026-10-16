@@ -1,5 +1,71 @@
 # Performance measurements (Windows and macOS)
 
+## Paced whole-process AU CPU comparison on macOS
+
+Build the explicit `silver_au_cpu_benchmark` target in a Release arm64 build.
+It loads one requested AU bundle directly in-process without installing it:
+
+```sh
+AU_BENCH_SECONDS=8 AU_BENCH_PARAMETERS=/absolute/path/parameters.json \
+  /absolute/path/silver_au_cpu_benchmark \
+  /absolute/path/Instrument.component /absolute/path/plugin.state \
+  /absolute/path/private-results/run-1
+```
+
+Pass `-` instead of a state file to use the instrument's initial state. The
+optional parameter JSON maps exact AU parameter names to AU values **in their
+reported ranges**; continuous parameters may be normalized 0..1 while choices
+use integer indices. Missing/ambiguous names and out-of-range values fail the
+run. Metadata records the parameter ranges, overrides and final effective
+values; the runner must check that requested settings actually took effect.
+
+The host uses 48 kHz, 256 frames and one audio thread with the same existing
+audio-priority helper for every instrument. It pumps the message loop on the
+main thread. Four phases request 0, 1, 8 and 16 held notes (48 upward, velocity
+100, channel 1). Each phase has four seconds of paced voice-path warm-up,
+followed by 4..60 seconds of measured playback and two seconds of release.
+Initial setup, compilation warm-up, parameter enumeration and state snapshots
+are outside the CPU windows. `getrusage(RUSAGE_SELF)` differences include user
+and system CPU of **all** threads, including the host. CPU seconds divided by
+delivered audio seconds, multiplied by 100, use **100% = one logical CPU**.
+This is different from render wall time or a DAW's audio-deadline meter.
+
+JSON reports include callback overruns, finite/non-silent output, float audio
+hashes and KS's state-exposed lost-frame counter. `missing_frames = -1` means
+that another instrument does not expose that counter through this KS-specific
+state field; it does not mean zero. Callback overruns, KS lost frames or silent
+note phases fail the run. Compare identical KS state/overrides before and after
+an optimization; exact AU hashes strengthen the offline 24-stream/bus checks.
+For different synths, match basic oscillator/FX/polyphony settings and document
+the remaining firmware, native-rate and latency differences. Equal held-key
+counts do not establish equal DSP instruction work or identical synthesis.
+
+Use at least three alternating before/after runs without concurrent builds or
+profiling. Keep the AU host executable identical across the comparison. Save
+bundle, source, host, state and private-input identities alongside the reports.
+The `.plist` state and parameter snapshots may contain private presets, full
+paths and firmware references: retain them in ignored local output only.
+
+For FX and multipart follow-ups, `AU_BENCH_SCENARIO` accepts an optional JSON
+file with `parts` (1 or 4), `phases` (total held-note counts, 0..16), `setup`
+(ordered objects containing a `midi` status/data1/data2 triple or an absolute
+`sysex_file` path), `probe_parts` and `require_fx_tail` booleans. Setup and
+single-channel probes run before parameter overrides and measured playback.
+Use admitted dry edit-buffer programs for probes; a previous part's FX tail
+must not be mistaken for the next part sounding. Each note is assigned round
+robin to the requested parts/channels. Route all test parts to the AU's main
+stereo bus, and verify the returned performance/Multi state as well as the
+per-channel probes. OsTIrus analog and USB outputs occupy different AU buses.
+
+The host now records `settled_peak`/`settled_rms` after the first quarter of a
+render interval. After Note Off it renders a two-second tail before All Sound
+Off; `tail_settled_rms`, `tail_settled_peak` and `tail_audio_hash` describe the
+last 1.5 seconds, excluding normal host latency and a short amplitude release.
+`require_fx_tail` rejects a note phase whose settled tail RMS is below 1e-5.
+Tail playback, setup and probes are outside the main CPU window. The new tail
+sequence differs from the original host's immediate All Sound Off: freeze one
+host binary and compare the new scenarios within the same measurement round.
+
 Diagnostics are opt-in per plugin instance. They do not change guest clocks, JIT
 configuration, audio buffers, MIDI scheduling, resampling or thread priorities.
 They add instrumentation overhead; compare Off, Summary and Detailed on the same
@@ -85,8 +151,19 @@ set it to `1`, then reload the instance to restore sequential execution. The
 setting is not saved in presets/preferences/DAW state and has no effect on K.
 This is an experiment, not an enabled-by-default optimization.
 
-The original H8, DSP boot and warm-up stay sequential. Afterwards two persistent
-helpers execute only each DSP's catch-up at the existing H8 slice boundary.
+The first 2026-10-15 M1 Pro round failed all eight original two-helper realtime
+captures. The subsequent Mac handoff fix passes twelve paced captures plus
+exact command/audio/state comparisons: Mac executes DSP A on the coordinator
+and DSP B on one persistent helper, with bounded 8192-probe polling before the
+existing sleep. Other platforms retain two helpers and 256 probes. Total Mac
+CPU still exceeds sequential (~33% in the paced control), and ordinary-priority
+VST3 CLI-host captures remain intermittent; keep the experiment off by default.
+Read the latest Mac handoff entry in `OPTIMIZATION_LOG.md` for actual limits.
+
+The original H8, DSP boot and warm-up stay sequential. Afterwards the two DSP
+executors perform only each DSP's catch-up at the existing H8 slice boundary.
+On Mac the coordinator is also the DSP A executor; a helper executes DSP B.
+On other platforms both DSPs use separate persistent helpers.
 The coordinator waits for both, then services shared serial IO in the original
 order. Guest targets, JIT, buffers, polling and existing worker priorities stay
 unchanged; helpers use the same live priority as the existing worker. No Windows
@@ -94,10 +171,11 @@ setting or process placement is changed. The previous P-core option targets
 the coordinator only; do not interpret it as verified placement of DSP helpers.
 
 JSON `dsp_execution_backend` in the root/session identifies `sequential`,
-`two-workers-slice-barrier`, or `not-applicable` for K. In parallel mode the
+`two-workers-slice-barrier`, or `not-applicable` for K. The parallel identifier
+is retained on Mac despite its coordinator/one-helper ownership. In parallel mode the
 worker wall/audio ratio measures coordinator wall time including its DSP waits,
 not summed CPU usage across three threads. Detailed DSP timers run on their
-respective helpers and overlap. Compare process CPU separately and distinguish
+respective execution threads and overlap. Compare process CPU separately and distinguish
 steady playback from the unchanged sequential boot/warm-up cost.
 
 `tools/run_performance_matrix.py --dsp-threads 2` verifies the reported backend.
@@ -114,6 +192,19 @@ Build/run `ksDspWorkers_test` for ROM-free handoff/failure/shutdown checks.
 passages; this private-input test returns 77 without arguments. Do not commit
 firmware, wave banks or captured audio. Windows and macOS require separate
 build/runtime verification; portable synchronization code alone is not validation.
+
+For Mac paced CPU comparisons, `silverRealtime_test` prints whole-process
+`process_cpu_seconds` and `process_wall_seconds`, measured outside the callback
+around playback only. Set `SILVER_REALTIME_SAVE=0`, use fresh `SILVER_K_DATA` per
+run, interleave `SILVER_KS_DSP_THREADS=1`/`2`, and require equal delivered frames
+and zero missed frames before comparing CPU. Other platforms print CPU=-1.
+Keep continuous offline-probe timing distinct from this paced audio workload.
+
+The Mac VST3 checker can model an audio-priority caller with
+`SILVER_TEST_HOST_AUDIO_PRIORITY=1` in realtime mode. It checks the priority/
+period setters and prints `host_audio_priority=1`; default `0` keeps the old
+ordinary-priority main-thread caller. This is an explicit test-host distinction,
+not a plugin-priority change or a substitute for a real DAW/device test.
 
 ## Equal-work CPU cost (Windows measurement tools)
 
@@ -560,11 +651,12 @@ Choose H8 explicitly in Setup to disable the experiment. `native-midi` still
 selects the historical hybrid through the developer path; recorded fixture
 playback remains separate.
 
-In `native-cpp-runtime`, H8 performs the original bootstrap and initial setup; the native
-controller takes over when `Board::boot()` returns, before the Device's program
-restore, voice warm-up and normal playback. The interpreter is then locked.
-Normal playback then uses the selected controller. This is a plugin setting;
-Windows settings and K's engine are unchanged.
+In C++ mode, fresh Device instances execute reset, initial DSP setup and
+warm-up through fixed C++ compatibility control flow, with the interpreter
+locked before the first reset operation. Selecting C++ in an already-running
+H8 instance still uses the reversible post-boot handoff. The original H8 path
+remains selectable while semantic typed-state conversion is unfinished.
+This is a plugin setting; Windows settings and K's engine are unchanged.
 
 The native implementation covers normal playback controller code for verified
 KS OS 2.1.02: MIDI/system/realtime/SysEx parsing and part routing, all CC/NRPN,
@@ -590,7 +682,7 @@ A complete ROM fingerprint and comparison of the active executable SRAM guard
 handoff. Writes to that code and states outside the ported playback code fail
 explicitly; there is **no automatic H8 fallback**. MCU OS flashing/bootloader
 entry is outside this mode. Loading firmware through the plugin recreates the
-engine and uses original bootstrap. Original/private ROM and data files remain
+engine and uses the selected controller from reset. Original/private ROM and data files remain
 required and are never embedded in the source. The experiment stays off by
 default; verified scenarios are not a claim of every possible patch/wave,
 malformed SysEx stream, host or platform.
@@ -632,6 +724,32 @@ preset into the private in-memory Flash and requires a completed page write;
 input files are not modified. `clock` drives the arpeggiator at 90/180 BPM with
 start/stop/continue. `steal` sends 24 notes with two-voice unison across four
 parts. `controls` sends all CC numbers plus explicit NRPN, bend and pressure.
+`fx` uses four parts/16 notes with delay, reverb and chorus sends, changes those
+sends during playback, exercises sustain and releases the notes into FX tails.
+Use `--controller native --scenarios fx --seconds 4 --repeats 1` for complete
+bus/audio/state correctness; use separate unrecorded repeats for CPU. The
+recorded-controller comparison runner also accepts `--scenarios fx --seconds 4`.
+Recorded replay estimates fixed-passage controller cost; it does not implement
+live MIDI/voice decisions or establish a future live-controller saving.
+
+The first live event-controller stage is opt-in with
+`SILVER_KS_DSP_TRANSPORT=events` and the C++ controller selected. The H8 default
+and native compatibility transport remain unchanged. In the comparison runner,
+pass `--controller native --dsp-transport events`; the runner explicitly sets
+the transport and rejects a capture with no live jobs. HDI readiness observations,
+address requests, 24-bit writes and reply reads use native protocol jobs. They
+retain each original port byte, cycle and in-flight PC. A job executes only if
+it fits before the next UART/timer/ADC event and the existing slice limit;
+IRQs that can preempt the job or shorter intervals use the existing native
+compatibility path. Pending mode-2 IRQs masked by the current EXR remain pending;
+these jobs do not change the mask. Busy replies drive timed live retries with
+the original countdown/overflow flags and timeout continuation. Each retry still
+reads the actual DSP port at the original cycle; no response is cached or skipped.
+There is no interpreter fallback or recorded traffic. Materialized compatibility
+registers/flags preserve interrupt preemption and the H8 comparison switch.
+`transport_jobs` and `transport_job_boundaries` count executed work, including
+preparation unless metrics were reset; they are not CPU measurements. Voice,
+parameter, MIDI and other control logic still use the native compatibility port.
 
 Native reports must show `original_h8_step_calls=0`,
 `h8_interpreted_steps_after_boot=0` and
@@ -642,9 +760,16 @@ clock in native mode; growing cycles are not interpreted execution. Explicit
 toggle tests allow H8 in the disabled window; the last-handoff counter must
 still remain zero. Resetting diagnostics preserves controller state. Counter
 segments after a toggle describe only the last enabled controller object.
+The fixture's coverage assertion sums handler calls from both native segments,
+so a Note On before the switch and release after it are both counted. This does
+not change per-instance exported counters or the command/audio/state checks.
 Recorded replay has no live state/Flash/MIDI-output snapshot comparison; those
 digest fields are null there. CPU means whole-process user+kernel seconds for
-equal rendered work on Windows, excluding bootstrap/preparation and report IO.
+equal rendered work on Windows and macOS, excluding bootstrap/preparation and
+report IO. Windows uses `GetProcessTimes`; macOS uses
+`getrusage(RUSAGE_SELF)` (all threads, not just the coordinator). Other platforms
+still report no CPU measurement. Runner metadata identifies the OS, architecture
+and measurement availability. Only unrecorded runs are used for CPU comparisons.
 Recording and unrecorded timing runs remain separate; the replay saving from
 an earlier experiment is not the native live controller's saving.
 
@@ -659,6 +784,110 @@ audio and guest/serial counters must still match. Verify those extra snapshots
 separately with the current H8 control. A frozen baseline avoids attributing
 new per-step diagnostic overhead to a controller CPU saving.
 
-Consult the latest diary entry for actual Windows results. macOS compilation,
-real-host listening/deadline behavior and the tester's Ryzen 3 3100 remain
-separate validation work.
+For macOS, use the same runner with the arm64 `ksControllerProbe_test` executable
+and locally supplied private inputs. Pass `--controller native`; the runner's
+default remains the historical hybrid. Use `--scenarios single multi midi pedal
+controls state clock steal --seconds 2 --repeats 1` for broad correctness, then
+four-second repeated unrecorded pairs for timing. Do not run a compiler or other
+DSP test concurrently with timing captures. A same-binary H8 comparison includes
+its current interpreter guard/counter overhead; it does not replace a frozen
+pre-instrumentation baseline when attributing a CPU saving.
+
+Consult the latest diary entry for actual platform results. Real DAW/driver
+listening/deadline behavior and the tester's Ryzen 3 3100 remain separate checks.
+
+### OsTIrus DSP threads and CPU cores (2.2.25 source review)
+
+TI/TI2 use one `DSPThread` per DSP. The inspected creation/execution/priority
+path does not assign physical CPU IDs or hard affinity: the OS scheduler chooses
+cores and can migrate the threads. On macOS `ThreadTools` sets QoS and a Mach
+time-constraint policy; those scheduling hints are not a fixed DSP-to-core map.
+Snow is a single-DSP case. This finding is for tag 2.2.25, not a runtime trace or
+a claim about every later release or host-imposed affinity.
+
+Sources: [DSP worker creation](https://github.com/dsp56300/gearmulator/blob/2.2.25/source/axel/virusLib/dspSingle.cpp),
+[pinned DSP thread](https://github.com/dsp56300/dsp56300/blob/e643fa89f0c11147963b315c0bd8afb283bba468/source/dsp56kEmu/dspthread.cpp),
+[pinned priorities and macOS policy](https://github.com/dsp56300/dsp56300/blob/e643fa89f0c11147963b315c0bd8afb283bba468/source/dsp56kBase/threadtools.cpp).
+Silver-K's opt-in parallel DSP executors likewise have no fixed core IDs;
+the macOS coordinator and helper request audio priority and participate in the host audio workgroup
+where available. The Windows-only KS P-core CPU Sets experiment targets the
+coordinator, not a verified placement of both DSP helpers.
+
+
+### KS control jobs: 2026-10-15 isolated Mac investigation
+
+Select C++ and set `SILVER_KS_CONTROL_JOBS=1` before host startup to enable
+part-state/parameter-table and scale jobs. For the combined experiment also
+set `SILVER_KS_DSP_TRANSPORT=events`. Omit the control flag for the previous
+C++ path. These are portable C++17 jobs; Windows execution remains pending.
+They do not complete bootstrap or remove the compatibility CPU frame.
+See [migration status](KS_NATIVE_CONTROLLER.md).
+
+The live comparison runner accepts `--controller native --dsp-transport events
+--control-jobs on`. It clears inherited profile/audio-capture flags. Frequency
+profiling (a separate CMake build with `SILVER_KS_CONTROLLER_PROFILING=ON`,
+then `SILVER_KS_CONTROLLER_PROFILE=1`) counts dispatched boundaries,
+excluding batched jobs, and is reset before the passage. Never include its
+overhead in CPU results. The standalone probe also accepts bounded 2–30 second
+passages and optional `SILVER_KS_AUDIO_CAPTURE=/private/path/new.pcm`; storage
+is preallocated and file writing occurs after the measured render. Compare
+those bytes for correctness, and omit capture/recording/profile for CPU runs.
+
+Ordinary builds default `SILVER_KS_CONTROLLER_PROFILING=OFF`; the boundary
+profile branch and vector are compiled out, including in the CPU matrices.
+
+Additional controller timing checks (no private ROM needed for the first):
+
+```sh
+cmake --build <build-dir> --target ksControllerTiming_test ksControllerUart_test
+<build-dir>/silverPlugin/ksControllerTiming_test
+<build-dir>/silverPlugin/ksControllerUart_test <KSOS2102.SYX> <ks-init-flash.bin> <ks-wave-zero.bin> <fresh-private-output-dir>
+```
+
+The UART test compares H8 with C++ at controller budgets 1..128, validates the
+exact receive cycle after every delivered post-boot byte, and checks full
+port/slice files, all native audio words, IO/registers/memory and state across
+H8 round trips. Run it once with flags omitted, then in another fresh directory
+with `SILVER_KS_DSP_TRANSPORT=events` and `SILVER_KS_CONTROL_JOBS=1`. The explicit
+post-boot counter excludes bootstrap bytes. This synthetic fixture currently
+has zero bootstrap UART bytes. These instrumented checks are not CPU evidence.
+Windows uses the corresponding `.exe` targets; this iteration's Windows run
+remains pending.
+
+## KS cold-reset compatibility verification — 2026-10-16
+
+Fresh C++ Device instances now enter the C++ compatibility runtime at reset,
+not after original-H8 warm-up. Native probe modes reject any boot interpreter
+calls; report `h8_interpreted_steps_boot` separately from post-boot/toggle
+counts. The register/PC/flags/stack ABI still remains and H8 is still selectable.
+This is not the completed semantic controller replacement.
+
+```sh
+cmake --build <build-dir> --target ksControllerBoot_test ksRuntimeController_test ksControllerTiming_test
+<build-dir>/silverPlugin/ksControllerBoot_test <KS-OS> <Flash> <Wave> <fresh-private-output> single
+# Repeat with a different fresh output and variant: irregular, multi, mapped.
+```
+
+The standalone CMake layout puts these executables under silverPlugin. The
+unit skips with 77 without private inputs and refuses to reuse output paths.
+It compares two independently initialized Boards from cycle zero. Every
+coordinator observation checks cycles, continuation/register/flag/IRQ/bus
+state and all IO, followed by full memory/Flash/MIDI/musical state, complete
+DSP tapes and 24,000 audible 24-stream frames. The `mapped` variant modifies
+only synthetic bank endpoints to exercise the no-placeholder path; it does
+not admit original sampled-sound fidelity. These instrumented comparisons
+are correctness evidence and must not be used as CPU benchmarks.
+
+Reset operation checks add 4,128 original-H8 comparisons, including rare
+checksum/update branches and arbitrary partial frames. The fetch-clock test
+now uses actual original read8 calls before its independent observation,
+covering 11,520 cases including signed PC / 24-bit physical bus addressing.
+The previous 10,880-case test compared clockMem calls directly and did not
+prove that additional signed/physical distinction. Keep historical results
+separate. No change is made to the original H8 oracle or DSP JIT.
+
+The Desktop build CI now compiles the reset/runtime/UART fixtures on Windows
+x64 too. Timing/timer/memory checks run without ROMs; private-input fixtures
+skip explicitly with 77 when no ROMs are supplied. A successful build of these
+fixtures does not establish Windows firmware/audio/CPU equivalence. No private
+ROM or capture is uploaded to CI. Inspect the actual run before claiming pass.

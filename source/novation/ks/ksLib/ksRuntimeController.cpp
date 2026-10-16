@@ -1,13 +1,22 @@
 #include "ksRuntimeController.h"
 #include "ksLiveMidiController.h"
 #include <sstream>
+#include <cstdlib>
+#include <cstring>
 #include <stdexcept>
 
 namespace ks {
-RuntimeController::RuntimeController(const ControllerCpu& h,LiveMidiController& state):shared(state){
+RuntimeController::RuntimeController(const ControllerCpu& h,LiveMidiController& state,Entry entry):shared(state){
     uint64_t hash=14695981039346656037ull;
     for(unsigned n=0;n<87360;++n){hash^=h.memory[n];hash*=1099511628211ull;}
     if(hash!=0xbd1afefba93cb7b9ull)throw std::runtime_error("Native KS runtime requires verified OS 2.1.02");
+    if(entry==Entry::PostBoot)verifyImage(h);
+#if defined(SILVER_KS_CONTROLLER_PROFILING)
+    const auto* profile=std::getenv("SILVER_KS_CONTROLLER_PROFILE");
+    if(profile && std::strcmp(profile,"1")==0)boundaryProfile.assign(0x10000,0);
+#endif
+}
+void RuntimeController::verifyImage(const ControllerCpu& h){
     // H8 boots from Flash into SRAM. Verify the actual executable image too;
     // ROM identity alone would not establish an unchanged handoff image.
     for(auto range:{std::pair<unsigned,unsigned>{0x170,0x172},{0x490,0x2a0c},{0x2a18,0xb8e8}})
@@ -49,6 +58,9 @@ bool RuntimeController::stepCode(ControllerCpu& h){
     else if(pc<0xb8e8)handled=extended(h);
     if(!handled)return false;
     ++steps;
+#if defined(SILVER_KS_CONTROLLER_PROFILING)
+    if(!boundaryProfile.empty())++boundaryProfile[pc];
+#endif
     if(pc>=0x2de8 && pc<0x2efc)++shared.nativeSteps;
     if(pc==0x2de8)++shared.bytes;
     if(pc==0x2ecc){
@@ -58,6 +70,12 @@ bool RuntimeController::stepCode(ControllerCpu& h){
         else if(kind==0x90)++shared.noteOn;
     }
     return true;
+}
+void RuntimeController::stepStartup(ControllerCpu& h){
+    const int depth=h.indent;arbitrate(h);if(h.indent!=depth)++interruptEntries;
+    if(startup(h)){++steps;return;}
+    if(stepCode(h))return;
+    throw std::runtime_error("Unsupported native KS reset state (no H8 fallback)");
 }
 void RuntimeController::step(ControllerCpu& h){
     const int depth=h.indent;arbitrate(h);if(h.indent!=depth)++interruptEntries;

@@ -11,12 +11,20 @@ inline void value(ControllerCpu& h,int32_t v){h.ccr=uint8_t((h.ccr&~14)|(v<0?8:0
 struct Boundary {
     ControllerCpu& h;unsigned next,length;
     Boundary(ControllerCpu& cpu,unsigned pc,unsigned n):h(cpu),next(pc+n),length(n){
-        if(h.nativeFetchClocksOnly)h.clockMem(pc,h.lastread);else h.read8(pc);
+        if(h.nativeFetchClocksOnly && n && !(pc&1) && !(n&1)
+            && pc<0x400000 && n<=0x400000-pc){
+            // Verified aligned low code: each fetched 16-bit word costs three
+            // clocks, independently of the preceding read. Fetches have no
+            // callbacks in this mode; preserve their exact final bus history.
+            h.cycles+=3*(n/2);h.lastread=int(pc+n-1);h.pc=h.makepc(pc+1);
+            return;
+        }
+        if(h.nativeFetchClocksOnly)h.clockMem(pc&0xffffff,h.lastread);else h.read8(pc);
         // The original core exposes entry+1 to mapped devices while its local
         // decoder consumes the remainder. Port records and IO error context
         // must see that same in-flight PC, not just the final boundary PC.
         h.pc=h.makepc(pc+1);
-        if(h.nativeFetchClocksOnly)for(unsigned i=1;i<n;++i)h.clockMem(pc+i,h.lastread);
+        if(h.nativeFetchClocksOnly)for(unsigned i=1;i<n;++i)h.clockMem((pc+i)&0xffffff,h.lastread);
         else for(unsigned i=1;i<n;++i)h.read8(pc+i);
     }
     template<class T>void move(T& dst,int64_t src){dst=T(src);value(h,dst);}

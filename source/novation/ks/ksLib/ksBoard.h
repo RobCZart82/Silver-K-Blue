@@ -24,7 +24,7 @@ public:
     // Quotient/remainder avoids an overflowing cycles*Hz intermediate in long sessions.
     static constexpr uint64_t dspTime(uint64_t cycles){return (cycles/ControllerClockHz)*DSP::ClockHz+(cycles%ControllerClockHz)*DSP::ClockHz/ControllerClockHz;}
     static constexpr uint32_t WaveBase=0x860000, WaveSize=129024;
-    Board(const std::vector<uint8_t>& os, const std::vector<uint8_t>& bank,const std::vector<uint8_t>& storage={},bool isolateParts=false);
+    Board(const std::vector<uint8_t>& os, const std::vector<uint8_t>& bank,const std::vector<uint8_t>& storage={},bool isolateParts=false,bool nativeStartup=false);
     void advance(uint32_t budget=128);
     void enableDspWorkers(int rate,unsigned block);
     void configureDspWorkers(int rate,unsigned block){if(dspWorkers)dspWorkers->configure(rate,block);}
@@ -41,10 +41,13 @@ public:
     uint64_t h8StepsSinceNativeHandoff()const{return nativeRuntime?h8->interpretedSteps-nativeH8Steps:0;}
     const LiveMidiController* liveMidiController()const{return liveMidi.get();}
     void enableControllerDelegationProfile(){if(liveMidi)liveMidi->enableDelegationProfile();}
-    void resetControllerMetrics(){if(liveMidi)liveMidi->resetMetrics();if(nativeRuntime)nativeRuntime->steps=nativeRuntime->interruptEntries=0;}
-    const char* controllerBackend()const{return recordedController?"recorded-cpp-prototype":nativeRuntime?"native-cpp-runtime":liveMidi?"live-cpp-midi-hybrid":"original-h8";}
+    void resetControllerMetrics(){if(liveMidi)liveMidi->resetMetrics();if(nativeRuntime)nativeRuntime->resetMetrics();transportJobs=transportBoundaries=controlJobs=controlBoundaries=0;}
+    const char* controllerBackend()const{return recordedController?"recorded-cpp-prototype":nativeRuntime?(eventControlJobs?(eventDspTransport?"native-cpp-events-control":"native-cpp-control-jobs"):eventDspTransport?"native-cpp-events-transport":"native-cpp-runtime"):liveMidi?"live-cpp-midi-hybrid":"original-h8";}
+    uint64_t transportJobs=0,transportBoundaries=0,controlJobs=0,controlBoundaries=0;
     uint64_t controllerCycles()const{return recordedController?recordedController->cycles():h8->cycles;}
     uint64_t checkedControllerPorts()const{return recordedController?recordedController->checkedPorts():0;}
+    // Coordinator only, between advance() calls. Host threads use Device's
+    // event queue; the parser/placeholder state is not a concurrent API.
     bool enqueueMidi(const uint8_t* b,size_t n);
     bool enqueuePartMidi(unsigned part,const uint8_t* b,size_t n);
     bool zeroBank()const{return placeholder.enabled;}
@@ -53,6 +56,7 @@ public:
     using AudioFrame=std::array<int32_t,24>;
     AudioFrame renderSample();
     uint64_t midiReceived=0;
+    uint64_t lastMidiReceiveCycle()const{return midiReceived?rxDue-8000:0;}
     std::array<uint64_t,2> serialUnderruns{},serialOverflows{};
     std::array<size_t,2> serialDepth()const{return {aToB.size(),bToA.size()};}
     uint8_t read(uint32_t address) override;
@@ -71,8 +75,12 @@ public:
 private:
     baseLib::performance::Diagnostics* performance=nullptr; // worker-owned attachment
     uint64_t diagnosticAdvances=0;
+    void nativeStartupBoundary();
+    void nativeReadyBoundary();
     void tick(uint64_t previous);
     void tickNative(uint64_t previous);
+    uint64_t nextControllerEvent(uint64_t limit)const;
+    bool eventDspTransport=false,eventControlJobs=false,nativeCodeSealed=true;
     void adaptStoredProgram(uint8_t*,size_t);
     void muteStoredPrograms();
     bool enqueueNativeMidi(const uint8_t*,size_t);
@@ -86,6 +94,9 @@ private:
     bool started[2]{};
     uint64_t serialNext=0,serialSlot=0;bool serialSlaveStarted=false;
     uint64_t adcDue=0, rxDue=0,txDue=0;
+    // The coordinator fills this UART queue between advance() calls. Snapshot
+    // availability once per native slice; only an actual pop consumes a byte.
+    uint32_t nativeQueuedMidi=0;
     kstation::MidiSerialQueue<65536> midiIn;
     kstation::Queue<uint8_t,65536> midiOut;
     PlaceholderMidi placeholder;

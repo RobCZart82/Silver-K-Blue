@@ -4,8 +4,82 @@ This versioned journal is shared between Windows and macOS work. Append dated
 entries; do not replace earlier measurements with results from another machine.
 Raw local reports are not committed. A hypothesis is not a measured result.
 
-## Current state — 2026-10-15
+## Current state — 2026-10-16
 
+- KS C++ cold reset now runs without the H8 interpreter, including initial
+  DSP upload and warm-up; the original reset path remains the independent
+  selectable reference. Four cold timelines plus 4,128 reset boundary cases
+  pass with zero C++-path interpreter calls. This still uses the compatibility
+  register/PC/flag/stack frame, so full controller-emulation removal is **not
+  complete**. All 13 final cold/musical/plugin/CPU stages pass under test ID
+  `perf-ks-native-reset-20261016`. H8 has not yet been confined to test targets.
+- KS full-removal follow-up is isolated from preset-manager work. Full native
+  bootstrap/typed-state conversion is **not complete**. The final fetch/UART/
+  opt-in control-job candidate passes full admitted H8 command/audio/state tests.
+  Versus the frozen accepted event-transport AU, total CPU medians decrease
+  **47.09771 -> 46.60725% (-1.04% relative)** Single FX and
+  **46.91181 -> 46.22541% (-1.46%)** four-part FX, three alternating pairs.
+  This is a small local saving, not a complete controller conversion. Earlier
+  trials are separate and cannot be pooled. H8 stays default/available and
+  no installed bundle or preset-manager files changed. See the final entry.
+- First live event-transport stage on Mac: opt-in timed HDI readiness/address/
+  word/reply jobs now include actual busy retries and timeout countdowns.
+  Frozen previous C++ versus final event transport gives AU median total CPU
+  **51.9601 -> 51.1810% (-1.50%)** Single FX and
+  **50.7903 -> 50.1744% (-1.21%)** four-part FX (100% = one CPU), three pairs
+  per case at 48 kHz/256. Offline four-second medians improve 1.21% Single,
+  5.86% Multi and 2.84% dynamic FX. These are modest, workload-dependent results;
+  one AU Single pair regresses. Nine passages match 8,085,451 complete port
+  events and all 24 integer streams/state; pedal/FX H8 switching also matches.
+  All 12 AU windows have zero lost frames/deadline failures and exact float
+  output/tails. No sound/JIT/clocks/priority/thread/buffer changes. H8 remains
+  default/reference; `SILVER_KS_DSP_TRANSPORT=events` plus C++ selects this Mac-
+  tested experiment. Other controller work remains the native compatibility
+  port; Windows and real-DAW validation remain separate. See the final entry.
+- Mac FX/Multi follow-up: 24 unprofiled arm64 AU windows, 16 held keys total,
+  48 kHz/256 and three repeats per case. Median whole-process CPU for KS C++
+  is **49.2/49.1/48.0/48.2% of one CPU** in Single dry/FX and four-part dry/FX;
+  installed OsTIrus 2.2.16/TI2 is **52.0/51.7/64.7/63.3%**. These basic patches
+  establish the consumption scale, not identical synth/FX workloads or universal
+  speed ranking. All measured windows pass; separate sampled profiles disrupt
+  realtime and are excluded. A RAM-read trial gives mixed ~0.4% aggregate
+  improvement and is reverted. Fixed-command replay costs 18.6–19.7% less CPU
+  than the current native compatibility controller in exact four-second offline
+  Multi/FX passages. This is evidence of remaining controller cost, not a live
+  replacement or promised saving. The new FX bus/audio/state test passes with
+  zero post-boot H8 calls. See the final entry below for limits and next steps.
+- Mac total-CPU follow-up: a matched arm64 AU host compares installed OsTIrus
+  2.2.16/TI2 with frozen and changed **sequential KS C++** builds. Three
+  alternating runs per build, 0/1/8/16 held keys, 48 kHz/256, basic oscillator
+  and effects off: KS note-phase median total CPU falls **6.1–7.7%**, idle
+  **11.7%**. KS uses about **49–50% of one CPU**, the same scale as OsTIrus
+  in these active-note passages. Float output hashes match all six KS runs;
+  eight frozen-reference command/24-stream/state scenarios also match exactly.
+  The change only moves the existing DSP catch-up loop into the DSP wrapper's
+  translation unit; no additional threads, JIT or sound changes. Ranges and
+  limitations are in the latest total-CPU entry below.
+- CPU objective clarified: lower total process CPU at equal delivered audio is
+  the acceptance criterion. The Mac handoff candidate below is **not accepted
+  as a CPU optimization**: 9.09547 versus 6.83596 CPU seconds per 12 seconds
+  of audio is +33.05%. Keep sequential execution as the optimization baseline.
+  Installed OsTIrus AU 2.2.16 includes arm64. Its runtime comparison is now
+  recorded below, separately from the earlier 2.2.25 source review.
+- Mac handoff follow-up: excessive condvar parking at short KS slices is
+  reproduced in stacks and an isolated handoff benchmark. The final Mac path
+  runs DSP A on the existing coordinator and DSP B on one helper, with bounded
+  active waiting before parking. Eight exact command/audio/state passages,
+  12 paced 128/64-frame captures and six paced CPU controls pass. Total CPU is
+  about 33% higher than sequential, while active worker wall/audio falls from
+  ~0.53 to ~0.36. Ordinary-priority VST3 CLI-host captures still have intermittent
+  losses; audio-priority VST3 passes 6/6 and AU passes. Keep the mode opt-in and distinguish host scheduling from
+  correctness. See the latest Mac handoff entry below.
+- Initial macOS baseline on Apple M1 Pro: Release arm64 Standalone/VST3/AU built;
+  eight full H8/native command/audio/state scenarios and live switching pass.
+  Same-current-binary native CPU medians are 2.5–4.8% lower in four passages;
+  no frozen pre-instrumentation Mac baseline. Sequential DSP playback passes
+  all eight realtime captures at 128/64 frames. **Two DSP helpers fail all
+  eight Mac realtime captures**, despite exact offline audio equivalence;
+  keep them opt-in/off by default. See the dated Mac entry below.
 - Windows tester follow-up: Setup now has a per-instance **KS controller:
   H8 / C++** selector with worker-owned live handoff, project/default persistence
   and separate diagnostic sessions. Windows x64 VST3/Standalone tester package
@@ -20,7 +94,8 @@ Raw local reports are not committed. A hypothesis is not a measured result.
   show **2.4–5.3% lower process CPU seconds**, three pairs per passage on the
   local Windows Intel. This is a clock-compatible native port, not a batched
   OsTIrus-style redesign. Default H8 and the earlier hybrid remain available;
-  keep the experiment off by default. Mac, real VST3 host and Ryzen pending.
+  keep the experiment off by default. Mac follow-up is recorded below;
+  real DAW/driver and Ryzen checks remain pending.
 - Historical live note/sustain stage: C++ handles Note On/Off decisions, key and
   velocity memory, held-key/mono priority, CC64 state and part/pedal release
   decisions. Complete DSP bus tapes/audio match H8 in four scenarios, including
@@ -48,7 +123,8 @@ Raw local reports are not committed. A hypothesis is not a measured result.
   (5.875 -> 13.297), while wall time falls 23.1% (5.872 -> 4.514 s). This is
   improved throughput at increased CPU cost, not CPU saving. Boot/warm-up and
   host polling are excluded; real DAW/Ryzen CPU cost remains unmeasured.
-- Active environment: Windows x64. macOS compilation and measurements pending.
+- Platforms measured: Windows x64 and macOS arm64, with separate results below.
+  A Mac command-line wrapper check does not establish behavior in a user's DAW.
 - K Windows notification response improved; active worker wall cost did not
   improve. KS retains its exact original polling path: event parking failed both
   Low and Balanced in extended repeats; later polling trials also failed, so the
@@ -1630,6 +1706,1041 @@ build/tests/trace analysis during captures. Power/thermal state not controlled.
   separate summary JSON reports, then repeat CPU-meter comparison with
   diagnostics off. Ryzen stability/CPU, real DAW deadlines, multiple instances,
   real wave/patch corpus and macOS compilation/testing remain pending.
+
+## 2026-10-15 — macOS H8/C++ validation and OsTIrus core scheduling
+
+- Source: **`f52e397`**, branch `Optimized`, plus this patch's test-only macOS
+  CPU measurement and documentation. Apple M1 Pro, 8 physical/logical cores,
+  16 GiB; macOS 27.2 (`26B5101f`), AppleClang 21.0.0.21000334, Release arm64,
+  deployment target 12.0. No production controller/DSP, JIT, guest clocks,
+  slice/serial ordering, wait policy, priorities, buffers or core placement
+  changed. Per-process test settings are isolated; installed plugins and user
+  preferences were not replaced. No Windows/Ryzen result is inferred.
+- Build: `/private/tmp/Silver-K-optimized-mac-20261015`, Ninja, `-j 6`.
+  Cached JUCE/AsmJit/DSP sources were compared file-by-file with their downloaded
+  pinned archives: 3,593 / 197 / 8,734 files, **no differences**. The existing
+  build-local JUCE SDK compatibility patch still applies. DSP pin remains
+  `44353be2f0156cac970c6ab4f467ea1998b40605`. Standalone, VST3, AU, native/hybrid
+  controller probes, DSP equivalence/workers, UI-switch, realtime and wrapper
+  checks built. Local tested bundles are copied to ignored
+  `build/optimized-mac-2026-10-15/` (Standalone and Plugins/AU,VST3).
+- Test change: `ksControllerProbe_test` now measures process user+kernel time
+  with `getrusage(RUSAGE_SELF)` on macOS; bootstrap/preparation, trace/report IO
+  remain outside the measured render. The runner records OS/architecture and
+  emits CPU changes on Mac. Other platforms' unavailable CPU results remain
+  excluded. This changes measurement only, not sonic behavior.
+- Private evidence root: **`output/perf-mac-20261015/`**. `source.json`,
+  `binaries.json` and `dependencies.json` record source, toolchain, binary and
+  archive identities. Raw tapes, reports, states, audio and inputs remain
+  local/ignored. Probe SHA-256:
+  `7a7e3de6b0660d206c734bc7fbd20b14697cddde1c6fc611f6c60d0d19f2105b`.
+- Eight direct unit/differential checks pass: **440,512** native runtime
+  boundaries and 80 interrupt/mask/tie entries, **101,232** timer cases,
+  **150,000** mapped/native memory operations, existing hybrid MIDI/note/voice
+  differentials, tape serialization/guards, DSP handoff/failure/shutdown,
+  diagnostics and host clock. Native runtime guards reject interpreter fallback.
+- Full-Board correctness ID **`correctness/20261015-201440`**: all eight
+  scenarios (Single, Multi, MIDI, pedal/voice modes, all CC/NRPN/bend/pressure,
+  state/Flash, clock/arp, stealing/unison), 2 s / **90,681 native frames** each,
+  separate bus pair plus one unrecorded pair, 32 processes. Complete tapes are
+  byte-identical, all 24 integer audio streams, guest/DSP/serial counters and
+  state/Flash/MIDI digests match. Audio hashes/event counts also equal the
+  recorded Windows scenarios above. Every native report has zero actual H8
+  calls after boot and since handoff, with positive native runtime steps.
+- UI/Processor check: **61,440 exact float samples across five live H8/C++
+  switches**, held notes/sustain, no firmware reboot, latency change or underruns;
+  diagnostics segmentation, instance/default preference isolation, native and
+  legacy project restore and rejected-ROM handoff all pass. This correctness
+  check ran during the last build steps; no CPU conclusion is taken from it.
+- CPU ID **`cpu/20261015-201636`**: sequential DSPs, four scenarios x 4 s /
+  **181,362 native frames**, three alternating H8/native pairs per scenario,
+  separate trace pair. One process at a time after compilation finished;
+  commands/audio/guest/state/Flash/MIDI equivalence also passes. All CPU values
+  below are medians of whole-process user+kernel seconds for equal rendered work.
+
+| Passage | Current H8 CPU s | C++ CPU s | Change |
+| --- | ---: | ---: | ---: |
+| Single | 1.978352 | 1.893731 | -4.28% |
+| Multi | 1.968846 | 1.874458 | -4.79% |
+| MIDI | 1.980986 | 1.910627 | -3.55% |
+| Sustain | 1.923952 | 1.875733 | -2.51% |
+
+- Interpretation: modest local savings versus **the current instrumented H8**,
+  not a frozen original Mac reference. H8 guard/counter overhead can affect
+  attribution. Power/thermal/background load were not controlled; three short
+  pairs do not establish a universal percentage, DAW CPU saving or dropout fix.
+  The earlier recorded-tape replay saving is not used here.
+- Parallel compatibility ID **`parallel-toggle/20261015-201845`**: Pedal, two
+  DSP helpers, 2 s, disable at 0.65 s / re-enable at 0.95 s. Full tapes,
+  audio/state/Flash/MIDI and counters match; original H8 executes only during
+  the intended disabled window (797,572 calls), with zero calls since final
+  handoff. Separate `ksDspEquivalence_test` passes **65,536 frames x 24 streams**,
+  Single, sustain, program change and four parts, hash `3852514813786200426`.
+  Correct offline output does not establish realtime throughput.
+- Actual built wrapper checks: VST3 and AU, H8 and C++, **four 4-second
+  realtime captures**, 48 kHz / 256 frames, sequential DSPs, identical saved
+  sound and controller-specific state. All pass with finite audible output,
+  peak 0.0151513 and **zero underruns**. VST3 onset is 722 samples in both modes;
+  reported latency is 512 samples / 10.6667 ms. These are isolated JUCE/native
+  AU wrapper hosts, not Logic/Cubase or a physical driver/listening test.
+- Realtime ID **`realtime/`**, reproducer `run_realtime_matrix.py` in the same
+  ignored evidence root: one KS instance, 48 kHz, 12 s fixture, rapid eight-note
+  chords, state reads every 100 ms, redundant prepare at 6 s, Summary diagnostics,
+  fresh settings per process. At 128 frames/Balanced, three interleaved runs per
+  controller/backend; at 64 frames/Low, one run each. CPU placement is ordinary
+  OS scheduling. No compiler or other DSP fixture ran concurrently.
+
+| Block/profile | Controller | DSP mode | Passed | Missing frames per run | Median worker wall/audio ratio |
+| --- | --- | --- | --- | --- | ---: |
+| 128 / Balanced | H8 | Sequential | 3/3 | 0, 0, 0 | 0.4983 |
+| 128 / Balanced | C++ | Sequential | 3/3 | 0, 0, 0 | 0.4823 |
+| 128 / Balanced | H8 | Two helpers | 0/3 | 575415, 575350, 575387 | 2.0378 |
+| 128 / Balanced | C++ | Two helpers | 0/3 | 575287, 575414, 575342 | 2.0129 |
+| 64 / Low | H8 | Sequential | 1/1 | 0 | 0.4955 |
+| 64 / Low | C++ | Sequential | 1/1 | 0 | 0.4787 |
+| 64 / Low | H8 | Two helpers | 0/1 | 575311 | 2.0025 |
+| 64 / Low | C++ | Two helpers | 0/1 | 575369 | 1.9854 |
+
+- **Mac two-helper realtime validation fails**, in both controller modes.
+  All sequential captures have zero startup and steady misses, nonzero output
+  and matching onset/peak within each profile. All two-helper captures have
+  startup and steady losses and zero delivered peak; worker wall/audio >1
+  establishes insufficient fixture throughput. Coordinator wall ratio includes
+  both-helper waits and is not summed CPU utilization. Synchronization/wakeup
+  overhead is a hypothesis, not isolated proof or a demonstrated core-placement
+  problem. Keep `SILVER_KS_DSP_THREADS` unset/`1` on this Mac; default stays
+  sequential. The suite's aggregate nonzero exit records these eight failures,
+  not a controller-equivalence failure. No automatic enablement or scheduler
+  workaround was introduced.
+- OsTIrus source check, **tag 2.2.25** / DSP pin
+  `e643fa89f0c11147963b315c0bd8afb283bba468`: re-read `dspSingle.cpp`,
+  `dspthread.cpp`, `threadtools.cpp`; local snapshots/hashes at
+  `output/research/ostirus-2.2.25-mac-20261015/`. TI/TI2 create one worker per
+  DSP; inspected worker creation/priority/execution assigns **no physical CPU
+  IDs/hard affinity**. The OS schedules cores; macOS QoS and Mach time-constraint
+  policy influence scheduling, not fixed DSP A/B core ownership. Snow has one
+  DSP. Silver-K helpers likewise do not pin cores. No OsTIrus runtime benchmark
+  or actual core-placement trace was collected; do not extrapolate to every
+  release or host-imposed affinity. Primary sources are linked in
+  `PERFORMANCE_DIAGNOSTICS.md` and the earlier source review.
+- Next: separately profile/design Mac helper dispatch and barriers before
+  recommending that experiment; preserve default sequential execution and exact
+  offline audio as the control. Real DAW/physical-device listening/deadline
+  behavior, four-part realtime stress, other patches/waves and Ryzen remain
+  separate validation. Public source audit and whitespace checks run after the
+  documentation update; private assets/audio/binaries stay untracked.
+
+## 2026-10-15 — Mac DSP handoff profiling and coordinator/DSP A execution
+
+- Authorized follow-up: investigate the Mac two-DSP slowdown and try a fix
+  without changing sound/JIT. Same M1 Pro/macOS/compiler/pins as the preceding
+  Mac entry; source `f52e397` plus the local Mac measurement patch and this
+  change. Frozen pre-fix executables and `ksDspWorkers.cpp` are retained at
+  ignored **`output/perf-mac-dsp-sync-20261015/before/`**. The parent evidence
+  root preserves rejected experiments; **`one-helper/` is the final candidate**.
+- Cause established for the initial slowdown: at each original ~128-controller-
+  cycle boundary, the coordinator dispatches two very small tasks and waits
+  for both. The 256-probe spin window is too short for this Mac workload;
+  `pthread_cond_wait`/`pthread_cond_signal` dominate the sampled handoff path.
+  This is not evidence that hard core affinity is required.
+- Before profile: same 12 s / 48 kHz / 128 / Balanced / H8 fixture, Detailed,
+  state reads off, plus a separate four-second `sample` capture. Mean sampled
+  DSP A/B work is **1.753 / 1.917 us**, but dispatch + both-DSP barrier is
+  **10.784 us**. The coordinator has 847/1410 samples in condvar waits and
+  370/1410 in notifications; DSP A/B have 1152/1410 and 1232/1410 in waits.
+  Sampling perturbs timing and includes blocked/preempted time; this is not
+  a precise CPU-percentage breakdown. Raw profile is `sample-before.txt`.
+- ROM-free isolated benchmark: `handoff.cpp` in the evidence root, 100,000
+  submissions, three alternating runs, identical integer result hashes. Empty
+  jobs take median **0.596544 s** with the original wait, versus **0.030467 s**
+  with a longer bounded spin. With 1024 dependent integer operations per DSP,
+  medians are **0.958645 -> 0.284512 s**; process-reported context switches fall
+  from roughly **306,000 to tens**. This separates dispatch cost from firmware,
+  JIT, resampling and host buffers; it is not a synth speedup factor.
+- Rejected intermediate: retain two helper threads, increase Mac spin probes
+  from 256 to 8192. Exact comparisons and all 12 paced audio checks pass, but
+  three runnable realtime threads waste CPU at the barrier. Paced H8 controls
+  consume 16.25–20.57 CPU s per 12 s of delivered audio in the completed
+  controls, and ordinary VST3 host runs still lose frames. Results remain in
+  the parent evidence root. This is not the final implementation.
+- Final Mac implementation: dispatch DSP B to its persistent helper, execute
+  DSP A on the already existing audio/coordinator worker, then join B before
+  any next H8/control step, host-port access, serial-slot IO or snapshots.
+  Both DSP computations overlap, as verified by the ownership/overlap test;
+  this is not a sequential fallback. The command and completion polling on
+  Mac is bounded at **8192 probes**, then uses the existing condvar sleep.
+  Idle threads still park. There is no new OS API/deployment requirement.
+- Preserved: exact virtual slice/target/cycle boundaries, DSP firmware and JIT
+  pin/configuration, serial ordering, MIDI/state semantics, resampling, buffers,
+  thread priorities and ordinary OS core scheduling. Audio callback unchanged.
+  Default remains sequential. Non-Apple builds retain two helpers and the
+  original 256-probe window; Windows was not rebuilt in this Mac round.
+  The legacy `two-workers-slice-barrier` backend identifier is retained for
+  compatibility; on Mac it now means coordinator/DSP A plus one DSP B helper.
+- Worker test passes 10,000 payload/completion handoffs, actual overlap and
+  platform-specific ownership, failures in A/B/both with complete draining,
+  recovery, 20 parked idle resumes and idle shutdown. Exact sequential/parallel
+  Board test passes **65,536 frames x 24 streams**, including Single, sustain,
+  program change, four parts, clocks/serial/state/Flash;
+  hash `3852514813786200426` is unchanged.
+- Final correctness ID: `one-helper/correctness/` (timestamped subdirectory),
+  eight passages x 2 s / **90,681 native frames**, original pre-fix H8 reference
+  versus final native mode, both with parallel DSP selected. Complete bus tapes,
+  all 24-stream audio hashes/peaks, guest/DSP/serial counters, state/Flash/MIDI
+  digests match. Native execution reports zero H8 interpreter calls after boot.
+  This validates the tested input/scenario set, not every possible firmware/patch.
+- Final paced captures: `one-helper/smoke/` + `one-helper/repeated/`, one KS
+  instance, 48 kHz, eight-note fixture, state reads every 100 ms and redundant
+  prepare at 6 s, Summary diagnostics, fresh per-process settings. Three runs
+  per controller/profile: **12/12 pass with zero startup/steady misses**.
+
+| Controller | Block/profile | Median active worker wall/audio | Missing frames, all three runs |
+| --- | --- | ---: | --- |
+| H8 | 128 / Balanced | 0.35994 | 0, 0, 0 |
+| C++ | 128 / Balanced | 0.35371 | 0, 0, 0 |
+| H8 | 64 / Low | 0.36403 | 0, 0, 0 |
+| C++ | 64 / Low | 0.35359 | 0, 0, 0 |
+
+- Onset/peak and plugin latency match sequential controls within each profile:
+  14.7292 ms / 0.146099 / 10.6667 ms at 128/Balanced, and
+  9.52083 ms / 0.123063 / 5.33333 ms at 64/Low. State reads on their ordinary
+  background thread can still be slow (maximum **531.762 ms** in this matrix);
+  do not claim a general GUI/state-serialization latency improvement.
+- CPU conclusion uses **paced** captures `one-helper/paced-cpu/`, not an
+  unbounded realtime-priority offline loop. Same binary, H8, 48 kHz/128/Balanced,
+  three alternating pairs, Summary, state reads off; all six pass, with equal
+  12 s of delivered audio and matching onset/peak. `silverRealtime_test` now
+  reads `getrusage(RUSAGE_SELF)` before/after playback, outside the callback;
+  bootstrap, firmware preparation and report IO are excluded. It prints
+  `process_cpu_seconds` and `process_wall_seconds` (CPU unavailable = -1 off Mac).
+
+| Mode | Median whole-process CPU s / 12 s audio | Median active worker wall/audio |
+| --- | ---: | ---: |
+| Sequential | 6.83596 | 0.52874 |
+| Final Mac parallel | 9.09547 | 0.36486 |
+
+- Interpretation: ~31% less active coordinator wall time than the same-binary
+  sequential control, at **33.05% more total CPU**, including the helper.
+  This is throughput/headroom, not an energy/CPU saving. Unpaced probe timing
+  with a normal-priority coordinator differs from production; an attempted
+  continuous audio-priority offline cost run was also unstable and stopped.
+  Neither is used as a production performance headline; raw trials are retained.
+- Final separate Detailed + `sample` profile: dispatch/barrier mean
+  **1.739 us** (includes inline DSP A), sampled A/B **1.265 / 0.998 us**.
+  Same sampling/OS-preemption caveats as before; do not add overlapping timers.
+  Profiled fixture passes with nonzero audio. These sampled timings and the
+  isolated ablation support the handoff diagnosis without assigning CPU IDs.
+- Live UI/Processor check with parallel mode passes **61,440 exact float
+  samples across five H8/C++ switches**, held notes/sustain, diagnostic-session
+  isolation, native/legacy state restore and firmware guard rejection.
+- Actual AU checks (H8 and native, parallel, 48 kHz/256) both pass, nonzero
+  output, zero underruns. Ordinary-priority VST3 CLI-host results remain mixed:
+  initial H8/native runs lose 2190/9854 frames; repeats lose 5672 in one H8 run,
+  with the other three parallel repeats and both sequential controls passing.
+  Main-thread callback maxima in failing captures reach 24.877 ms. Preserve
+  this limitation rather than describing the entire wrapper suite as passing.
+- The VST3 checker gains an explicitly opt-in Mac
+  `SILVER_TEST_HOST_AUDIO_PRIORITY=1` model, requesting the same audio priority
+  and period as the existing realtime fixture and checking setter success.
+  It prints the selected host model. Its default ordinary-priority mode stays
+  available; production plugin priorities are unchanged. Audio-priority capture
+  results are stored separately in `one-helper/audio-priority-results.json`.
+- Final explicitly audio-priority VST3 checks pass **6/6** (three alternating
+  H8/native pairs, 48 kHz/256, parallel mode), zero underruns, identical peak
+  0.0151513, onset 722 samples and latency 512 samples. All reports confirm
+  `host_audio_priority=1`. This supports a caller-scheduling distinction; it
+  does not erase the ordinary-priority failures or establish real-DAW behavior.
+- OsTIrus comparison: tagged TI/TI2 workers execute independently through audio
+  queues and host-side output processing; they do not have KS's H8-clocked
+  two-DSP barrier at every short slice. The final KS change reduces handoffs
+  and uses the waiting coordinator for DSP work while preserving that required
+  barrier. No OsTIrus JIT settings, larger guest slices, mixing or firmware
+  algorithms were imported. Tagged source snapshot: `ostirus-dspMultiTI.cpp`
+  in the evidence root; primary references remain in PERFORMANCE_DIAGNOSTICS.
+- Default remains opt-in/off; no installed application or plugin is replaced.
+  Final signed local bundles: `build/optimized-mac-dsp-sync-2026-10-15/`;
+  source/binary identities and copy/signature checks are in the final candidate's
+  `one-helper/identity.json`.
+  Real DAW/physical driver, other Macs (including Intel), multiple instances,
+  broader patches/waves and Windows runtime remain unverified. Keep ordinary
+  and audio-priority host results distinct. Source audit, diff check, copied
+  bundle signatures and binary identities are checked before handoff.
+
+## 2026-10-15 — Mac CPU objective and OsTIrus comparison preparation
+
+- User clarification: optimize aggregate CPU consumption and compare KS with
+  OsTIrus on this machine. Reduced coordinator wall time alone is insufficient.
+  Sound and JIT preservation remain required; no new engine change in this entry.
+- Same M1 Pro and local Optimized revision/configuration as the preceding entry.
+  Existing paced controls establish sequential H8 median 6.83596 CPU s / 12 s
+  audio and parallel H8 median 9.09547 CPU s / 12 s audio. The latter fails the
+  clarified CPU objective even though it improves completion wall time.
+- Read-only inventory: installed OsTIrus.component reports version 2.2.16 and
+  universal x86_64/arm64 executable. Its runtime model, firmware, settings and
+  CPU consumption have not yet been measured. The 2.2.25 source study must not
+  be represented as profiling this installed 2.2.16 binary.
+- Next measurement: use one native-arm64 AU host for installed OsTIrus and the
+  tested KS build; record model/firmware, native and host rates, DSP clock,
+  buffers/latency, voice/part counts, patch complexity and effects. Compare
+  paced whole-process user+system CPU after warm-up, idle and note workloads,
+  repeated alternating runs and audio deadline failures. Report the instruments'
+  different firmware workloads rather than claiming equal instruction work.
+- Next optimization decision: profile sequential KS to distinguish controller,
+  DSP execution and host/peripheral/synchronization overhead; prioritize changes
+  that lower aggregate CPU while retaining exact command/audio/state behavior.
+  OsTIrus batching and its different JIT configuration are comparison subjects,
+  not authorization to change KS JIT or guest timing. Parity is an objective,
+  not an established achievable result.
+
+## 2026-10-15 — Matched Mac AU total CPU: OsTIrus and sequential KS C++
+
+- User objective: reduce aggregate CPU at unchanged sound/JIT, rather than
+  shorten completion wall time by adding compute threads. Branch Optimized,
+  `f52e397` plus the preceding local Mac work and this small catch-up change.
+  Same M1 Pro/macOS 27.2/AppleClang 21/Release arm64 and pinned dependencies as
+  the preceding Mac entries. Frozen baseline bundle/probe/realtime binaries
+  and edited-file originals are in ignored `output/perf-mac-cpu-20261015/before/`.
+- OsTIrus admission: installed AU 2.2.16 universal executable, arm64 execution;
+  isolated bundle copy loads the private installer image found in the supplied
+  desktop archive. Saved state identifies **TI2**, DSP clock defaults to 100%
+  (no DSPC override), host/native rate 48 kHz, clock log 133.12 MHz. Exact local
+  tag source is now retained: `b0fe0cb37d1ca10f8e09797423ef7b889d413aa1`, DSP
+  gitlink `554f0fabdc97040517ea1d8d25e48c7ce0a5f0e0`. This source review is
+  separate from the earlier 2.2.25 review. The stock installed executable is
+  measured; the local tag is not proof that its build is otherwise unmodified.
+- Measurement fixture: new explicit `silver_au_cpu_benchmark` target loads one
+  AU per process using its bundle factory. Same host executable, 48 kHz/256,
+  audio priority and main message loop for every case. Setup/boot, four seconds
+  of voice-path warm-up, state reads and parameter enumeration are outside each
+  eight-second CPU window. Process user+system CPU includes every thread and
+  the host. Three alternating full runs per case; 36 measurement windows and
+  288 seconds of measured audio. No concurrent agent builds/tests/profiles.
+- Workload: single part, 0/1/8/16 held notes, notes 48 upward, velocity 100,
+  polyphony/unison/arp explicitly set, basic oscillator and effects sends off.
+  All requested AU values are checked against final effective parameter values.
+  KS uses the native C++ controller, sequential DSPs, original 162.5 MHz clocks,
+  synthetic zero wave bank and 45,340.4018 Hz native rate. KS latency is 512
+  host frames; OsTIrus reports 472. Synth algorithms, firmware work, clocks and
+  internal rates differ. Held keys are controlled input, not a proof of equal
+  firmware instruction counts or identical voice algorithms.
+
+Median aggregate CPU, **100% = one CPU**, with min–max across three runs:
+
+| Held keys | OsTIrus TI2 | KS C++ before | KS C++ after | KS median change |
+| --- | --- | --- | --- | --- |
+| 0 | 41.52% (38.03–53.16) | 55.93% (53.34–56.51) | 49.41% (49.12–49.81) | -11.66% |
+| 1 | 51.37% (49.77–54.67) | 53.56% (53.02–55.37) | 49.44% (49.36–50.96) | -7.70% |
+| 8 | 55.36% (51.47–57.91) | 53.00% (52.70–53.30) | 49.75% (49.45–53.66) | -6.12% |
+| 16 | 50.24% (46.47–58.40) | 53.26% (53.15–54.19) | 49.78% (49.66–53.24) | -6.54% |
+
+- Interpretation: active-note consumption is already of the same order as
+  OsTIrus on this Mac, and the change reduces median aggregate KS CPU. OsTIrus
+  is cheaper in the median idle case. Variability matters: the third KS
+  eight-note pair regresses despite the lower overall median; this is not a
+  guarantee of a saving in every short window. OS placement/frequency effects
+  were not independently measured, so they are hypotheses about the spread.
+- Initial sequential KS C++ stack sample: about 70% of 1694 render-stack
+  observations lie on DSP catch-up paths, about 17% on native control, with
+  the remainder in the board loop/serial work. These are sampled stack
+  proportions, not precise process CPU attribution. Detailed timers include
+  preemption; the profiled native fixture loses 27 steady frames and 77 startup
+  frames. These profiled captures are excluded from the unprofiled CPU table.
+  One exact two-second passage records 6,220,388 native controller boundaries,
+  zero post-boot H8 interpreter calls: compatibility polling still has a cost.
+- Separate final stack captures retain the DSP-dominated KS path and OsTIrus's
+  two DSP threads with direct native controller servicing. The changed KS
+  profile loses 5398 steady frames under `sample`; the OsTIrus profile has one
+  5.819 ms callback (5.333 ms budget). Neither is a passing realtime capture or
+  a CPU-table input. Additional unprofiled dynamic-note controls are recorded
+  separately in `realtime-final-index.json` to distinguish profiling effects
+  from normal operation.
+- Unprofiled changing-note control: two frozen and two changed native KS runs,
+  12 s/48 kHz/128/Balanced, state reads off, Summary diagnostics. All four pass
+  with zero startup/steady lost frames and unchanged peak/onset/latency. Median
+  aggregate CPU is **6.39149 -> 5.949865 CPU s per 12 s audio (-6.91%)**.
+  These are separate from the AU table's held-note measurements.
+- Accepted implementation: `DSP::catchUpToCycle(target)` contains the identical
+  `discardAudio(); step(1)` sequence and target comparison formerly in Board.
+  This keeps the hot loop and step implementation in one translation unit,
+  allowing compiler inlining and removal of wrapper call/return overhead.
+  DSP order, every controller/serial boundary, instruction count and JIT
+  configuration stay unchanged. No new allocation, lock, wait or thread.
+- Correctness: eight two-second frozen-original-H8 versus changed-native
+  scenarios match complete DSP bus tapes, 24-stream integer audio, guest
+  counters, controller state, user Flash and MIDI; zero native interpreter
+  fallback. Actual AU float hashes and peaks match **all six KS runs** in
+  every phase. All 24 KS windows have zero lost frames; all 36 windows have
+  finite output, audible note phases and zero over-budget callbacks. OsTIrus
+  does not expose the KS lost-frame state counter: its `-1` is unavailable,
+  not a claim of zero internal lost frames.
+- Shared-path regression check: the existing sequential/parallel DSP test also
+  passes 65,536 native frames x 24 streams, exact clocks/serial/state/Flash,
+  retaining the frozen known audio hash `3852514813786200426`.
+- Raw identity/results: ignored `output/perf-mac-cpu-20261015/`, including
+  `baseline-identity.json`, `comparison-index.json`, `comparison-summary.json`,
+  `correctness/`, exact 2.2.16 source manifest and separate stack captures.
+  Private state/parameter/firmware data stays local.
+- Final Release arm64 Standalone, VST3 and AU are built and copied to ignored
+  `build/optimized-mac-cpu-2026-10-15/`, with verified binary copies and ad-hoc
+  signatures. The rebuilt VST3 passes its ordinary-priority realtime CLI host:
+  zero underruns, 512-frame latency, unchanged 0.0151513 peak and 722-sample
+  onset. AU was exercised by the comparison host itself. No installed plugin
+  was replaced. Repository audit and `git diff --check` pass; full private
+  source/binary/input identities are retained alongside the reports.
+- Limitations: one Mac, three short repeats, basic single-part patches and no
+  physical driver/DAW or Windows validation. Broader wave banks, effects-heavy
+  and multipart CPU comparisons remain unmeasured. This comparison establishes
+  the tested consumption scale, not universal KS/OsTIrus speed parity.
+
+## 2026-10-15 — Mac FX/multipart and native-controller follow-up
+
+- User scope: compare OsTIrus and KS with effects and in Multi on this Mac,
+  investigate further aggregate CPU savings with sound/JIT unchanged, and
+  assess removing the remaining controller emulation overhead.
+- Same machine, Release arm64, Optimized `f52e397` plus the preceding local
+  changes. Current accepted KS AU/probe and edited header are frozen under
+  ignored `output/perf-mac-fx-multi-20261015/before/`; the RAM-read candidate
+  and common comparison host are frozen separately. No shipping default,
+  DSP/JIT settings, guest clocks, buffers or production priorities changed.
+- Fixture extended for ordered MIDI/SysEx setup, four-channel part probes,
+  a specified held-note phase and measured post-release FX tails. Explicit
+  single dry/FX and four-part dry/FX cases use 16 total held notes and the
+  original 48 kHz/256 host conditions. Parameter values, raw private setup,
+  host identity and state are retained in the ignored evidence root.
+- Admission: KS and TI2 each sound on all four isolated channel probes. KS
+  Multi uses four active parts/channels 1..4; TI2 returned Multi state confirms
+  the same channels, four enabled parts and twelve disabled parts. An initial
+  TI2 probe was silent because USB routing targets a different AU bus; this
+  capture was rejected, outputs corrected to analog stereo bus 1 and admission
+  repeated successfully. Both wet preflights have nonzero settled release
+  tails. These four-second preflights are not headline CPU comparisons.
+- Rejected candidate: recognize a contiguous native RAM/ROM span once for a 16/32-bit
+  read, retain every original bus-clock update, and use the existing byte path
+  at IO/overlay/address-wrap boundaries. Memory/IO/clock tests pass 150,100
+  operations, including new crossing/unaligned/error cases. All 440,512 native
+  boundaries and 80 IRQ entries also match H8. Four first-round matched cases
+  sum to 15.479632 baseline versus 15.419660 candidate CPU seconds (-0.3874%);
+  individual changes are -1.97%, +2.09%, -1.66%, -0.014%. All four audio/tail
+  hashes match. This is too small and mixed to accept; restore the header
+  byte-for-byte. A second-round candidate part probe was silent before the CPU
+  window and was rejected. Separate diagnostic host runs of baseline and trial
+  both pass with identical audio; the admission failure is not reproduced and
+  its cause remains unestablished. Do not attribute it to the candidate alone.
+  The candidate matrix was stopped; its four pilot measurements and one failed
+  admission are not pooled into the primary comparison.
+- Primary comparison: frozen accepted sequential KS C++ versus installed
+  OsTIrus 2.2.16/TI2, same common host, three alternating repeats per case,
+  eight seconds per measurement: **24 windows / 192 seconds measured audio**.
+  All requested AU parameters and all 24 returned Single/Multi states are
+  validated. Single has one part/16 notes; Multi has four parts/four notes each.
+  Basic saw programs, no unison/arp, zero amp release. Wet cases enable delay,
+  reverb and chorus, including nonzero settled release tails on both synths.
+  Synthetic zero KS wave bank, native rates/clocks and differing synth/FX
+  algorithms remain as in the preceding entry; this is equal input/feature
+  classes, not equal instruction work or matched FX loudness.
+
+Median aggregate CPU, **100% = one CPU**, with min–max across three runs:
+
+| Passage (16 total held keys) | OsTIrus TI2 | KS C++ sequential |
+| --- | --- | --- |
+| Single, dry | 52.04% (42.47–58.35) | 49.22% (48.00–49.57) |
+| Single, delay/reverb/chorus | 51.71% (42.77–60.12) | 49.10% (49.07–50.36) |
+| Four-part Multi, dry | 64.70% (45.92–72.63) | 48.04% (48.02–49.02) |
+| Four-part Multi, delay/reverb/chorus | 63.30% (52.90–65.00) | 48.21% (47.16–53.15) |
+
+- All 24 main measurement windows are finite, audible and have zero callback
+  deadline failures; all 12 KS windows have zero lost frames. OsTIrus's internal
+  lost-frame counter is unavailable, not measured zero. Initial part admission
+  and warm-up are outside these windows and can include slow startup callbacks.
+  All three KS repeats match their scenario's float audio/tail hashes. Wet KS
+  settled-tail RMS is 0.004192 Single / 0.002868 Multi, versus about 0.00005905 /
+  0.000046–0.000048 TI2. These confirm active effects, not equal reverb level.
+  The dry/FX CPU differences are within run variability; do not infer free or
+  CPU-saving effects. OS core placement/frequency was not measured separately.
+- Separate Multi+FX stack samples: 110 of 140 KS render-stack observations
+  (~79%) are DSP catch-up, about 22 (~16%) native control, the remainder mostly
+  serial/board work. These coarse stack proportions are not exact process CPU
+  attribution. Profiling disrupts realtime: KS loses 2861 frames and TI2 has a
+  6.090 ms callback against a 5.333 ms budget. Both profiled runs are excluded
+  from the primary table. TI2 has two DSP threads and direct native controller
+  servicing; exact tag 2.2.16 source snapshots remain in the earlier evidence
+  root. Its missing local DSP gitlink object limits inspection of that version's
+  DSP-library internals.
+- New four-second `fx` regression: four parts, 16 notes, changing delay/reverb/
+  chorus sends, sustain, Note Off and release tails. Current original-H8 versus
+  native C++ compares the complete 739,356-event bus tape byte-for-byte, all
+  24 integer streams (181,362 frames, hash `6021595737639781281`), guest/serial
+  counters, controller state, user Flash and MIDI output. All match. Native
+  executes 10,750,110 compatibility boundaries and 22,196 IRQ entries with zero
+  H8 calls after boot/handoff. An initial fixture omitted sustain and failed its
+  own coverage assertion; sustain events were added and the full test rerun.
+  Memory (150,100 operations) and runtime (440,512 boundaries/80 IRQ entries)
+  checks pass again after the rejected header was restored.
+- Controller-cost diagnostic: three alternating original-H8/native/recorded-
+  replay runs for each four-second offline passage, sequential DSPs; whole-
+  process user+system render CPU excludes boot/preparation/recording/report IO.
+  Multi medians are **1.894003 / 1.792881 / 1.458515 CPU s**; FX medians are
+  **1.955012 / 1.824031 / 1.465334 CPU s**. Replay is 18.65% / 19.67% below
+  native. Audio, guest DSP cycles/instructions and serial counters match in
+  every run; replay verifies every recorded port event. Replay bypasses live
+  decisions and has no live controller state equivalence: it is a bounded cost
+  diagnostic, not an implemented controller, strict ceiling or promised saving.
+  H8/native timing here is same-current-binary, not a new frozen-baseline claim.
+- Controller finding: native mode already locks out all H8 interpreter calls
+  after bootstrap. It retains H8-compatible PC/register/RAM, instruction
+  boundaries, timer/IRQ and port scheduling. Replacing that compatibility loop
+  with semantic MIDI/voice/parameter/clock jobs is a different architecture
+  from changing the Setup default. It requires preserved bus/audio/state
+  behavior and an explicit state bridge for live reference switching.
+- Recommendation: a semantic event-based C++ controller is a plausible next
+  CPU project. Start with timed HDI transport/background polling; then MIDI,
+  voice allocation and parameter jobs, original tables/math, exact guest
+  timestamps, timer/IRQ and readiness ordering. Preserve DSP firmware/JIT and
+  a coherent state bridge to the selectable H8 reference. Gate each stage on
+  full command/audio/state comparisons (FX, Multi, sustain, stealing, clock,
+  save/restore) and repeated aggregate CPU. Simply changing the Setup default
+  or removing the one-time H8 boot cannot remove steady compatibility work.
+  DSP remains the main cost; this experiment does not support a 2x promise.
+- Evidence: ignored `output/perf-mac-fx-multi-20261015/`, especially
+  `primary-summary.json`, `comparison-index.json`, `state-validation.json`,
+  `controller-cost/summary.json`, `fx-exact/20261015-223040/` and separate sample
+  traces. Four candidate pilots and one failed admission are retained separately
+  from the 24 primary windows. Production code retains the previous accepted
+  catch-up optimization; no further CPU optimization or default change accepted
+  this round. No plugin installation, Windows/real-DAW validation or universal
+  patch/ROM coverage is established by this Mac run.
+
+## 2026-10-15 — Live timed DSP transport jobs on Mac
+
+- Scope: first event-controller stage for KS, preserving sound, DSP JIT,
+  clocks, slices, serial ordering, buffers and priorities; H8 remains the
+  reference/default. Same Optimized `f52e397` plus prior local changes,
+  M1 Pro/macOS 27.2/Release arm64/pinned dependencies as preceding entries.
+  Frozen accepted C++ AU, probe, runtime test and host are under ignored
+  `output/perf-mac-dsp-events-20261015/before/`; originals and SHA-256 identity
+  are retained before edits. No installation or publication is part of this run.
+- New opt-in `SILVER_KS_DSP_TRANSPORT=events`: live readiness observations,
+  address requests, 24-bit data writes and reply reads are timed protocol jobs.
+  No tape, opcode decoder or H8 interpreter is involved in these jobs. Fixed
+  protocol timing preserves every reference port event and in-flight PC;
+  registers/flags remain materialized for the compatibility controller.
+  Jobs fit wholly before the existing slice end and next UART/TPU0/TPU1/ADC
+  event; otherwise the existing native boundary path handles preemption.
+  Busy replies retain the actual read/timeout path, never cached readiness.
+  Other controller logic is still the native compatibility port, so this is
+  a bounded first stage rather than a completed semantic controller rewrite.
+- Initial validation: 440,512 existing native boundaries and 80 IRQ cases,
+  plus 1,216 complete HDI jobs with randomized live words/replies/flags and
+  both DSP selections match original H8 data/IO, access clocks/PC, full frame
+  and RAM. Deadline/pending-IRQ guards preserve state. Nine four-second full
+  musical scenarios (Single, Multi, MIDI, pedal, controls, state, clock, steal,
+  FX) match frozen original H8 full bus tapes, all 24 integer audio streams,
+  guest/serial counters, state/user Flash/MIDI. Each renders 181,362 frames;
+  post-boot/handoff interpreter calls remain zero and event-job counts are
+  positive in every native scenario.
+- Initial CPU pilot: three frozen-native/event pairs per four-second Single,
+  Multi and FX passage produce only -0.59%, -0.24%, -0.07% median changes;
+  this variant is not accepted as a CPU improvement. The first dispatch called
+  a transport predicate for every controller boundary. A cheap HDI range gate
+  and continuation of adjacent protocol stages before the event deadline remove
+  that overhead. An intermediate repeat gives -2.99%, -2.13%, -1.60%, all nine
+  individual pairs lower. The final source also leaves the disabled experiment
+  on its original tight compatibility loop. Final binary measurements follow.
+- Final protocol capture: 9/9 scenarios, **8,085,451 port events** byte-for-byte
+  against the retained frozen-H8 oracle, **1,632,258 frames x 24 streams**,
+  identical state/Flash/MIDI and guest counters. H8 calls after boot remain zero.
+  The switching fixture initially rejected FX because its coverage assertion
+  examined only the new native instance after .95 s, while Note On occurred
+  before destruction at .65 s. Retain the first native segment's handler counts
+  for the coverage assertion; original events, audio and equality checks stay
+  unchanged. Per-instance exported metrics and last-handoff H8 counts keep
+  their existing meanings. The rejected run is retained. Both pedal and FX
+  switching passages now pass full tapes/audio/state with the corrected fixture;
+  the intentional H8 window has positive interpreter calls and the final native
+  handoff has zero interpreter calls. Correctness-run timing is not used as an
+  optimization result.
+- Further pilot evidence: the first complete AU matrix gives Single FX
+  **50.6508 -> 49.7249% (-1.83%)**, four-part FX **48.8354 -> 48.9539% (+0.24%)**.
+  All 12 windows pass and output/tails/program snapshots match. Final offline
+  medians in that variant are -0.27% Single, -2.09% Multi, +0.67% FX, with
+  overlapping ranges; no universal CPU saving is established. These matrices
+  are retained under `*-unmasked-guard` and are not pooled with later trials.
+- Masked-IRQ hypothesis: permit a job when mode-2 pending IRQ priority
+  cannot preempt the current EXR; keep every bit and the current mask intact.
+  Independent H8 tests include masked IRQs in both banks and rejection of
+  unmasked low/high IRQs. All full tapes still match, but the nine scenarios'
+  job counts are unchanged: this hypothesis does not explain their CPU cost.
+  Its partial CPU matrix is stopped/retained under `*-masked-only`; it is not
+  an accepted performance result.
+- Live retry follow-up: Multi records 736,678 actual ISR-ready reads per four
+  seconds, versus 61,996 low-data writes. Lift the timeout initialization and
+  countdown/branch into the timed retry job when its complete original interval
+  fits before the next deadline. Preserve every actual port observation,
+  countdown wrap/overflow flags and the timeout continuation. No guessed DSP
+  completion or suppressed polling. Differential cases now force busy replies
+  and countdown 0/1/2/32767/-32768/-1/-2/3 as well as random live replies.
+  Final Multi dispatches fall from 605,744 to 228,298 while covering 3,075,265
+  reference boundaries; every actual port event remains unchanged. Dispatch
+  reduction is not itself a CPU measurement.
+- Final validation repeats all nine full bus/audio/state captures against the
+  retained frozen H8, both live-switch passages, and the independent runtime
+  oracle (440,512 boundaries/80 IRQ cases/1,216 complete protocol jobs). All pass.
+  Deadlines and both masked/unmasked IRQ banks, busy countdown edges, full RAM,
+  registers/flags, data/IO access clocks and in-flight PC are covered. The final
+  source, fixture and bundle identities are frozen before CPU measurements.
+- Final paced AU measurement: previous accepted **C++ compatibility controller**
+  versus final event transport, identical host, three alternating pairs per
+  Single FX and four-part FX case, 16 held keys total, 48 kHz/256, eight seconds
+  after warm-up. **12 windows / 96 seconds measured audio**, user+system CPU
+  for all process threads. No concurrent build, profiler or DSP test.
+
+Median aggregate CPU, **100% = one CPU**, min–max across three runs:
+
+| AU passage | Previous C++ | Event transport | Median change |
+| --- | --- | --- | --- |
+| Single, delay/reverb/chorus | 51.9601% (50.5946–53.2668) | 51.1810% (50.8302–53.0224) | -1.50% |
+| Four-part Multi, delay/reverb/chorus | 50.7903% (50.7502–54.4722) | 50.1744% (49.8977–50.2472) | -1.21% |
+
+- All 12 AU windows pass finite/audible output, zero lost frames and zero
+  callback deadline failures. Actual float audio/tail hashes match all six
+  runs of each passage, as do complete returned program snapshots. All requested
+  AU values and all returned C++/Single/Multi/active-part/channel states validate.
+  Wet release tails are nonzero. KS uses the same synthetic zero wave bank and
+  generated saw programs as the previous comparison; no claim for every ROM,
+  patch or wave bank. Initial setup/probes/tails/state reads are outside CPU.
+- Separate final unrecorded offline render: three alternating frozen-C++/event
+  pairs per four-second passage; **18 windows / 72 seconds measured audio**.
+  Audio, state/Flash/MIDI and guest/serial counters match in all 18 runs.
+  CPU medians/ranges in seconds per four seconds of native audio:
+
+| Offline passage | Previous C++ | Event transport | Median change |
+| --- | --- | --- | --- |
+| Single | 1.946890 (1.944976–1.998989) | 1.923290 (1.816914–1.958586) | -1.21% |
+| Multi | 1.931908 (1.916010–1.940372) | 1.818724 (1.791157–1.822111) | -5.86% |
+| Dynamic Multi FX | 1.874350 (1.845315–1.899880) | 1.821183 (1.753601–1.915733) | -2.84% |
+
+- Interpretation/decision: retain this as the first **opt-in live event-
+  transport stage**, with modest median aggregate CPU savings in the tested
+  final cases. Do not pool pilot variants or call the earlier fixed-replay
+  19–20% diagnostic a realized saving. One AU Single pair and individual
+  offline Single/FX pairs regress; small samples and overlapping ranges do not
+  establish a saving in every run. OS placement/frequency was not independently
+  measured. AU and offline workloads differ and are reported separately.
+  H8 remains default/reference and C++ compatibility transport remains available
+  by omitting the environment flag. MIDI/voice/parameter/other controller logic
+  still uses the native compatibility implementation; this is not the complete
+  event-controller conversion. DSP/JIT, clocks, slices, buffers, priorities,
+  serial ordering and worker count are unchanged. No new allocation/lock/wait.
+- Delivery: Release arm64 AU/VST3/Standalone and local launch instructions are
+  in ignored `build/optimized-mac-dsp-events-2026-10-15/`; binary copies and
+  ad-hoc signatures validate. AU is exercised by the actual comparison host;
+  VST3/Standalone are built, not separately driver-tested in this round.
+  No installed plugin replaced. Repository audit and diff checks pass.
+- Raw evidence: ignored `output/perf-mac-dsp-events-20261015/`, especially
+  `final-measurement-identity.json`, `final-bus/summary.json`, latest `toggle/`,
+  `offline-cpu/summary.json`, `cpu/summary.json`, `au-state-validation.json` and
+  `final-results.json`. Earlier pilot/failed/cancelled captures are retained
+  under their explicit suffixes; none enter the final matrices. Windows,
+  physical driver/DAW and broader patch/wave-bank validation remain pending.
+  Next bounded investigation: profile remaining controller work outside HDI,
+  then lift periodic voice/parameter jobs with the same command/audio/state
+  gates and repeated whole-process CPU measurements.
+
+## 2026-10-15 UTC — KS native-control jobs, isolated Mac follow-up
+
+- Request: finish the KS controller removal first, preserve sound/JIT/timing,
+  test against H8 and avoid concurrent preset-manager work. **Full controller
+  removal is not delivered by this stage.** Original startup and the H8-like
+  compatibility state/dispatch remain. The precise remaining gates are in
+  `KS_NATIVE_CONTROLLER.md`; renaming the register/PC model or removing a link
+  dependency is not treated as completing the semantic migration.
+- Isolation: managed checkout `ks-native-controller`, based on `Optimized`
+  parent `f52e397`, plus the preceding verified engine changes. Source matches
+  the previous source-identity allowlist before this change. Browser/library/
+  patch/Processor/workflow changes from the other chat were excluded; the
+  shared checkout, its build directories and installed plugins are untouched.
+  Pinned JUCE/asmjit/DSP source copies and generated framework headers live in
+  the private build, independently of the other chat.
+- Platform/build: Apple M1 Pro arm64, macOS 27.2, AppleClang 21, C++17 Release,
+  deployment 12.0; standalone CMake build. Firmware OS 2.1.02 hash and the
+  external synthetic Flash/zero-wave test inputs are recorded in local identity
+  reports. No original/private input is committed. KS only; K-Station unchanged.
+- Frequency profiling identified repeated part-state/table selection and scale
+  work outside HDI. `SILVER_KS_CONTROL_JOBS=1` now enables bounded live jobs for
+  these functions. The scale job computes the permitted shifts directly,
+  including zero-as-256 byte-counter wrap, final carry and reference INC flag
+  quirks. It does not run a hidden opcode loop. Part jobs retain the compatibility
+  frame at yields and read actual selector/stack data. Jobs reject mode zero,
+  unmasked IRQs and insufficient time, and stop at the event/slice boundary.
+  No queue count, DSP thread, JIT, clock, catch-up order, serial ordering,
+  priority, resampling, latency or buffer setting changed. No render allocation,
+  lock, sleep or I/O added. The prior C++ path and original H8 remain selectable.
+- Diagnostic backend publication now reports the Board's actual selected
+  backend through an atomic literal pointer instead of labeling every native
+  Device identically. The combined mode is `native-cpp-events-control`.
+  Optional boundary profiling allocates only before playback and resets at
+  the passage; it is excluded from CPU runs. Optional raw capture preallocates
+  all 24 streams and writes the file after rendering; capture runs are not CPU
+  evidence. The probe accepts bounded 2–30 second passages.
+- Arithmetic admission: **86,016** control-job state/deadline/IRQ cases compare
+  **471,684** independently executed original boundaries. All selector/counter
+  bytes, random registers/flags, edge words, short/full-loop deadlines, masked
+  pending IRQs and rejection of both unmasked banks are exercised. Results,
+  flags, clocks, PC, stack bookkeeping and admitted data accesses match. Existing
+  **440,512** boundary, **80** IRQ and **1,216** HDI-job cases also pass, as do
+  **150,100** native memory operations. Interpreter count stays zero after
+  handoff. The initial return-budget mistake was detected/fixed before admission;
+  reference stack RAM in this emulator costs three clocks per byte. Loop-job
+  prototypes and intermediate captures remain separately labeled and are not
+  pooled with the final direct-arithmetic candidate.
+- First candidate final checks: nine frozen H8 bus tapes match all
+  **8,085,451** events/cycles/PC/responses/slices. Raw native audio compares
+  **byte-for-byte** in 14 passages: the nine four-second scenarios, 30-second
+  Multi/pedal/clock and two H8/C++ toggle passages. **6,075,618 frames x 24
+  streams (583,259,328 bytes per implementation)** match, as do state/Flash/
+  MIDI/counters. Five live UI switches compare 61,440 float samples, project/
+  preference/instance/diagnostic checks pass, and paced 128/256 callbacks with
+  concurrent state saves have no startup or steady frame loss/latency change.
+- First candidate CPU, three alternating pairs per case, all process threads:
+  18 unrecorded offline windows / 72 seconds of native audio give medians
+  1.835025 -> 1.781483 seconds Single (-2.92%), 1.805687 -> 1.789120 Multi
+  (-0.92%), 1.770809 -> 1.753599 dynamic FX (-0.97%). Some pairs regress.
+  Same-binary AU with jobs OFF/ON, 12 windows / 192 seconds measured at 48 kHz/
+  256 with 16 held keys total and active FX: Single 48.74323 -> 48.73647% of
+  one CPU (-0.014% relative), Multi 48.61798 -> 48.15311% (-0.96%).
+- Essential frozen-bundle control: previous accepted event-transport AU versus
+  the first candidate, same 12-window/192-second protocol. Single medians
+  48.25578 -> 48.48819% (+0.482%), Multi 47.96348 -> 48.03503% (+0.149%).
+  All 24 AU windows have matching audio/tail hashes/programs, audible parts,
+  zero lost frames and zero callback deadline failures. These small changes
+  and overlapping ranges do **not** establish an improvement over the previous
+  plugin. Keep this candidate research-only and off by default; do not claim
+  that its dispatch reduction is a realized CPU saving. The first candidate
+  still compiled in the optional profile guard; the next trial removes it.
+- Research/identity root: ignored `output/perf-native-controller-20261015/`.
+  `isolation-identity.json`, `final-source-identity.json` and
+  `final-binary-identity.json` identify admitted sources, fixtures and AU.
+  `runtime-final-86016.log`, `control-bus/`, `audio-exact/`, final host checks,
+  offline/AU matrices and final stage results hold local evidence. Earlier
+  `*-loop-prototype`, initial host/session-name checks and pre-direct-scale
+  checks are not final CPU results. Windows execution and CPU remain pending;
+  the new jobs are portable C++17 with no macOS scheduling dependency.
+
+## 2026-10-16 Mac local — whole part lookup and lean Release trial
+
+- Same isolated KS-only checkout and firmware/dependency/platform pins as above.
+  First-candidate source/binaries/results remain frozen in the previous local
+  root; no matrices are pooled. This is another bounded controller-CPU trial,
+  **not completion of the requested full controller removal**.
+- Lift the whole remaining part-state/parameter-table lookup to direct C++
+  arithmetic when its original observations fit before the next event. Handle
+  every partial-entry frame too, including unconstrained multiply/add inputs.
+  Bounded formulas derive final C/V/Z/N/H directly; general partial frames
+  retain exact reference arithmetic flags. Selector and return-stack reads
+  retain original cycles/PC; short deadlines use the previous phase path.
+- Move frequency profiling behind the separate CMake option
+  `SILVER_KS_CONTROLLER_PROFILING`, default OFF. Ordinary Release contains no
+  frequency vector or per-boundary profile check. The diagnostic ON branches
+  compile in all eight affected units (compile-only check); production OFF
+  is the actual built/tested/measured configuration. No DSP/JIT setting changed.
+- Admission: the same 86,016 state/deadline/IRQ cases / 471,684 original
+  boundaries pass for the complete formulas. All previous 440,512 boundary,
+  80 IRQ and 1,216 HDI cases also pass. Nine final H8 command tapes match all
+  8,085,451 events. All 14 full raw-audio passages and host checks pass again
+  for this frozen version, including 30-second Multi/pedal/clock and H8 toggles.
+- Offline comparison is V2 partial lookup versus V3 complete lookup/profile OFF,
+  three pairs per four-second passage. Median CPU seconds: Single
+  1.784172 -> 1.783389 (-0.044%), Multi 1.767489 -> 1.761360 (-0.347%), FX
+  1.726016 -> 1.743217 (+0.997%). No broad improvement established.
+- Actual AU control is the previous accepted event-transport bundle versus V3,
+  three alternating pairs each Single FX / four-part FX, 16 held keys total,
+  48 kHz/256 and 16 seconds measured per run (12 windows / 192 seconds).
+  Single median total CPU is 46.46118 -> 46.06234% of one CPU (-0.858% relative);
+  Multi 45.59552 -> 45.68498% (+0.196%). Ranges overlap. All outputs/tails and
+  returned programs match; no lost frames/callback deadline failures. Again,
+  this is not a noticeable or general CPU improvement. Keep control jobs opt-in.
+- After CPU matrices finished, sample the admitted 30-second offline Multi
+  fixture separately for five seconds at 1 ms. Its audio/state/guest counters
+  still match the admitted passage and it executes zero post-boot interpreter
+  calls. 3,752 samples: approximately 78.76% in DSP/catch-up, 14.53% native
+  controller/service, 4.32% serial, 1.79% coordinator and 0.61% fixture. These
+  are stack-sample shares in this evolving offline passage, not AU CPU shares
+  or a universal patch distribution. Profiled times are excluded from all CPU
+  matrices. Native `tickNative` itself accounts for 70 samples (~1.87%), and
+  repeatedly attempts empty atomic MIDI queues; investigate that bounded cost.
+- Local evidence: ignored `output/perf-ks-full-lookup-20261016/`, with separate
+  source/binary identities, final stage runner/results, raw bus/audio/host
+  checks and CPU matrices. No installed plugin or other chat's files changed.
+  Source of preset-manager/Processor/workflow files still equals this checkout's
+  HEAD. The earlier changed-engine-file manifest did not record those GUI file
+  hashes; do not treat missing identities as evidence of either equality or
+  differences in the frozen AU. Frozen AU results are whole-artifact controls;
+  no editor is opened in the CPU host. Windows checks remain pending.
+
+## 2026-10-16 Mac local — native UART availability snapshot
+
+- Same isolated KS scope, hashes/pins and Release arm64 configuration. The
+  previous candidates and their negative/inconclusive CPU results stay separate.
+- `Board` MIDI input is coordinator-owned: Device host methods enqueue into
+  its separate event queue, then the worker feeds Board between `advance()`
+  calls. All production Board enqueue call sites were audited in that worker.
+  Snapshot pending UART bytes once at the start of a native slice, decrement
+  only after a real priority-queue pop, and use the same count for the next
+  UART deadline. Empty queue polls have no guest-visible side effect. Actual
+  byte order, UART spacing, RX flags/interrupts and all guest clocks stay intact.
+  Original H8 tick, shared queue implementation and host event-queue atomics
+  are unchanged. No new synchronization, waiting, allocation or OS API.
+  This applies to the C++ compatibility and control-job paths; it is not a new
+  thread or a changed MIDI admission policy. Board input methods are explicitly
+  documented as coordinator-only, as required by their existing mutable parsers.
+- New independent H8/C++ UART test passes in both compatibility and combined
+  job modes: **12,000 frames x 24 streams per mode**, **post-boot UART bytes at exactly matching receive cycles**
+  (the then-reported total was 252 per mode; the later reporting-only audit
+  below verifies 0 bootstrap and 252 monitored bytes), **77,692 complete port events**
+  and **56,561 complete slices** per mode. Budgets 1/2/3/7/15/31/63/97/127/128,
+  empty-to-burst transitions, partial packets/realtime priority and two H8/native
+  round trips are covered. Every observation spans at most one received byte;
+  the exact last-receive cycle is derived from the existing RX deadline with
+  no render bookkeeping overhead. All registers/flags/PC/clocks/bus history,
+  IO, final RAM/Flash/state/MIDI output and audio agree. Reference arithmetic
+  diagnostic messages remain in the logs; no host failure or divergence.
+- All 86,016 control-job cases and existing 440,512 boundary / 80 IRQ / 1,216
+  HDI cases pass after this change. Nine full frozen H8 command tapes again
+  match 8,085,451 events. All 14 complete raw-audio passages, host switching/
+  restore/instance tests and paced 128/256 captures pass without frame losses.
+- Three offline V3/V4 pairs: CPU seconds Single 1.776630 -> 1.749493 (-1.53%),
+  Multi 1.740694 -> 1.734468 (-0.36%), FX 1.728585 -> 1.715980 (-0.73%).
+  Ranges overlap and some individual runs regress. Primary frozen accepted-AU
+  comparison (12 x 16-second windows, all threads, same 16-note FX programs,
+  48 kHz/256): Single 47.30961 -> 47.37749% of one CPU (+0.143% relative),
+  Multi 46.79391 -> 47.00770% (+0.457%). No AU CPU saving established. All
+  audio/tail/program checks pass; no lost frames/deadline failures. Do not
+  promote this as a total-CPU improvement or pool it with other trials.
+- Local evidence: ignored `output/perf-ks-uart-events-20261016/`, including
+  `uart-final-results.json`, both `uart-final-*` logs/tapes, final source/binary
+  identity and stage results. Profiling remains compiled OFF. Windows actual
+  build/audio/CPU remains untested for these changes; all new engine work is
+  portable C++17. Full semantic controller/bootstrap removal is still pending.
+
+## 2026-10-16 Mac local — aggregate native fetch timing trial
+
+- Same isolated KS scope and pins. After the previous matrices finished and
+  verified their source identity, address the separately sampled constructor
+  cost: Boundary constructor appears in 93 top-of-stack samples (~2.48%) in
+  the admitted offline Multi profile. This remains outside DSP/JIT changes.
+- In clock-only native mode, aligned low code and a nonzero even fetch length
+  entirely below 0x400000 have exactly three clocks per 16-bit word, independent
+  of preceding reads. Charge that duration directly and preserve final read
+  history and in-flight PC. Keep the entire original byte-clock/read path for
+  mapped mode, odd/zero lengths, odd addresses, boundary crossings and high
+  code. No data/IO reads, instruction boundaries or interrupt acceptance move.
+  Native execution already suppresses immutable code-fetch callbacks; this
+  change only removes their per-byte timing loop. Original H8 core unchanged.
+- New independent byte-clock oracle passes **10,880** combinations of fetch
+  mode, length, alignment, preceding read, 0x400000 boundary, off-chip/on-chip
+  ranges and 24-bit wrap fallback. Cycles, PC, read/write history, next boundary
+  and mapped callback addresses/cycles/in-flight PC agree. All 440,512 runtime
+  boundaries / 80 IRQ / 1,216 HDI jobs and 86,016 control-job cases also pass.
+- UART fixture reporting now explicitly subtracts bootstrap bytes; its monitored
+  admission is stricter and no equality criterion was removed. This particular
+  fixture has **0** bootstrap UART bytes and **252 monitored bytes per mode**,
+  so the earlier total 504 is confirmed rather than assumed. Both modes again
+  pass 12,000 frames x 24 streams and each exact byte delivery cycle, all
+  registers/flags/IO/memory/state and complete 77,692-event/56,561-slice tapes.
+  Preserve the old fixture/hash and reporting-change audit in the UART trial
+  root; production sources were unchanged by that reporting correction.
+- Frozen final candidate and separate evidence root:
+  ignored `output/perf-ks-fetch-timing-20261016/`. Full musical/host/CPU matrix
+  completed; see the final matrix entry below. Profiling is compiled OFF. Full bootstrap,
+  register/PC state and semantic controller removal remain unfinished; Windows
+  actual checks remain pending. No files from the preset-manager chat changed.
+
+
+## 2026-10-16 Mac local — final fetch/UART/control-job matrix
+
+- This closes the measurement matrix above, not the full semantic controller
+  migration. Full bootstrap, register/PC/flags/address-space frame and semantic
+  lifecycle removal remain unfinished. Do not remove H8 or describe this as
+  the completed native controller. Next independent gate is native initialization
+  with full-boot command/state/timing equivalence, followed by foreground/parser/
+  clock/voice/state lifecycle extraction. K-Station remains unchanged.
+- Final local test ID: `perf-ks-fetch-timing-20261016`. All eight final stages
+  pass and every KS source hash remains equal to the frozen pre-test identity.
+  Measured AU executable SHA-256:
+  `afe1be2b80e2a8d68f459ce031ddc28d136e1f90271eb5f188b05fb7242e21f1`.
+  Parent revision remains f52e3971842bb25e92d3681f23441f16ddc56805 plus the
+  documented isolated uncommitted engine changes. Release arm64, C++17,
+  AppleClang 21 / SDK 27.2, deployment macOS 12, M1 Pro 6P+2E, macOS 27.2.
+  JUCE/asmjit/DSP pins remain unchanged. Profiling is compiled OFF. No changes
+  to DSP JIT, clocks, slices, serial order, buffers, priorities or DSP threads.
+- Nine complete frozen H8 tapes match **8,085,451 ordered port events** and
+  **1,632,258 native frames**. Fourteen complete raw-audio comparisons match
+  **6,075,618 frames x 24 streams / 583,259,328 bytes per implementation**,
+  including three 30-second evolving passages and two live-switch passages.
+  State/Flash/MIDI output and guest/DSP/serial counters agree. Host tests pass
+  **61,440 exact float samples across five live UI switches**, preferences,
+  native/legacy project restore, instance isolation and corrupt-ROM/handoff
+  guards. Paced 128/256-frame operation has no new frame loss. Separate focused
+  checks cover 10,880 fetch-clock cases, 86,016 control-job cases (471,684
+  original boundaries), 440,512 runtime boundaries, 80 IRQ cases, 1,216 HDI
+  jobs and 504 exact-cycle post-boot UART bytes across both C++ modes.
+- Primary final AU comparison: **12 x 16-second unprofiled windows / 192 seconds
+  of audio** after preparation, three alternating before/candidate pairs per
+  scenario, 48 kHz/256, same programs, 16 held notes total, delay/reverb/chorus.
+  Total process user+system CPU is counted; **100% = one CPU**, not all 8 cores.
+  Before is the frozen accepted event-transport AU; candidate is the combined
+  fetch/UART/opt-in control-job build. Do not attribute the whole difference
+  to one sub-change or pool results from earlier trials.
+
+| AU, FX | Frozen accepted event-transport AU | Final candidate | Relative change |
+| --- | ---: | ---: | ---: |
+| single-fx | 47.097706% | 46.607250% | -1.041% |
+| multi-fx | 46.911813% | 46.225413% | -1.463% |
+
+- Single FX ranges: before [47.075425,47.399450], candidate
+  [46.382350,46.627581]% of one CPU; saving 0.490456 percentage points.
+  Four-part FX: [46.799306,47.450931] / [46.067700,46.340219]%; saving
+  0.686400 points. All three pairs improve per case; ranges do not overlap
+  in this series. All 12 windows have exact output/tails, matching returned
+  programs and channels, finite audible output and zero lost frames or
+  over-budget callbacks. This is a small local improvement, not a large or
+  universal CPU gain. Earlier UART/part-only trials were mixed.
+- Offline V4/V5 baseline is the immediately preceding UART candidate, distinct
+  from the frozen accepted AU baseline. Three alternating four-second pairs,
+  total CPU seconds (medians and relative change):
+  single 1.760828 -> 1.738883 (-1.246%); ranges [1.754975, 1.763404] / [1.738505, 1.740908].
+  multi 1.748462 -> 1.721816 (-1.524%); ranges [1.740714, 1.756252] / [1.685986, 1.722089].
+  fx 1.719284 -> 1.715176 (-0.239%); ranges [1.718473, 1.722266] / [1.70177, 1.724456].
+  FX ranges overlap; do not generalize that small result.
+- Local package: ignored `build/optimized-mac-ks-control-jobs-2026-10-16/`.
+  Exact measured AU, separately built VST3/Standalone, source snapshot, licenses,
+  source identity and checksums. Verify strict signatures before handoff. AU
+  was hosted/tested/measured; VST3/Standalone were built but have not had a
+  separate DAW/audio-device session in this round. Installed plugins and the
+  original shared checkout are unchanged; seven excluded preset-manager/
+  Processor/workflow files equal the isolated parent revision. Work is not
+  merged into the shared Optimized checkout.
+- Inputs are authenticated KS OS 2.1.02, synthetic Flash and zero Wave ROM.
+  Original sampled banks, physical-device equivalence and arbitrary untested
+  states/inputs are not proven by finite comparisons. Private ROMs, captures,
+  binaries and raw traces remain ignored. New algorithms use portable C++17,
+  not M1-only code; actual Windows x64 build, audio/state and CPU checks remain
+  pending. See KS_NATIVE_CONTROLLER.md for the full remaining removal gates.
+
+
+## 2026-10-16 Mac local — C++ reset and initial DSP setup
+
+- Isolated KS OS 2.1.02 scope, same authenticated OS/dependency pins and
+  Mac Release arm64/C++17 compiler configuration as the preceding final matrix.
+  No K-Station, preset-manager, DSP JIT, clock/slice/serial/buffer/priority or
+  worker-count change. The new work removes original-H8 instruction execution
+  from a fresh C++ Device's reset/initialization/warm-up. No saved startup image,
+  prerecorded DSP response or interpreter fallback is used. The complete ROM
+  is authenticated before entry; executable SRAM is checked and sealed at the
+  actual overlay transition. The H8 path remains separately selectable.
+- New reset path covers reset vector, internal SRAM clear, hardware setup,
+  Flash copy/checksum/validation, copied overlay trampoline and existing initial
+  DSP/controller setup. This is a fixed C++ **compatibility** path that retains
+  the same register/PC/flags/stack frame, not the completed semantic initializer.
+  Native mode now uses it from construction; a live H8-to-C++ switch still
+  validates and adopts the current state through the existing handoff.
+- Independent full-reset differential fixture compares two fresh Boards on
+  every coordinator observation, complete port/slice bytes, all controller
+  memory/IO/IRQ priorities and masks, Flash/musical state/MIDI and serial state,
+  then 24,000 audible frames x 24 streams. Results (all exact; zero candidate
+  interpreter steps): Single 503,282 cold slices / 1,809,727 port events;
+  irregular budgets 432,116 / 1,433,980; Performance 503,674 / 1,692,077;
+  synthetic nonzero wave mapping 503,282 / 1,809,727. Reference step counts
+  are respectively 14,806,723 / 12,799,189 / 14,641,837 / 14,806,723.
+  Counts include the test's complete trace through warm-up and notes; cold
+  slices are counted only through first readiness. These are instrumented
+  fidelity checks, not CPU measurements. The mapping variant is synthetic,
+  not an admission of original sampled-sound fidelity.
+- Independent operation tests add **4,128 reset cases** with arbitrary partial
+  values/flags and both mapped/clock-only fetches, including rare branches.
+  Existing **440,512 runtime boundaries, 80 IRQ cases, 1,216 HDI jobs and
+  86,016 control-job cases / 471,684 original boundaries** also pass.
+  A first-address error in hardware setup and two long-branch lengths were
+  caught by the cold oracle and corrected before final validation.
+- The per-operation reset oracle additionally caught H8's signed immediate
+  PC on the copied trampoline: logical PC 0xffffec00 versus physical bus
+  0xffec00. Preserve that exact original state while masking physical fetch
+  addresses to 24 bits. The fetch-clock oracle now uses actual original read8
+  calls, not a parallel clockMem loop; **11,520** cases pass including signed
+  PC and physical wrap. The earlier 10,880-case oracle proved equivalence to
+  its old byte-clock helper but did not establish this signed/physical case.
+  The original H8 core and DSP JIT remain untouched.
+- Final local test ID: ignored `output/perf-ks-native-reset-20261016/` with
+  frozen engine/binary identities, four full cold logs/tapes and musical/host
+  revalidation. All 13 final stages pass and the frozen KS source identity was
+  verified after completion.
+  Full semantic register/state/frame removal and H8-only-test linking are
+  still outstanding; never call this the completed full controller port. No
+  Windows execution validation for this stage yet. New source is portable
+  C++17. Do not reuse the previous binary's CPU claims for this new binary.
+
+
+### Final cold-reset delivery validation
+
+- All nine complete frozen original-H8 musical tapes match **8,085,451**
+  ordered port events and **1,632,258** native frames. Native boot interpreter
+  counts are explicitly zero in every native musical capture. All 14 complete
+  audio cases again match **6,075,618 frames x 24 streams / 583,259,328 bytes
+  per side**, with exact Flash/state/MIDI and guest/DSP/serial counters.
+  Long passages and live H8 round trips are included; deliberately toggled
+  H8 segments are counted separately from initial/native interpreter counts.
+- Actual JUCE controller host passes **61,440 exact float samples across five
+  UI switches**, held notes/pedal, instance isolation, preferences, native and
+  legacy projects and diagnostic boundaries. Paced 128/256 sessions have zero
+  startup/steady missed frames in this series, stable latency and concurrent
+  state reads. Windows firmware/audio/CPU was not exercised locally.
+- New unprofiled AU series: three alternating 16-second pairs per Single FX
+  and four-part FX (12 windows / 192 seconds total), 48 kHz/256, 16 notes total,
+  same returned programs/channels, delay/reverb/chorus, sequential DSPs, all
+  process user+system CPU; **100% = one CPU**. Before is the frozen accepted
+  event-transport AU; candidate includes prior fetch/UART/control jobs and
+  this new C++ reset. Do not attribute all savings to the reset change or pool
+  this series with preceding variants.
+
+| AU, FX | Frozen accepted event-transport AU | C++ reset + current jobs candidate | Relative change |
+| --- | ---: | ---: | ---: |
+| single-fx | 44.863262% | 44.445200% | -0.932% |
+| multi-fx | 44.716487% | 43.866525% | -1.901% |
+
+- Single ranges: before [44.753306,45.704925], candidate
+  [44.413012,44.537306]%; median saving 0.418063 percentage points. Multi:
+  [44.579844,45.160663] / [43.807225,43.931119]%; saving 0.849963 points.
+  All three pairs improve per case and ranges do not overlap in this local
+  series. All 12 windows have exact output/tails, finite audible output,
+  matching returned programs, zero lost frames and zero over-budget callbacks.
+  This is still a modest whole-process saving, not a completed semantic port
+  or a universal performance claim. No cold-start CPU speed-up is inferred
+  from instrumented cold timelines.
+- After all stages and source-identity verification, correct only the probe's
+  obsolete notes sentence claiming H8 booted all modes. Preserve the measured
+  fixture source and exact before/after replacement hashes in the ignored
+  `fixture-notes-audit.json`. No production algorithm or plugin binary changed.
+  The corrected fixture is separately rebuilt and its native report is checked
+  against the frozen Single audio/state/counter reference. This annotation
+  correction does not replace or relabel any measured CPU window.
+- The Windows Desktop CI now compiles reset/runtime/UART/timing fixtures and
+  runs ROM-free timing/timer/memory checks. Missing private-input cases skip
+  explicitly with 77; no ROM or captured data is uploaded. Actual CI status
+  must be read after push and must not be inferred from the workflow change.
+- Local package: ignored `build/optimized-mac-ks-native-reset-2026-10-16/`,
+  exact measured AU plus built VST3/Standalone, strict signature verification,
+  public source snapshot/identity, checksums, licenses and explicit limitations.
+  AU was hosted and measured; VST3/Standalone were built, not separately hosted.
+  Shared Optimized, installed plugins and seven excluded preset/Processor/
+  workflow files are unchanged. Work is on `codex/ks-native-controller`,
+  isolated from the ongoing preset-manager work.
+- **Full controller migration remains unfinished.** The compatibility
+  register/flag/PC/stack/address-space state still owns normal control flow;
+  H8 remains selectable in the product, not confined to comparative tests.
+  Retiring it requires semantic typed-state foreground, parser/clock/arp,
+  voice/parameter/transport and state/Flash lifecycles, including preemption
+  and data-dependent timing. Removing inheritance, renaming fields or deleting
+  the H8 link would not complete that work. Do not publish this as full removal.
 
 ## Entry template
 

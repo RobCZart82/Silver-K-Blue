@@ -11,7 +11,17 @@ namespace {
 void check(bool v,const juce::String& why){if(!v)throw std::runtime_error(why.toStdString());}
 juce::Component* find(juce::Component& c,const juce::String& id){if(c.getComponentID()==id)return &c;for(auto* child:c.getChildren())if(auto* found=find(*child,id))return found;return nullptr;}
 juce::var report(Processor& p){return juce::JSON::parse(p.performanceReport());}
-void backend(Processor& p,const char* name){check(report(p)["controller_backend"].toString()==name,"Wrong active controller backend");}
+juce::String backendName(const char* name){
+ juce::String expected=name;
+ if(expected=="native-cpp-runtime"){
+  const bool transport=juce::SystemStats::getEnvironmentVariable("SILVER_KS_DSP_TRANSPORT",{})=="events";
+  const bool jobs=juce::SystemStats::getEnvironmentVariable("SILVER_KS_CONTROL_JOBS",{})=="1";
+  if(jobs)expected=transport?"native-cpp-events-control":"native-cpp-control-jobs";
+  else if(transport)expected="native-cpp-events-transport";
+ }
+ return expected;
+}
+void backend(Processor& p,const char* name){check(report(p)["controller_backend"].toString()==backendName(name),"Wrong active controller backend");}
 }
 int main(int argc,char** argv){try{
  juce::ScopedJuceInitialiser_GUI gui;
@@ -44,7 +54,7 @@ int main(int argc,char** argv){try{
     check(candidate.ksControllerMode()==int(native),"UI switch did not apply");backend(candidate,native?"native-cpp-runtime":"original-h8");backend(reference,"original-h8");
     check(candidate.firmwareLoadRevision()==revision&&candidate.getLatencySamples()==latency,"Controller switch rebuilt firmware or changed latency");
     if(block==4){auto r=report(candidate);check(!bool(r["recording"])&&r["stop_reason"].toString()=="controller_changed"&&r["session"]["controller_backend"].toString()=="original-h8","Mixed controller diagnostic session");}
-    if(block==15){check(candidate.setPerformanceDiagnostics(1),"Could not start native measurement");check(report(candidate)["session"]["controller_backend"].toString()=="native-cpp-runtime","Native diagnostic session mislabeled");}
+    if(block==15){check(candidate.setPerformanceDiagnostics(1),"Could not start native measurement");check(report(candidate)["session"]["controller_backend"].toString()==backendName("native-cpp-runtime"),"Native diagnostic session mislabeled");}
    }
    juce::MidiBuffer midi;
    if(block==0)midi.addEvent(juce::MidiMessage::noteOn(1,60,juce::uint8(100)),0);

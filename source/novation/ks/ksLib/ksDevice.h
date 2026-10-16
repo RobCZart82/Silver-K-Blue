@@ -31,7 +31,7 @@ public:
     const char* dspExecutionBackend()const{return parallelDSPs?"two-workers-slice-barrier":"sequential";}
     static ControllerMode environmentControllerMode();
     ControllerMode controllerMode()const{return currentController.load();}
-    const char* controllerBackend()const{const auto mode=controllerMode();return mode==ControllerMode::Native?"native-cpp-runtime":mode==ControllerMode::Hybrid?"live-cpp-midi-hybrid":"original-h8";}
+    const char* controllerBackend()const{return activeControllerBackend.load();}
     // Control thread only; the worker applies/acknowledges between samples.
     // Failed native validation retains the current controller and state.
     bool setControllerMode(ControllerMode,std::string& error);
@@ -43,6 +43,7 @@ private:
     baseLib::performance::Diagnostics* performance;
     const bool parallelDSPs;
     std::atomic<ControllerMode> currentController;
+    std::atomic<const char*> activeControllerBackend{"original-h8"};
     std::atomic<int> requestedController{-1};
     std::mutex controllerMutex;
     std::condition_variable controllerCV;
