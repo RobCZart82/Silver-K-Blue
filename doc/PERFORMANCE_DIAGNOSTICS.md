@@ -485,7 +485,7 @@ format, both DSP routes and failure guards without private assets. Example:
 
 ```powershell
 cmake --build build-nmake --target ksControllerProbe_test ksControllerTrace_test
-python tools/run_controller_comparison.py --executable build-nmake/source/novation/silverK/buildStandalone/silverPlugin/ksControllerProbe_test.exe --ks-rom output/perf-dsp-threads/private-KSOS2102.SYX --flash "$env:USERPROFILE/Documents/Silver-K/ROMs/ks-init-flash.bin" --wave "$env:USERPROFILE/Documents/Silver-K/ROMs/ks-wave-zero.bin"
+python tools/run_controller_comparison.py --executable build-nmake/source/novation/silverK/buildStandalone/silverPlugin/ksControllerProbe_test.exe --ks-rom "<firmware-bin>" --flash "$env:USERPROFILE/Documents/Silver-K/ROMs/ks-init-flash.bin" --wave "$env:USERPROFILE/Documents/Silver-K/ROMs/ks-wave-zero.bin"
 ```
 
 The runner creates a fresh directory, captures boot, then Single/four-part
@@ -555,8 +555,8 @@ do not reuse the recorded-playback saving as a live-controller result.
 
 ```powershell
 cmake --build build-nmake --target ksLiveMidiController_test ksControllerProbe_test
-& build-nmake/source/novation/silverK/buildStandalone/silverPlugin/ksLiveMidiController_test.exe output/perf-dsp-threads/private-KSOS2102.SYX
-python tools/run_live_controller_comparison.py --executable build-nmake/source/novation/silverK/buildStandalone/silverPlugin/ksControllerProbe_test.exe --ks-rom output/perf-dsp-threads/private-KSOS2102.SYX --flash "$env:USERPROFILE/Documents/Silver-K/ROMs/ks-init-flash.bin" --wave "$env:USERPROFILE/Documents/Silver-K/ROMs/ks-wave-zero.bin"
+& build-nmake/source/novation/silverK/buildStandalone/silverPlugin/ksLiveMidiController_test.exe "<firmware-bin>"
+python tools/run_live_controller_comparison.py --executable build-nmake/source/novation/silverK/buildStandalone/silverPlugin/ksControllerProbe_test.exe --ks-rom "<firmware-bin>" --flash "$env:USERPROFILE/Documents/Silver-K/ROMs/ks-init-flash.bin" --wave "$env:USERPROFILE/Documents/Silver-K/ROMs/ks-wave-zero.bin"
 ```
 
 The isolated test compares C++ against independent original-H8 decoding at
@@ -695,8 +695,8 @@ Private comparisons:
 
 ```powershell
 cmake --build build-nmake --target ksRuntimeController_test ksControllerTimers_test ksControllerMemory_test ksControllerProbe_test
-& build-nmake/source/novation/silverK/buildStandalone/silverPlugin/ksRuntimeController_test.exe output/perf-dsp-threads/private-KSOS2102.SYX
-python tools/run_live_controller_comparison.py --executable build-nmake/source/novation/silverK/buildStandalone/silverPlugin/ksControllerProbe_test.exe --ks-rom output/perf-dsp-threads/private-KSOS2102.SYX --flash "$env:USERPROFILE/Documents/Silver-K/ROMs/ks-init-flash.bin" --wave "$env:USERPROFILE/Documents/Silver-K/ROMs/ks-wave-zero.bin" --controller native --repeats 3 --seconds 4
+& build-nmake/source/novation/silverK/buildStandalone/silverPlugin/ksRuntimeController_test.exe "<firmware-bin>"
+python tools/run_live_controller_comparison.py --executable build-nmake/source/novation/silverK/buildStandalone/silverPlugin/ksControllerProbe_test.exe --ks-rom "<firmware-bin>" --flash "$env:USERPROFILE/Documents/Silver-K/ROMs/ks-init-flash.bin" --wave "$env:USERPROFILE/Documents/Silver-K/ROMs/ks-wave-zero.bin" --controller native --repeats 3 --seconds 4
 ```
 
 The runtime differential test checks every ported boundary with varied full
@@ -835,7 +835,7 @@ Additional controller timing checks (no private ROM needed for the first):
 ```sh
 cmake --build <build-dir> --target ksControllerTiming_test ksControllerUart_test
 <build-dir>/silverPlugin/ksControllerTiming_test
-<build-dir>/silverPlugin/ksControllerUart_test <KSOS2102.SYX> <ks-init-flash.bin> <ks-wave-zero.bin> <fresh-private-output-dir>
+<build-dir>/silverPlugin/ksControllerUart_test <firmware-bin> <ks-init-flash.bin> <ks-wave-zero.bin> <fresh-private-output-dir>
 ```
 
 The UART test compares H8 with C++ at controller budgets 1..128, validates the

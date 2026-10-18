@@ -1,28 +1,28 @@
-# Silver-K 0.2.4 Beta
+# Technical notes
 
 A combined Windows x64 Standalone/VST3 and macOS arm64 Standalone/VST3/AU instrument for original K-Station OS 2.1.01 and KS OS 2.1.02 firmware. The project was extracted from ungeermoolator and uses Gearmulator components. See the [installation guide](INSTALL.md) for platform installation and ROM/Data setup.
 
 The original H8/DSP engines run internally. Firmware is validated by contents and SHA-256, not filename. The integration uses Gearmulator patchDB for folder scanning, caching, tags, favourites and metadata changes. K-Station retains the Gearmulator/libresample rate converter; KS retains its four-channel stream. ROM code is not embedded in the application or DAW project state.
 
-## Getting started
+## Plugin operation
 
-1. On Setup, select **Silver-K folder**. Firmware in its `ROMs` subfolder is scanned; decoded BIN, OS/SYX and firmware ZIP updates are supported. Select firmware in the menu at the top.
-2. For KS, select our `assets/ks-init-flash.bin` (524288 bytes) under **KS factory data**. It contains only Silver-K initial sounds. Alternatively, supply an official All Data MIDI file locally. A separate Wave ROM can be selected (129024 bytes); without one, the engine uses an in-memory zero bank. For a zero bank, ROM-dependent fields are silenced in a working Flash copy before boot; subsequent edits are adapted through original MIDI commands. Original levels remain in snapshots and saved state. This adaptation is disabled with a real bank.
-3. The main folder’s `Patches` subfolder is added automatically. On Patches, add another folder, SYX, MID, V-Station FXB/FXP or ZIP. Files and subfolders are scanned in the background. Selecting a row loads a patch into the selected part. All column headers sort in both directions, with the selected patch retained across reordering and filters. Tags and favourites are stored separately from source files.
-
-On macOS, the library is stored in `~/Library/The Usual Suspects/Silver-K/patches`. Isolated checks can use `SILVER_K_DATA` to select a separate database; this does not supply factory ROMs.
+See the [user guide](USER_GUIDE.md) for setup, file loading and patch management, and [installation](INSTALL.md) for plugin locations. Firmware is loaded as BIN; KS program data is loaded as one complete MIDI file or a compatible set of MIDI files. The required zero Wave ROM is created automatically.
 
 ## Interface
 
-The 1280 × 752 layout follows the existing Silver-K K-Station panel. OSC/Mixer/Filter/LFO/Env and the lower effects sections are retained. The top pages are Main, Extra, Perf, Patches and Setup.
+The default studio panel uses a 1280 × 1000 canvas and opens at 75% (960 × 750). Main, Perf, Patches and Setup are the top pages. Each section's small **O** button opens its Extra controls in place; its tooltip identifies the section. Program retains its full-width **Options** button.
+
+Signed rotary parameters have a centre-zero blue LED arc: negative values light towards the left, positive values towards the right. Each oscillator's knobs run Semitone, Detune, LFO 1 Pitch, Pitch Bend, PW and Mod Env Pitch. PW Position / LFO 2 PWM / Env PWM select the fifth knob's parameter and caption; the three parameters keep independent values.
+
+Rotary controls normally show only their name. Clicking or dragging a knob temporarily replaces that name with its value; the name returns 1.2 seconds after interaction ends. Click the name to type a value, including a signed value; Enter applies it and Escape cancels. Mod Env and Amp Env faders keep their permanent numerical readouts. LFO Extra identifies the edited LFO; K-Station's shared Extra panel identifies both LFOs.
 
 Tabs 1–4 select a part. K-Station exposes only the first part; the remaining tabs are dimmed. For four KS parts, enable Performance on Perf. This page controls part activity, MIDI channel, keyboard range, transpose, level and Main 1+2 / Aux 3+4 / Mono 1–4 output routing. Switching tabs does not itself stop notes on other parts.
 
 KS editor changes and automation address individual parts, including tuning and Part volume, even when parts share a MIDI channel. Incoming MIDI notes and controllers still affect all matching parts for layered playing. User MIDI channels are preserved in Performance and project state; internal engine channels are hidden. Level and tuning edits do not reload the Performance or interrupt held notes.
 
-KS **Program boost (dB)** in Voice / Performance provides 0–30 dB of gain, matching the firmware's ENV ProgBoost menu. At 0 dB, the program uses its normal unboosted level. This is separate from Part volume (0–127). The erroneous boost range of 0–127 has been corrected; host ID `voice_level` is preserved, but normalized automation now maps to 0–30. Legacy program values above 30 reset to 0 dB; valid values are preserved. High boost with loud oscillators or polyphony can still overload the signal path. See the [KS Rack manual, pages 39 and 63](https://fael-downloads-prod.focusrite.com/customer/dev/s3fs-public/novation/downloads/10720/english102.pdf).
+KS **Program boost (dB)** in Voice / Performance provides 0–30 dB of gain, matching the firmware's ENV ProgBoost menu. At 0 dB, the program uses its normal unboosted level. This is separate from Part volume (0–127). The erroneous boost range of 0–127 has been corrected; host ID `voice_level` is preserved, but normalized automation now maps to 0–30. Legacy program values above 30 reset to 0 dB; valid values are preserved. High boost with loud oscillators or polyphony can still overload the signal path.
 
-Auto mode uses the original dark lower panel for K-Station and a grey panel with dark labels for KS. Setup offers Silver-K, KS Grey, Classic and custom JSON skins based on the supplied skin. The template has a fixed 1280 × 752 size.
+Auto mode uses the original dark lower panel for K-Station and a grey panel with dark labels for KS. Setup offers Silver-K, KS Grey, Classic and custom JSON skins based on the supplied skin; the older Classic layout uses a 1280 × 752 canvas.
 
 VST3/AU expose two stereo buses; the host can disable Aux. Standalone supports two or four physical output channels. K-Station outputs 3–4 are silent. KS routing preserves its original MIDI parameters and four-part engine.
 
@@ -48,9 +48,15 @@ The [Novation compatibility table](https://support.novationmusic.com/hc/en-gb/ar
 
 ## Host MIDI clock
 
-VST3/AU read host BPM, PPQ and transport and deliver 24 MIDI clocks per quarter note to the original UART, with sample offsets. Start/Stop, looping and timeline seeks reset the transport phase. Clocks continue while the host is stopped so tempo-synchronised effects remain usable while auditioning. Incoming clock/transport messages are suppressed while the host owns timing, preventing two clock sources from doubling the tempo. With no host playhead, incoming MIDI clock is passed through and firmware uses Auto clock source.
+**Program → Options → Clock source** selects timing for the entire instance, including all KS parts. It is saved in the DAW/Standalone session rather than individual hardware-format program dumps. New instances and older saved sessions default to Host.
 
-Both supported OS 2.1 images use clock-source values 0=Auto, 1=Internal, 2=External; the old manuals' 0/1 description does not match these images. The plugin selects External when host tempo is available. The firmware retains its own tempo-tracking filter, so external clock acquisition and large tempo changes take time to settle. Sync controls set to Off still use their manual rates.
+- **Host** reads host BPM, PPQ and transport and delivers 24 MIDI clocks per quarter note to the original UART, with sample offsets. Start/Stop, looping and timeline seeks reset the transport phase. Clocks continue while the host is stopped so tempo-synchronised effects remain usable while auditioning. Incoming clock/transport messages are suppressed while the host owns timing, preventing two clock sources from doubling the tempo. With no host playhead, incoming MIDI clock is passed through and firmware uses Auto clock source.
+- **Internal** uses the synthesizer's Tempo knob. Host tempo/transport and incoming MIDI clock/transport do not control timing; notes and other MIDI controls remain available.
+- **MIDI Clock** follows incoming MIDI clock/transport even when the host supplies a different tempo. Without an incoming clock, externally synchronised functions wait for it.
+
+Internal tempo comes from the Tempo knob; External tempo comes from incoming MIDI Clock. Clock source is global, separate from each effect/LFO Sync interval.
+
+Both supported OS 2.1 images use clock-source values 0=Auto, 1=Internal, 2=External; the old manuals' 0/1 description does not match these images. Source changes are applied by the audio callback using the existing MIDI path, without restarting the engine. The firmware retains its own tempo-tracking filter, so external clock acquisition and large tempo changes take time to settle. This source choice is separate from each LFO/effect's Sync setting: Sync controls set to Off still use their manual rates.
 
 System realtime bytes (F8 and transport) have reserved UART queue space and can interrupt queued CC/NRPN/SysEx bytes. Ordinary messages retain their byte order. This keeps parameter editing from postponing clock ticks; the callback uses fixed queues and does not allocate or block.
 
@@ -92,7 +98,7 @@ K-Station and KS publish preset/Flash snapshots from their worker threads. Host 
 
 Both workers join the host audio workgroup where available. KS uses audio priority after boot/JIT warm-up. Both engines warm common polyphonic voice paths before opening audio. The K-Station low-latency horizon uses a 256-frame minimum and 128-frame reserve; KS uses max(256, host block + 128), capped at 4096 frames. Slow startup/JIT work and sustained CPU overload can still exceed a small reserve.
 
-The default main folder is `Documents/Silver-K`, containing `ROMs` and `Patches`. Setup remembers another chosen root. ROMs holds original externally supplied firmware, KS Data, optional real Wave ROM, and our generated synthetic placeholders. Patches is scanned automatically. The metadata database remains in Application Support so favourites and tags survive migration. Project files use relative asset paths within the root, with legacy path support and existing hash checks.
+The default main folder is `Documents/Silver-K`, containing `ROMs`, `Patches` and `Skins`. Setup remembers another chosen root. ROMs holds required externally supplied firmware and KS Data plus the required zero Wave ROM (or a compatible real bank). Only the zero Wave ROM is generated automatically. Required files selected outside the root are copied into ROMs without removing originals or overwriting different files. Patches holds additional libraries and is scanned automatically; the custom skin chooser starts in Skins. The metadata database remains in Application Support so favourites and tags survive migration. Project files use relative asset paths within the root, with legacy path support and existing hash checks.
 
 `silverRealtime_test` exercises 12 seconds of live callbacks with rapid eight-note chords, state reads every 100 ms and a redundant host prepare. Optional buffer sweeps change the reserve while playing. It reports startup/steady missed frames, first-note onset and maximum callback/state-read duration. Private ROMs are command-line inputs; use `SILVER_K_DATA` for an isolated data folder. Run these timing tests without a concurrent compiler or another emulation benchmark.
 
@@ -115,7 +121,7 @@ UI scale, skin, buffer profile, editor MIDI-channel preference, browser filters/
 
 The source menu distinguishes folders, banks and individually connected presets. Individual FXP files discovered inside folders stay in the table. The No. column preserves bank order; normal text-column sorting remains available. Show all bank slots includes unnamed and default User-number V-Station bank slots. Those slots are retained in the database; the option filters their display and never discards their sound data. User-number names on individual FXP files are treated as ordinary preset names.
 
-Rescan rebuilds all connected file/folder trees and detects added, modified and deleted files. It also works on manually connected sources nested inside another connected folder, without duplicating their programs. Re-adding an existing folder triggers a refresh. Remove source excludes its entire subtree from scanning and persists that exclusion across restarts. Re-adding a path reconnects it. Exclusions and the current managed folder are stored alongside the library database in silver-sources.json. Favourites and tags are retained for unchanged patch identities. The KS Factory local collection is replaced when its Flash data changes.
+Rescan rebuilds all connected file/folder trees and detects added, modified and deleted files. It also works on manually connected sources nested inside another connected folder, without duplicating their programs. Re-adding an existing folder triggers a refresh. Remove source clears its entire subtree and cached patches and persists the exclusion across restarts and automatic scans. Explicit Rescan restores removed paths that still exist inside managed Patches. Removed external sources require Add file / Add folder. Source files remain on disk. Identical ZIP/extracted patches appear once when browsing together, preferring extracted files; model, sound content and name must match, so different sounds sharing a name remain visible. Exclusions and the current managed folder are stored alongside the library database in silver-sources.json. Favourites and tags are retained for unchanged patch identities. The KS Factory local collection is replaced when its Flash data changes.
 
 The V-Station importer supports the known separate sound/name-table chunk layout with 1–400 slots, as well as standard FxBk lists containing supported FPCh presets. It validates the complete container before appending patches. NUL-terminated names can contain arbitrary padding after the terminator, and legacy extended-byte names are decoded. ZIP archives can contain banks or individual presets; macOS resource-fork entries are ignored. Unknown VST layouts remain rejected and are reported in the browser.
 
@@ -149,6 +155,6 @@ Validation on macOS arm64, 2026-10-16: five ROM-free product tests passed; KS ru
 
 **Setup → Demo Song** starts the KS OS 2.1.02 internal player. **Stop Demo Song** stops it; the firmware also stops at the end and returns to the previous Program/Performance selection. The control follows the original MENUS, then simultaneous keypad 1 + 2 panel path, with PROG for stop. It runs on the KS worker. K-Station hides this control.
 
-The music must be present in your full 524288-byte KS Flash, selected through **Setup → KS factory data**. The player's MIDI track is separate from Program/Performance banks. The supplied Silver Init data and the factory Program/Performance MIDI bank do not contain the demo song. Without a compatible embedded track and demo Performance 199, the button explains the missing data and leaves playback unchanged. Original music is not supplied or reconstructed by Silver-K. External demo data is reloaded from the selected full Flash when restoring a DAW project; it is not embedded in project state.
+The music must be present in your full 524288-byte KS Flash, selected through **Setup → KS factory data**. The player's MIDI track is separate from Program/Performance banks. The factory Program/Performance MIDI bank does not contain the demo song. The historical Silver Init test fixture is no longer supplied as startup Data. Without a compatible embedded track and demo Performance 199, the button explains the missing data and leaves playback unchanged. Original music is not supplied or reconstructed by Silver-K. External demo data is reloaded from the selected full Flash when restoring a DAW project; it is not embedded in project state.
 
 The demo test uses a clearly synthetic MIDI track in a private Flash copy, generated-wave programs and the native C++ controller. It checks panel start, audio, manual stop, end-of-track, return to Single/Performance mode and zero H8 interpreter steps. This verifies the player integration, not the missing original demo music or hardware sound equivalence.

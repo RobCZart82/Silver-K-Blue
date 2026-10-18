@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Package only built products, authored KS substitutes and release documentation."""
+"""Package built products, the zero Wave ROM, source and release documentation."""
 import argparse
 from contextlib import nullcontext
 import hashlib
@@ -12,7 +12,8 @@ import tempfile
 import zipfile
 from pathlib import Path
 
-VERSION = '0.2.4'
+VERSION = '0.4a'
+PLUGIN_VERSION = '0.4.0'
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -67,7 +68,7 @@ def main():
             built = args.products / source / filename
             if args.platform == 'macOS-arm64':
                 info = plistlib.loads((built / 'Contents/Info.plist').read_bytes())
-                if info.get('CFBundleShortVersionString') != '0.2.4':
+                if info.get('CFBundleShortVersionString') != PLUGIN_VERSION:
                     raise RuntimeError(f'Incorrect bundle version: {built}')
                 executable = built / 'Contents/MacOS' / info['CFBundleExecutable']
                 arches = subprocess.check_output(['lipo', '-archs', str(executable)], text=True).strip()
@@ -75,13 +76,8 @@ def main():
                     raise RuntimeError(f'Unexpected architecture: {arches}')
                 subprocess.run(['codesign', '--verify', '--deep', '--strict', str(built)], check=True)
             copy(built, target + '/' + filename)
-        flash = ROOT / 'assets/ks-init-flash.bin'
-        expected = json.loads((ROOT / 'assets/ks-init-flash.manifest.json').read_text())
-        if digest(flash) != expected['sha256'] or flash.stat().st_size != expected['size']:
-            raise RuntimeError('Synthetic KS Flash does not match its manifest')
-        copy(flash, 'Silver-K/ROMs/ks-init-flash.bin')
-        copy(ROOT / 'assets/ks-init-flash.manifest.json', 'Silver-K/ROMs/ks-init-flash.manifest.json')
-        (stage / 'Silver-K/Patches').mkdir(parents=True)
+        for folder in ('ROMs', 'Patches', 'Skins'):
+            (stage / 'Silver-K' / folder).mkdir(parents=True)
         waves = stage / 'Silver-K/ROMs/ks-wave-zero.bin'
         waves.write_bytes(bytes(129024))
         wave_manifest = dict(origin='Silver-K synthetic zero bank', size=129024,
@@ -90,7 +86,8 @@ def main():
                              generator='tools/package_release.py')
         (stage / 'Silver-K/ROMs/ks-wave-zero.manifest.json').write_text(json.dumps(wave_manifest, indent=2)+'\n')
         for src, dest in [('doc/INSTALL.md', 'INSTALL.md'),
-                          ('doc/releases/0.2.4.md', 'RELEASE_NOTES.md'),
+                          ('doc/USER_GUIDE.md', 'USER_GUIDE.md'),
+                          ('doc/releases/0.4a.md', 'RELEASE_NOTES.md'),
                           ('LICENSE.md', 'LICENSE.md'), ('THIRD_PARTY.md', 'THIRD_PARTY.md')]:
             copy(ROOT / src, dest)
         if args.test_guide:
@@ -130,9 +127,9 @@ Bundled framework, H8S, libresample and ptypes source/notices are in Silver-K's 
 No original firmware or factory sounds are included in this binary archive.
 '''
         (stage / 'SOURCES.txt').write_text(sources, encoding='utf-8')
-        manifest = dict(version=VERSION, channel='experimental' if args.variant else 'beta', variant=args.variant or None, plugin_version='0.2.4', platform=args.platform,
+        manifest = dict(version=VERSION, channel='experimental' if args.variant else 'release', variant=args.variant or None, plugin_version=PLUGIN_VERSION, platform=args.platform,
                         source_commit=commit, source_dirty=dirty, source_snapshot_sha256=digest(source_archive), firmware_included=False, factory_presets_included=False,
-                        synthetic_ks_data=expected, synthetic_wave_rom=wave_manifest,
+                        ks_data_required=True, synthetic_ks_data_included=False, synthetic_wave_rom=wave_manifest,
                         macos_signing='ad-hoc; not notarized' if args.platform.startswith('macOS') else None)
         (stage / 'release-manifest.json').write_text(json.dumps(manifest, indent=2)+'\n', encoding='utf-8')
         files = sorted(p for p in stage.rglob('*') if p.is_file() and not p.is_symlink())
@@ -147,8 +144,8 @@ No original firmware or factory sounds are included in this binary archive.
         with zipfile.ZipFile(archive) as package:
             if package.testzip() is not None:
                 raise RuntimeError('Archive CRC check failed')
-            if package.read(name+'/Silver-K/ROMs/ks-init-flash.bin') != flash.read_bytes():
-                raise RuntimeError('Packaged init Flash differs from source')
+            if name+'/Silver-K/ROMs/ks-init-flash.bin' in package.namelist():
+                raise RuntimeError('Test Init Flash must not be distributed as KS All Data')
             if package.read(name+'/Silver-K/ROMs/ks-wave-zero.bin') != bytes(129024):
                 raise RuntimeError('Packaged wave substitute is not a zero bank')
         checksum = digest(archive)

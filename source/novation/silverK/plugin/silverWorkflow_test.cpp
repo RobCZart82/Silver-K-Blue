@@ -228,7 +228,7 @@ static void folderChecks(Processor& p,const juce::File& dir){
  const auto original=p.dataFolder;juce::String error;const auto folder=dir.getChildFile("Managed Silver-K");
  check(p.setDataFolder(folder,error),error.toRawUTF8());
  const auto zero=folder.getChildFile("ROMs/ks-wave-zero.bin"),init=folder.getChildFile("ROMs/ks-init-flash.bin");
- check(zero.getSize()==129024 && init.getSize()==524288 && p.patchesFolder().isDirectory(),"Managed folder layout/placeholders");
+ check(zero.getSize()==129024 && !init.exists() && p.patchesFolder().isDirectory() && p.skinsFolder().isDirectory(),"Managed folder layout, required zero wave, no synthetic Data");
  juce::MemoryBlock data;check(zero.loadFileAsData(data),"Read placeholder");check(std::all_of(static_cast<const uint8_t*>(data.getData()),static_cast<const uint8_t*>(data.getData())+data.getSize(),[](uint8_t b){return b==0;}),"Placeholder is not zero-filled");
  data[0]=19;check(zero.replaceWithData(data.getData(),data.getSize()),"Replace local Wave ROM");check(p.setDataFolder(folder,error),"Reopen managed folder");juce::MemoryBlock reread;zero.loadFileAsData(reread);check(reread[0]==19,"Existing Wave ROM overwritten");
  {Processor next;check(next.dataFolder==folder,"Main folder preference not remembered");}
@@ -237,7 +237,7 @@ static void folderChecks(Processor& p,const juce::File& dir){
  {Processor next;check(next.firmwares.size()==1 && next.firmwares[0].file.getFileName()=="cached-os.bin","Startup rescanned ROMs instead of restoring the saved index");juce::String invalid;check(!next.loadFirmware(next.firmwares[0].file,invalid),"Cached metadata bypassed firmware validation");}
  check(p.setRomFolder(folder.getChildFile("ROMs"),error)==false && p.firmwares.empty(),"Explicit ROM rescan did not replace the cached index");
  check(p.setDataFolder(original,error),"Restore test folder");
- std::cout<<"PASS: managed ROMs/Patches, synthetic data, remembered root, existing files preserved\n";
+ std::cout<<"PASS: managed ROMs/Patches/Skins, zero Wave ROM, no synthetic KS Data, remembered root, existing files preserved\n";
 }
 static void bufferChecks(Processor& p){
  std::unique_ptr<juce::AudioProcessorEditor> editor(p.createEditor());
@@ -329,26 +329,40 @@ static void vStationFolderPlayback(Processor& p,const juce::File& folder){
 }
 static void audioClock(Processor& p,const juce::File& dir){
  PlayHead head;p.setPlayHead(&head);p.setNonRealtime(true);juce::AudioBuffer<float> audio(4,256);juce::MidiBuffer midi;midi.ensureSize(4096);
+ HostClock incoming;double incomingBpm=0;int64_t incomingSamples=0;bool noteHeld=false;
  auto set=[&](const char* id,int value){auto* parameter=p.uiParameter(id);check(parameter!=nullptr,id);parameter->setValueNotifyingHost(parameter->convertTo0to1(float(value)));};
  for(auto item:{std::pair<const char*,int>{"arp_on",1},{"arp_sync",9},{"arp_gate",32},{"arp_keysync",1},{"arp_latch",0},{"arp_rate",30},{"amp_release",0},{"amp_attack",0},{"amp_sustain",127},{"delay_level",0},{"reverb_level",0},{"chorus_level",0},{"volume",127}})set(item.first,item.second);
- auto render=[&]{inAudio=true;p.processBlock(audio,midi);inAudio=false;check(audioAllocations==0,"Heap allocation while processing host clock");head.ppq+=256*head.bpm/(60*48000);};
+ auto render=[&]{
+  if(incomingBpm>0){incoming.begin({true,true,true,incomingBpm,incomingSamples*incomingBpm/(60*48000)},48000,256);HostClock::Event event{};while(incoming.next(event))midi.addEvent(&event.status,1,event.offset);incomingSamples+=256;}
+  inAudio=true;p.processBlock(audio,midi);inAudio=false;check(audioAllocations==0,"Heap allocation while processing clock");head.ppq+=256*head.bpm/(60*48000);
+ };
  for(int n=0;n<250;++n)render();
- for(double tempo:{90.,180.}){
-  head.bpm=tempo;head.ppq=0;midi.addEvent(juce::MidiMessage::noteOff(1,60),0);for(int n=0;n<2400;++n)render();midi.addEvent(juce::MidiMessage::noteOn(1,60,uint8_t(100)),0);
+ struct Scenario{ClockSource source;double hostBpm,midiBpm,tempo;const char* name;};
+ for(const auto scenario:{Scenario{ClockSource::Host,90,0,90,"host-90"},
+                         {ClockSource::Host,180,0,180,"host-180"},
+                         {ClockSource::Internal,180,60,94,"internal-host180-midi60"},
+                         {ClockSource::Internal,90,180,94,"internal-host90-midi180"},
+                         {ClockSource::Midi,180,90,90,"midi90-host180"},
+                         {ClockSource::Midi,90,180,180,"midi180-host90"},
+                         {ClockSource::Host,90,180,90,"host90-after-midi"}}){
+  const double tempo=scenario.tempo;p.setClockSource(scenario.source);incomingBpm=scenario.midiBpm;incoming.reset();incomingSamples=0;
+  head.bpm=scenario.hostBpm;head.ppq=0;for(int n=0;n<2400;++n)render();if(!noteHeld){midi.addEvent(juce::MidiMessage::noteOn(1,60,uint8_t(100)),0);noteHeld=true;}
   const int blocks=750;std::vector<float> envelope;envelope.reserve(blocks);juce::AudioBuffer<float> capture(2,blocks*256);
   for(int n=0;n<blocks;++n){if(n%2==0)set("osc1_pulse_width",(n*7)%100+14);if(n==375){juce::MemoryBlock saved;p.getStateInformation(saved);check(saved.getSize()>0,"Live arp state read");}render();envelope.push_back(audio.getRMSLevel(0,0,256));capture.copyFrom(0,n*256,audio,0,0,256);capture.copyFrom(1,n*256,audio,1,0,256);}
-  const auto peak=*std::max_element(envelope.begin(),envelope.end());check(peak>1e-5,"Clock arp silent");std::vector<int> attacks;bool sounding=false;
+  const auto peak=*std::max_element(envelope.begin(),envelope.end());check(peak>1e-5,"Clock arp silent");std::vector<int> attacks;
+  // A held note can already be sounding at the measurement window's boundary;
+  // that boundary is not a new attack.
+  bool sounding=envelope[189]>peak*.12;
   for(int n=190;n<blocks;++n){const bool on=envelope[n]>peak*.12;if(on && !sounding)attacks.push_back(n*256);sounding=on;}
-  std::cout<<(p.isKStation()?"K":"KS")<<" tempo="<<tempo<<" attacks="<<attacks.size()<<" gaps:";for(size_t n=1;n<attacks.size();++n)std::cout<<' '<<attacks[n]-attacks[n-1];std::cout<<'\n';
-  const auto file=dir.getChildFile(juce::String(p.isKStation()?"K":"KS")+"-host-clock-"+juce::String(tempo)+".wav");auto stream=file.createOutputStream();juce::WavAudioFormat wav;std::unique_ptr<juce::AudioFormatWriter> writer(wav.createWriterFor(stream.release(),48000,2,24,{},0));check(writer && writer->writeFromAudioSampleBuffer(capture,0,capture.getNumSamples()),"Clock audio capture");
+  std::cout<<(p.isKStation()?"K":"KS")<<" clock="<<scenario.name<<" expected="<<tempo<<" attacks="<<attacks.size()<<" gaps:";for(size_t n=1;n<attacks.size();++n)std::cout<<' '<<attacks[n]-attacks[n-1];std::cout<<'\n';
+  const auto file=dir.getChildFile(juce::String(p.isKStation()?"K":"KS")+"-clock-"+scenario.name+".wav");auto stream=file.createOutputStream();juce::WavAudioFormat wav;std::unique_ptr<juce::AudioFormatWriter> writer(wav.createWriterFor(stream.release(),48000,2,24,{},0));check(writer && writer->writeFromAudioSampleBuffer(capture,0,capture.getNumSamples()),"Clock audio capture");
   check(attacks.size()>=3,"Arp attacks not detected");double average=0;for(size_t n=1;n<attacks.size();++n)average+=attacks[n]-attacks[n-1];average/=attacks.size()-1;
-  check(std::abs(average-48000*60/tempo)<512,"Arp does not follow host tempo");
+  check(std::abs(average-48000*60/tempo)<512,"Arp does not follow selected clock source");
   for(size_t n=1;n<attacks.size();++n)check(std::abs((attacks[n]-attacks[n-1])-average)<768,"Pulse edits disturb arp timing");
-  midi.addEvent(juce::MidiMessage::noteOff(1,60),0);for(int n=0;n<100;++n)render();
  }
- p.setPlayHead(nullptr);set("arp_on",0);for(int n=0;n<100;++n)p.processBlock(audio,midi);
+ midi.addEvent(juce::MidiMessage::noteOff(1,60),0);p.setPlayHead(nullptr);set("arp_on",0);for(int n=0;n<100;++n)p.processBlock(audio,midi);
  juce::MemoryBlock saved;p.getStateInformation(saved);check(dir.getParentDirectory().getChildFile(p.isKStation()?"K-ClockProbe.state":"KS-ClockProbe.state").replaceWithData(saved.getData(),saved.getSize()),"Save wrapper clock fixture");
- std::cout<<"PASS: original firmware arp follows host 90/180 BPM while Pulse changes every second block\n";
+ std::cout<<"PASS: Host/Internal/MIDI Clock isolation and live handovers with conflicting tempos, Pulse edits, state reads and no callback allocations\n";
 }
 static std::vector<uint8_t> read(const juce::File& f){juce::MemoryBlock b;check(f.loadFileAsData(b),"Read private fixture");const auto* p=static_cast<const uint8_t*>(b.getData());return {p,p+b.getSize()};}
 static void nativeImports(Library& library,const juce::File& os,const juce::File& wave,const juce::File& flash,const juce::File& folder){
@@ -407,7 +421,7 @@ int main(int argc,char** argv){std::cout<<std::unitbuf;std::cerr<<std::unitbuf;t
  if(argc>=5 && juce::SystemStats::getEnvironmentVariable("SILVER_TEST_SKIP_K",{}).isEmpty()){p.flashFile=juce::File(argv[3]);p.bankFile=juce::File(argv[4]);juce::String error;check(p.loadFirmware(juce::File(argv[1]),error),error.toRawUTF8());if(!browserOnly)audioClock(p,root);}
  auto banks=root.getChildFile("browser-banks-"+juce::Uuid().toString());banks.createDirectory();browserChecks(p,banks);drumBrowserChecks(p,root);
  if(browserOnly)return 0;
- if(argc>=5){p.flashFile=juce::File(argv[3]);p.bankFile=juce::File(argv[4]);juce::String error;check(p.loadFirmware(juce::File(argv[2]),error),error.toRawUTF8());audioClock(p,root);drumBrowserChecks(p,root);}
+ if(argc>=5 && juce::SystemStats::getEnvironmentVariable("SILVER_TEST_SKIP_KS",{}).isEmpty()){p.flashFile=juce::File(argv[3]);p.bankFile=juce::File(argv[4]);juce::String error;check(p.loadFirmware(juce::File(argv[2]),error),error.toRawUTF8());audioClock(p,root);drumBrowserChecks(p,root);}
  if(argc>=6){Library library(root.getChildFile("external-db"));unsigned counts[5]{};for(const auto& file:juce::File(argv[5]).findChildFiles(juce::File::findFiles,true,"*.syx")){DataList data;library.loadFile(data,file.getFullPathName().toStdString());for(auto& message:data)if(auto patch=library.createPatch(std::move(message),file.getFileNameWithoutExtension().toStdString())){++counts[int(modelOf(patch->sysex))];for(auto target:{Model::KStation,Model::KS})check(validPatch(convertPatch(patch->sysex,target).data),"External bank conversion");}}
   for(int m=1;m<=4;++m)std::cout<<modelName(Model(m))<<" external programs="<<counts[m]<<'\n';check(counts[int(Model::AStation)] && counts[int(Model::XStation)],"External A/X banks missing");
   nativeImports(library,juce::File(argv[2]),juce::File(argv[4]),juce::File(argv[3]),juce::File(argv[5]));

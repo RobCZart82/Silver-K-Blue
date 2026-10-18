@@ -1,4 +1,6 @@
 #include "silverBrowser.h"
+#include <map>
+#include <tuple>
 namespace silverK {
 using namespace pluginLib::patchDB;
 namespace {
@@ -84,6 +86,17 @@ void Browser::updateBanks(std::vector<DataSourceNodePtr>&& banks){
 void Browser::sortOrderChanged(int column,bool ascending){sortColumn=column;sortAscending=ascending;updateRows(rows);}
 void Browser::updateRows(std::vector<PatchPtr> next){
  if(p.isKStation())next.erase(std::remove_if(next.begin(),next.end(),[](const auto& patch){return ksDrum(patch->sysex.data(),patch->sysex.size());}),next.end());
+ // Keep one source for identical programs, preferring extracted files over an
+ // archive. Retain repeated slots within that source and keep all original
+ // records so removing one copy leaves the other usable.
+ using Identity=std::tuple<Model,PatchHash,juce::String>;
+ const auto identity=[](const PatchPtr& patch){return Identity{patchModel(*patch),patch->hash,patchName(*patch)};};
+ const auto sourceOrder=[](const DataSourceNodePtr& source){return std::make_pair(source->type==SourceType::File?(juce::File(source->name).hasFileExtension("zip")?1:0):2,source->name);};
+ std::map<Identity,DataSourceNodePtr> owners;
+ for(const auto& patch:next)if(auto source=patch->source.lock()){
+  auto& owner=owners[identity(patch)];if(!owner || sourceOrder(source)<sourceOrder(owner))owner=source;
+ }
+ next.erase(std::remove_if(next.begin(),next.end(),[&](const auto& patch){auto source=patch->source.lock();return !source || owners[identity(patch)]!=source;}),next.end());
  std::sort(next.begin(),next.end(),[this](const auto& a,const auto& b){
   int order=0;
   if(sortColumn==7){const auto as=a->source.lock(),bs=b->source.lock();order=juce::String(as?as->name:"").compareNatural(bs?bs->name:"");if(!order){const auto ab=ksBank(a->sysex.data(),a->sysex.size()),bb=ksBank(b->sysex.data(),b->sysex.size());if(ab!=bb)order=ab<bb?-1:1;else if(ab && a->sysex[12]!=b->sysex[12])order=a->sysex[12]<b->sysex[12]?-1:1;else if(a->program!=b->program)order=a->program<b->program?-1:1;}}
@@ -98,7 +111,7 @@ void Browser::updateRows(std::vector<PatchPtr> next){
  const int selected=table.getSelectedRow();const auto old=selected>=0 && selected<int(rows.size())?rows[selected]:nullptr;
  const juce::ScopedValueSetter<bool> updating(updatingRows,true);
  table.deselectAllRows();rows=std::move(next);table.updateContent();
- if(old){auto it=std::find(rows.begin(),rows.end(),old);if(it==rows.end()){const auto source=old->source.lock();it=std::find_if(rows.begin(),rows.end(),[&](const auto& patch){const auto nextSource=patch->source.lock();return source && nextSource && *source==*nextSource && patch->program==old->program && patch->hash==old->hash;});}if(it!=rows.end())table.selectRow(int(it-rows.begin()));}
+ if(old){auto it=std::find(rows.begin(),rows.end(),old);if(it==rows.end()){const auto source=old->source.lock();it=std::find_if(rows.begin(),rows.end(),[&](const auto& patch){const auto nextSource=patch->source.lock();return source && nextSource && *source==*nextSource && patch->program==old->program && patch->hash==old->hash;});}if(it==rows.end())it=std::find_if(rows.begin(),rows.end(),[&](const auto& patch){return identity(patch)==identity(old);});if(it!=rows.end())table.selectRow(int(it-rows.begin()));}
  selectedRowsChanged(table.getSelectedRow());table.repaint();
 }
 void Browser::paintRowBackground(juce::Graphics& g,int row,int width,int height,bool selected){g.fillAll(selected?juce::Colour(0xff087fe5):row%2?juce::Colour(0xffd5d8dc):juce::Colour(0xffe5e7ea));}

@@ -1,5 +1,11 @@
 # Project continuity
 
+- Release decision, 2026-10-18: publish all current changes on the existing branch as Silver-K 0.4a, tag v0.4a, with English release notes and both desktop platform packages. Numeric CMake/AU/VST3 version is 0.4.0.
+
+- Documentation decision, 2026-10-18: keep README short and plain, without emojis or repeated development reports. The user guide covers plugin setup, file loading and operation, not synthesis. Describe external inputs generically as firmware BIN and one complete Data MIDI file or several compatible MIDI files; do not publish concrete private asset names or acquisition/download advice.
+
+- User decisions, 2026-10-18: continue the first five interface changes; clock source is Program → Options (Host/Internal/MIDI), Extra section buttons become compact O, Program Options retains its label. Do not add effect enable buttons. Patch source removal clears cached rows until explicit managed Rescan; deduplicate ZIP/extracted content. Required firmware, Wave ROM and KS All Data/compatible MIDI set belong in ROMs; additional libraries in Patches; custom skins in Skins. Keep auto-created zero Wave ROM, remove automatic Silver Init startup data; the owned Init BIN remains a test-only fixture.
+
 - Latest user decision, 2026-10-16: the full semantic KS controller migration is PAUSED. Continue Windows performance work from the stable product basis on `codex/stable-windows-optimization`; read `doc/WINDOWS_STABLE_HANDOFF_20261016_RU.md` first. Do not resume the later controller migration, import its unfinished graphs or revive its old completion/push goal.
 - This stable branch starts at `1724c1b` with the two already admitted KS optimizations enabled by default. Production KS uses the C++ compatibility controller; original H8 is test-only, and the register/flag/stack/PC model remains. Older follow-up statements below about initial-default H8, product selectors and publishing to Optimized describe historical stages, not this delivery.
 - Windows build/audio/performance validation of this exact stable delivery is still pending. Reproduce the Windows baseline and matched OsTIrus comparison before evaluating a Windows optimization. Keep the Mac behavior, DSP/JIT, guest timing/IRQ/order, buffers and thread priorities unchanged. Do not merge into the concurrent preset-manager checkout automatically.

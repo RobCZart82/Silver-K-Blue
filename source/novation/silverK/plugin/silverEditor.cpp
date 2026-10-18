@@ -85,7 +85,16 @@ public:
         const float available=float(juce::jmin(w,h))-4;
         const float requested=slider.getProperties().contains("rotaryDiameter")?float(slider.getProperties()["rotaryDiameter"]):available;
         const float d=juce::jmin(available,requested),cx=x+w*.5f,cy=y+h*.5f;
-        const float position=juce::jlimit(0.f,1.f,pos);
+        float position=juce::jlimit(0.f,1.f,pos);
+        const bool bipolar=slider.getProperties().contains("bipolarZero");
+        if(bipolar){
+            const float zero=float(slider.getProperties()["bipolarZero"]);
+            position=position<=zero?.5f*position/zero:.5f+.5f*(position-zero)/(1.f-zero);
+        }
+        const auto ledLit=[position,bipolar](int step){
+            const float point=float(step)/20.f;
+            return bipolar?(point>=juce::jmin(.5f,position) && point<=juce::jmax(.5f,position)):point<=position;
+        };
         const float angle=start+position*(end-start);
         if(bool(slider.getProperties()["standKnob"]) && standBase.isValid())
         {
@@ -98,7 +107,7 @@ public:
             {
                 const float a=start+(end-start)*i/20.f,r=d*.45f,dot=juce::jmax(2.f,d*.037f);
                 const float dx=cx+std::sin(a)*r,dy=cy-std::cos(a)*r;
-                const bool lit=float(i)/20.f<=position;
+                const bool lit=ledLit(i);
                 if(lit){g.setColour(juce::Colour(0xff008bff).withAlpha(.16f));g.fillEllipse(dx-dot,dy-dot,dot*2,dot*2);}
                 g.setColour(lit?juce::Colour(0xff25c3ff):juce::Colour(0xff26303b));g.fillEllipse(dx-dot*.5f,dy-dot*.5f,dot,dot);
             }
@@ -132,7 +141,7 @@ public:
         {
             const float a=start+(end-start)*i/20.f,r=d*.45f;
             // Do not illuminate a step beyond the pointer by rounding upwards.
-            g.setColour(float(i)/20.f<=position?juce::Colour(0xff4cb2ff):juce::Colour(0xff27303b));
+            g.setColour(ledLit(i)?juce::Colour(0xff4cb2ff):juce::Colour(0xff27303b));
             const float dot=juce::jmax(2.f,d*.036f);
             g.fillEllipse(cx+std::sin(a)*r-dot*.5f,cy-std::cos(a)*r-dot*.5f,dot,dot);
         }
@@ -271,24 +280,25 @@ struct LfoIndicator final : juce::Label
         juce::Label::paint(g);
     }
 };
-struct Control final : juce::Component
+struct Control final : juce::Component, private juce::Timer
 {
     juce::RangedAudioParameter& parameter;
     const Spec& spec;
     juce::Label label;
-    juce::Label valueLabel;
     ControlSlider slider;
     juce::ComboBox menu;
     juce::TextButton button;
     std::vector<std::unique_ptr<juce::TextButton>> lamps;
     juce::String kind;
+    juce::String caption;
+    bool transientValue=false,showingValue=false;
     bool gesture=false;
     std::function<void(const juce::String&,bool)> report;
     Control(juce::RangedAudioParameter& p,const Spec& s,juce::String caption,juce::String type,bool isDark,
-            std::function<void(const juce::String&,bool)> changed):parameter(p),spec(s),kind(type),report(std::move(changed))
+            std::function<void(const juce::String&,bool)> changed):parameter(p),spec(s),kind(type),caption(caption),report(std::move(changed))
     {
         setComponentID(juce::String("control:")+s.id);
-        addAndMakeVisible(label);label.setText(caption,juce::dontSendNotification);
+        addAndMakeVisible(label);label.setText(caption,juce::dontSendNotification);label.setComponentID(juce::String("caption:")+s.id);
         label.setFont(juce::Font(12.5f));label.setColour(juce::Label::textColourId,isDark?light:ink);
         label.setJustificationType(juce::Justification::centred);
         setTooltipForControls(juce::String(s.group)+" / "+s.section+" / "+s.label);
@@ -329,20 +339,27 @@ struct Control final : juce::Component
             slider.setSliderStyle(row?juce::Slider::LinearHorizontal:(kind=="fader"?juce::Slider::LinearVertical:juce::Slider::RotaryVerticalDrag));
             slider.setRotaryParameters(juce::MathConstants<float>::pi*4.f/3.f,juce::MathConstants<float>::pi*8.f/3.f,true);
             slider.setTextBoxStyle(row?juce::Slider::TextBoxRight:juce::Slider::TextBoxBelow,false,row?56:64,row?24:18);
-            if(kind=="mixer")slider.setTextBoxStyle(juce::Slider::NoTextBox,false,0,0);
-            if(kind=="panelKnob" || kind=="miniKnob")
+            if(s.minimum+s.displayOffset<0 && s.maximum+s.displayOffset>0)
+                slider.getProperties().set("bipolarZero",slider.valueToProportionOfLength(-s.displayOffset));
+            transientValue=!row && kind!="fader";
+            if(transientValue)
             {
                 slider.setTextBoxStyle(juce::Slider::NoTextBox,false,0,0);
-                addAndMakeVisible(valueLabel);valueLabel.setComponentID(juce::String("value:")+s.id);
-                valueLabel.setJustificationType(juce::Justification::centred);valueLabel.setFont(juce::Font(13.f));
-                valueLabel.setColour(juce::Label::textColourId,isDark?light:ink);
-                valueLabel.setColour(juce::Label::outlineWhenEditingColourId,blue);
-                valueLabel.setColour(juce::TextEditor::backgroundColourId,isDark?dark:light);
-                valueLabel.setColour(juce::TextEditor::textColourId,isDark?light:ink);
-                valueLabel.setEditable(false,kind!="miniKnob",false);valueLabel.setTooltip(juce::String(s.label)+" — double-click to enter a value");
-                valueLabel.onTextChange=[this]
+                label.setColour(juce::Label::outlineWhenEditingColourId,blue);
+                label.setColour(juce::TextEditor::backgroundColourId,isDark?dark:light);
+                label.setColour(juce::TextEditor::textColourId,isDark?light:ink);
+                label.setEditable(true,false,false);label.setTooltip(juce::String(s.label)+" — click the name to enter a value");
+                label.onEditorShow=[this]{
+                    stopTimer();showingValue=true;
+                    if(auto* editor=label.getCurrentTextEditor()){editor->setText(valueText(),false);editor->selectAll();}
+                };
+                label.onEditorHide=[this]{startTimer(1200);};
+                label.onTextChange=[this]
                 {
-                    const int value=juce::jlimit(int(spec.minimum),int(spec.maximum),valueLabel.getText().getIntValue()-spec.displayOffset);
+                    const auto text=label.getText().trim();auto digits=text;
+                    if(digits.startsWithChar('-') || digits.startsWithChar('+'))digits=digits.substring(1);
+                    if(digits.isEmpty() || !digits.containsOnly("0123456789")){revealValue();return;}
+                    const int value=int(juce::jlimit(double(spec.minimum),double(spec.maximum),text.getDoubleValue()-spec.displayOffset));
                     parameter.beginChangeGesture();setValue(value);parameter.endChangeGesture();refresh();notify();
                 };
             }
@@ -354,7 +371,7 @@ struct Control final : juce::Component
             slider.textFromValueFunction=[this](double v){return juce::String(juce::roundToInt(v)+spec.displayOffset);};
             slider.valueFromTextFunction=[this](const juce::String& t){return t.getDoubleValue()-spec.displayOffset;};
             slider.onDragStart=[this]{gesture=true;parameter.beginChangeGesture();notify();};
-            slider.onDragEnd=[this]{parameter.endChangeGesture();gesture=false;if(slider.wheelGesture)notify();else report({},false);};
+            slider.onDragEnd=[this]{parameter.endChangeGesture();gesture=false;revealValue();if(slider.wheelGesture)notify();else report({},false);};
             slider.onValueChange=[this]
             {
                 if(!gesture)parameter.beginChangeGesture();
@@ -368,10 +385,15 @@ struct Control final : juce::Component
     }
     ~Control() override{if(gesture)parameter.endChangeGesture();}
     void setValue(int v){parameter.setValueNotifyingHost(parameter.convertTo0to1(float(v)));}
+    juce::String valueText()const{return juce::String(int(std::round(parameter.convertFrom0to1(parameter.getValue())))+spec.displayOffset);}
+    void revealValue(){if(!transientValue)return;showingValue=true;if(!label.isBeingEdited())label.setText(valueText(),juce::dontSendNotification);startTimer(1200);}
+    void timerCallback()override{if(gesture || label.isBeingEdited())return;stopTimer();showingValue=false;label.setText(caption,juce::dontSendNotification);}
+    void mouseDown(const juce::MouseEvent& e)override{if(transientValue && e.eventComponent==&slider && !e.mods.isPopupMenu())revealValue();}
     void mouseExit(const juce::MouseEvent&) override{if(!gesture)report({},false);}
     void setTooltipForControls(const juce::String& t){label.setTooltip(t);slider.setTooltip(t);menu.setTooltip(t);button.setTooltip(t);}
     void notify()
     {
+        revealValue();
         const auto v=int(std::round(parameter.convertFrom0to1(parameter.getValue())));
         report(juce::String(spec.label)+"\n"+(spec.enumCount?juce::String(spec.enumLabels[juce::jlimit(0,int(spec.enumCount)-1,v)]):juce::String(v+spec.displayOffset)),gesture);
     }
@@ -388,7 +410,7 @@ struct Control final : juce::Component
                 if(auto* field=dynamic_cast<juce::Label*>(slider.getChildComponent(i)))editing|=field->isBeingEdited();
             if(!editing){slider.setValue(v,juce::dontSendNotification);slider.updateText();}
         }
-        if((kind=="panelKnob" || kind=="miniKnob") && !valueLabel.isBeingEdited())valueLabel.setText(juce::String(v+spec.displayOffset),juce::dontSendNotification);
+        if(transientValue && showingValue && !label.isBeingEdited())label.setText(valueText(),juce::dontSendNotification);
     }
     void resized() override
     {
@@ -397,10 +419,10 @@ struct Control final : juce::Component
         {
             if(bool(getProperties()["compact"])){
                 slider.setBounds(0,0,getWidth(),76);label.setFont(juce::Font(11.5f));label.setBorderSize(juce::BorderSize<int>(0));label.setBounds(0,76,getWidth(),16);
-                valueLabel.setFont(juce::Font(12.f));valueLabel.setBounds(0,92,getWidth(),18);return;
+                return;
             }
             slider.setBounds(0,0,getWidth(),84);label.setBounds(0,84,getWidth(),18);
-            valueLabel.setBounds(0,102,getWidth(),20);return;
+            return;
         }
         if(kind=="extraRow")
         {
@@ -415,7 +437,7 @@ struct Control final : juce::Component
         if(kind=="miniKnob")
         {
             label.setFont(juce::Font(11.f));label.setJustificationType(juce::Justification::centredLeft);
-            label.setBounds(0,0,getWidth(),20);slider.setBounds(0,23,36,32);valueLabel.setBounds(42,23,42,32);return;
+            label.setBounds(0,0,getWidth(),16);slider.setBounds(0,18,36,32);return;
         }
         if(kind=="panelMenu")
         {
@@ -462,6 +484,9 @@ struct LocalExtra final : juce::Component
 {
     juce::TextButton back{"Back"};
     juce::Component content;
+    juce::Component clockRow;
+    juce::Label clockLabel;
+    juce::ComboBox clockSelect;
     juce::String title;
     std::vector<std::unique_ptr<Control>> controls;
     juce::Colour background=light;
@@ -471,6 +496,11 @@ struct LocalExtra final : juce::Component
     LocalExtra()
     {
         setComponentID("localExtra");addAndMakeVisible(back);addAndMakeVisible(content);
+        addChildComponent(clockRow);clockRow.addAndMakeVisible(clockLabel);clockRow.addAndMakeVisible(clockSelect);
+        clockRow.setComponentID("programClock");clockSelect.setComponentID("clockSource");
+        clockLabel.setText("Clock source",juce::dontSendNotification);clockLabel.setFont(juce::Font(11.5f));clockLabel.setColour(juce::Label::textColourId,ink);
+        clockSelect.addItem("Host",1);clockSelect.addItem("Internal",2);clockSelect.addItem("MIDI Clock",3);
+        clockSelect.setTooltip("Timing source for all parts. Internal ignores host and MIDI clock; MIDI Clock follows incoming MIDI. Saved with the plugin state.");
         back.setComponentID("extraBack");back.onClick=[this]{setVisible(false);if(onClose)onClose();};setVisible(false);
     }
     void paint(juce::Graphics& g) override
@@ -480,7 +510,8 @@ struct LocalExtra final : juce::Component
     }
     void resized() override
     {
-        back.setBounds(getWidth()-62,8,54,28);content.setBounds(8,compact?42:46,getWidth()-16,getHeight()-(compact?50:54));
+        back.setBounds(getWidth()-62,8,54,28);content.setBounds(8,compact?42:46,getWidth()-16,getHeight()-(compact?50:54)-(clockRow.isVisible()?36:0));
+        clockRow.setBounds(8,getHeight()-40,getWidth()-16,32);clockLabel.setBounds(0,0,88,28);clockSelect.setBounds(92,0,clockRow.getWidth()-92,28);
         const int width=(content.getWidth()-(columns-1)*12)/columns;
         for(size_t n=0;n<controls.size();++n)controls[n]->setBounds(int(n)%columns*(width+12),int(n)/columns*(rowHeight+gap),width,rowHeight);
     }
@@ -653,12 +684,13 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         loadRom.setBounds(rect(setup["firmware"]));folder.setBounds(rect(setup["folder"]));channel.setBounds(510,353,270,34);channel.setComponentID("controlChannel");
         for(int i=1;i<=16;++i)channel.addItem("Editor MIDI channel "+juce::String(i),i);channel.setSelectedId(int(processor.editorChannel())+1,juce::dontSendNotification);channel.onChange=[this]{processor.setEditorChannel(uint8_t(channel.getSelectedId()-1));};
         help.setBounds(52,494,1120,84);help.setColour(juce::Label::textColourId,ink);help.setFont(juce::Font(15.f));
-        help.setText("Silver-K folder contains ROMs and Patches. KS synthetic data is created in ROMs.\nWithout a wave ROM, sampled oscillators are silent. The zero bank adapter is disabled for a real ROM.\nPatch folders, model, tags, favourites and compatibility are available on Patches.",juce::dontSendNotification);
+        help.setText("ROMs: firmware, required Wave ROM and KS All Data / compatible MIDI set.\nPatches: additional patch libraries. Skins: custom skins.\nThe zero Wave ROM is created automatically. Select your own KS Data before loading KS.",juce::dontSendNotification);
         const juce::StringArray domains{"osc1","osc2","osc3","mixer","filter","envelopes","lfo","voice","arp","fx"};
         for(size_t i=0;i<extraButtons.size();++i)
         {
-            auto& b=extraButtons[i];main.addAndMakeVisible(b);b.setButtonText("Extra");
+            auto& b=extraButtons[i];main.addAndMakeVisible(b);b.setButtonText(i==7?"Options":"O");
             b.setComponentID("extra:"+domains[int(i)]);b.getProperties().set("small",true);
+            b.setTooltip(juce::StringArray{"Oscillator 1","Oscillator 2","Oscillator 3","Mixer","Filter","Envelopes","LFO","Program","Volume / Arp / Glide","Effects"}[int(i)]+(i==7?" — Options":" — Extra"));
             b.onClick=[this,domain=domains[int(i)]]{openExtra(domain);};
         }
         main.addAndMakeVisible(fmButton);fmButton.setComponentID("fmSettings");fmButton.getProperties().set("small",true);
@@ -682,6 +714,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         effectSelect.setSelectedId(effect+1,juce::dontSendNotification);
         effectSelect.onChange=[this]{effect=juce::jmax(0,effectSelect.getSelectedId()-1);rebuildEffects();};
         main.addChildComponent(localExtra);localExtra.onClose=[this]{updateExtraVisibility();repaint();};
+        localExtra.clockSelect.onChange=[this]{processor.setClockSource(ClockSource(localExtra.clockSelect.getSelectedId()-1));};
         addAndMakeVisible(previousPreset);addAndMakeVisible(nextPreset);
         previousPreset.setComponentID("previousPreset");nextPreset.setComponentID("nextPreset");
         previousPreset.getProperties().set("small",true);nextPreset.getProperties().set("small",true);
@@ -850,7 +883,10 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         const auto names=juce::StringArray{"osc1","osc2","osc3","mixer","filter","envelopes","lfo","voice","arp","fx","fm"};
         const auto regions=juce::StringArray{"Oscillator 1","Oscillator 2","Oscillator 3","Mixer","Filter","Envelopes","LFO","Program","Volume / Arp / Glide","Effects","FM"};
         const int n=names.indexOf(domain);if(n<0)return;
-        localExtra.title=domain=="fm"?"FM settings":domain=="voice"?"Options":regions[n];
+        localExtra.title=domain=="fm"?"FM settings":domain=="voice"?"Options":domain=="lfo"?(processor.isKStation()?"LFO 1 / LFO 2 — Extra":"LFO "+juce::String(lfo)+" — Extra"):regions[n];
+        localExtra.setTitle(localExtra.title);
+        localExtra.clockRow.setVisible(domain=="voice");
+        localExtra.clockSelect.setSelectedId(int(processor.clockSource())+1,juce::dontSendNotification);
         auto bounds=studioRegion(regions[n]);
         if(domain.startsWith("osc") || domain=="fm"){
             const int row=domain=="fm"?2:domain.substring(3).getIntValue();
@@ -863,6 +899,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         localExtra.columns=(domain.startsWith("osc") || domain=="filter" || domain=="fm" || domain=="voice" || domain=="arp")?3:(domain=="lfo"&&processor.isKStation()?2:1);
         localExtra.rowHeight=(domain.startsWith("osc") || domain=="filter" || domain=="fm" || domain=="lfo")?43:55;
         localExtra.gap=7;
+        if(domain=="voice"){localExtra.rowHeight=51;localExtra.gap=4;}
         if(compactSkin()&&(domain.startsWith("osc")||domain=="fm"||domain=="filter"||domain=="lfo")){localExtra.rowHeight=39;localExtra.gap=4;}
         if(compactSkin()&&domain=="mixer")localExtra.rowHeight=43;
         for(const auto& spec:extraSpecs(domain))
@@ -883,16 +920,20 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         for(auto item:*skin["studioModels"][processor.isKStation()?"K":"KS"].getArray())
         {
             auto id=item["id"].toString().replace("{lfo}",juce::String(lfo));
-            if(id.contains("{pw}")){const int o=id.substring(3,4).getIntValue()-1;id=id.replace("{pw}",sources[pwmSource[size_t(juce::jlimit(0,2,o))]]);}
+            auto caption=item["label"].toString();
+            if(id.contains("{pw}")){
+                const int o=id.substring(3,4).getIntValue()-1,source=pwmSource[size_t(juce::jlimit(0,2,o))];
+                id=id.replace("{pw}",sources[source]);caption=juce::StringArray{"PW Position","LFO 2 PWM","Env PWM"}[source];
+            }
             auto kind=item["kind"].toString();if(kind=="menu")kind="panelMenu";
-            addControl(mainControls,main,id,item["label"].toString(),kind,bool(item["dark"]),rect(item["rect"]));
+            addControl(mainControls,main,id,caption,kind,bool(item["dark"]),rect(item["rect"]));
         }
         for(int o=0;o<3;++o)for(int n=0;n<3;++n){auto& b=pwmSelectors[size_t(o)][size_t(n)];b.setBounds(rect(skin["pwmSelectors"][o*3+n]));b.setToggleState(n==pwmSource[size_t(o)],juce::dontSendNotification);}
         for(int n=0;n<2;++n){auto& b=studioLfos[size_t(n)];b.setBounds(rect(skin["lfoSelectors"][n]));b.setToggleState(lfo==n+1,juce::dontSendNotification);b.setVisible(!processor.isKStation());}
         const juce::StringArray domains{"osc1","osc2","osc3","mixer","filter","envelopes","lfo","voice","arp","fx"};
         const juce::StringArray regions{"Oscillator 1","Oscillator 2","Oscillator 3","Mixer","Filter","Envelopes","LFO","Program","Volume / Arp / Glide","Effects"};
         rebuildEffects();
-        for(size_t n=0;n<extraButtons.size();++n){const auto r=studioRegion(regions[int(n)]);auto& b=extraButtons[n];b.setBounds(r.getRight()-72,r.getY()+8,62,28);b.setButtonText(n==7?"Options":"Extra");b.setVisible(!extraSpecs(domains[int(n)]).empty());}
+        for(size_t n=0;n<extraButtons.size();++n){const auto r=studioRegion(regions[int(n)]);auto& b=extraButtons[n];b.setBounds(r.getRight()-(n==7?72:40),r.getY()+8,n==7?62:30,28);b.setButtonText(n==7?"Options":"O");b.setVisible(!extraSpecs(domains[int(n)]).empty());}
         fmButton.setBounds(rect(skin["fmButton"]));effectSelect.setBounds(compactSkin()?rect(skin["effectSelect"]):juce::Rectangle<int>(1199,887,218,28));
         if(localExtra.isVisible())openExtra(extraDomain);else updateExtraVisibility();
         main.setEnabled(processor.firmwareReady());
@@ -1020,9 +1061,13 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         for(unsigned i=0;i<4;++i){const bool available=i==0 || (!processor.isKStation() && processor.performanceMode());parts[i].setEnabled(available);parts[i].setAlpha(available?1.f:.3f);parts[i].setToggleState(i==processor.currentPart(),juce::dontSendNotification);}
         for(auto& c:mainControls)c->refresh();for(auto& c:effectControls)c->refresh();for(auto& p:panels)for(auto& c:p->controls)c->refresh();
         for(auto& c:localExtra.controls)c->refresh();
+        localExtra.clockSelect.setSelectedId(int(processor.clockSource())+1,juce::dontSendNotification);
         const bool ready=processor.firmwareReady();main.setEnabled(ready);content.setEnabled(ready);loadProgram.setEnabled(true);
         previousPreset.setEnabled(ready);nextPreset.setEnabled(ready);channel.setSelectedId(int(processor.editorChannel())+1,juce::dontSendNotification);
-        help.setText(processor.dataFolder.getFullPathName()+"\nROMs: firmware, KS Data and Wave ROM. Patches: automatically scanned patch banks.\nThe audio interface buffer is configured in your DAW.",juce::dontSendNotification);bufferSelect.setSelectedId(processor.bufferProfile()+1,juce::dontSendNotification);const auto rate=processor.getSampleRate();latency.setText(rate>0?"Plugin latency: "+juce::String(1000.*processor.getLatencySamples()/rate,1)+" ms":"",juce::dontSendNotification);
+        juce::StringArray dataNames,dataPaths;for(const auto& file:processor.ksDataFiles()){dataNames.add(file.getFileName());dataPaths.add(file.getFullPathName());}
+        const auto missing=[](const juce::File& file){return file.existsAsFile()?file.getFileName():juce::String("Not selected / missing");};
+        help.setText(processor.dataFolder.getFullPathName()+"\nROMs — Firmware: "+missing(processor.osFile)+" | Wave ROM: "+missing(processor.bankFile)+"\nKS Data: "+(dataNames.isEmpty()?juce::String("Required — select KS All Data or its MIDI files"):dataNames.joinIntoString(", "))+"\nPatches — additional sounds | Skins — custom skins",juce::dontSendNotification);
+        help.setTooltip("Firmware: "+processor.osFile.getFullPathName()+"\nWave ROM: "+processor.bankFile.getFullPathName()+"\nKS Data:\n"+dataPaths.joinIntoString("\n"));bufferSelect.setSelectedId(processor.bufferProfile()+1,juce::dontSendNotification);const auto rate=processor.getSampleRate();latency.setText(rate>0?"Plugin latency: "+juce::String(1000.*processor.getLatencySamples()/rate,1)+" ms":"",juce::dontSendNotification);
     }
     uint64_t lastFirmwareRevision=0;
     void refreshControllerSelection(){
@@ -1042,9 +1087,9 @@ struct Editor::Surface final : juce::Component, private juce::Timer
     }
     void refreshModel(){displayedK=processor.isKStation();displayedPart=processor.currentPart();displayedPerformance=processor.performanceMode();group.clear(juce::dontSendNotification);juce::StringArray names;for(const auto& c:processor.visibleControls())if(juce::String(c.group)!="Part")names.addIfNotAlreadyThere(c.group);for(int i=0;i<names.size();++i)group.addItem(names[i],i+1);group.setSelectedId(2,juce::dontSendNotification);status.setText(processor.status(),juce::dontSendNotification);rebuildMain();rebuildSections();refreshFirmwares();repaint();}
     void selectFile(bool){chooseAsset(4);}
-    void chooseAsset(int role){const bool directory=role==0;chooser=std::make_unique<juce::FileChooser>(directory?"Select Silver-K folder":role==1?"Select KS wave ROM":role==2?"Select KS factory data":role==3?"Select skin JSON":"Load firmware",directory?processor.dataFolder:processor.romFolder,directory?"*":role==3?"*.json":role==2?"*.bin;*.mid;*.midi":"*.bin;*.syx;*.zip;*.os;*.OS");const juce::Component::SafePointer<Surface> self(this);chooser->launchAsync(juce::FileBrowserComponent::openMode|(directory?juce::FileBrowserComponent::canSelectDirectories:juce::FileBrowserComponent::canSelectFiles),[self,role](const juce::FileChooser& c){if(!self || self->processor.isFirmwareLoading())return;auto file=c.getResult();if(file==juce::File{})return;juce::String error;bool ok=true;if(role==0)ok=self->processor.setDataFolder(file,error);else if(role==1)ok=self->processor.setWaveRom(file,error);else if(role==2)ok=self->processor.setFlashRom(file,error);else if(role==3){auto data=juce::JSON::parse(file);if(!validSkin(data)){ok=false;error="Expected a Silver-K compact (1280 x 1000), studio (1440 x 1122), or legacy (1280 x 752) JSON skin";}else{self->processor.customSkin=file.getFullPathName();self->processor.skinChoice="Custom";self->skin=skinData(self->processor);if(self->resizeEditor)self->resizeEditor();self->skinSelect.setText("Custom",juce::dontSendNotification);self->rebuildMain();self->rebuildAdvanced();self->repaint();}}else{self->startFirmwareLoad(file,0);return;}
+    void chooseAsset(int role){const bool directory=role==0;chooser=std::make_unique<juce::FileChooser>(directory?"Select Silver-K folder":role==1?"Select KS wave ROM":role==2?"Select KS factory data":role==3?"Select skin JSON":"Load firmware",directory?processor.dataFolder:role==3?processor.skinsFolder():processor.romFolder,directory?"*":role==3?"*.json":role==2?"*.bin;*.mid;*.midi":"*.bin;*.syx;*.zip;*.os;*.OS");const juce::Component::SafePointer<Surface> self(this);chooser->launchAsync(juce::FileBrowserComponent::openMode|(directory?juce::FileBrowserComponent::canSelectDirectories:juce::FileBrowserComponent::canSelectFiles)|(role==2?juce::FileBrowserComponent::canSelectMultipleItems:0),[self,role](const juce::FileChooser& c){if(!self || self->processor.isFirmwareLoading())return;auto file=c.getResult();if(file==juce::File{})return;juce::String error;bool ok=true;if(role==0)ok=self->processor.setDataFolder(file,error);else if(role==1)ok=self->processor.setWaveRom(file,error);else if(role==2)ok=self->processor.setFlashRoms(c.getResults(),error);else if(role==3){auto data=juce::JSON::parse(file);if(!validSkin(data)){ok=false;error="Expected a Silver-K compact (1280 x 1000), studio (1440 x 1122), or legacy (1280 x 752) JSON skin";}else{self->processor.customSkin=file.getFullPathName();self->processor.skinChoice="Custom";self->skin=skinData(self->processor);if(self->resizeEditor)self->resizeEditor();self->skinSelect.setText("Custom",juce::dontSendNotification);self->rebuildMain();self->rebuildAdvanced();self->repaint();}}else{self->startFirmwareLoad(file,0);return;}
         if(ok)self->processor.savePreferences();
-        if(ok&&(role==1||role==2)&&self->processor.osFile.existsAsFile()&&!self->processor.isKStation()){self->startFirmwareLoad(self->processor.osFile,4);return;}
+        if(ok&&(role==1||role==2)&&self->processor.osFile.existsAsFile()&&std::any_of(self->processor.firmwares.begin(),self->processor.firmwares.end(),[self](const auto& choice){return choice.file==self->processor.osFile && !choice.kStation;})){self->startFirmwareLoad(self->processor.osFile,4);return;}
         self->status.setText(ok?self->processor.status():error,juce::dontSendNotification);self->refreshFirmwares();if(ok&&role==4){self->refreshModel();self->showPage(0);}else self->showPage(4);});}
 
 };

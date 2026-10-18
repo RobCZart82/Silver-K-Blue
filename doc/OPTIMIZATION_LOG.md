@@ -4,6 +4,59 @@ This versioned journal is shared between Windows and macOS work. Append dated
 entries; do not replace earlier measurements with results from another machine.
 Raw local reports are not committed. A hypothesis is not a measured result.
 
+## 2026-10-18 — Interface, clock-source selection and required KS assets
+
+Source/build identity: `codex/stable-windows-optimization`, base `79fffe0`
+plus the uncommitted interface/library changes. The fetched remote matched this
+base, including the accepted Windows Release VST3 `/INCREMENTAL:NO` policy.
+Platform for this entry: macOS arm64, Release, pinned dependency revisions.
+This is a product feature/validation change, not a CPU optimization. The full
+semantic controller migration remains paused. DSP/JIT, guest scheduling/IRQ,
+resampling, buffers, worker waits/placement and thread priorities are unchanged.
+
+Changes: centre-zero LEDs for signed rotary values; temporary numeric captions
+and caption-click entry; oscillator PW placement/labels; numbered LFO Extra
+titles; compact O buttons with Program retaining Options. Program Options adds
+Host/Internal/MIDI Clock using the existing firmware NRPN/UART path. The audio
+callback snapshots the requested source and filters conflicting clock/transport;
+notes and ordinary controllers retain their existing route. No effect enable
+buttons were added.
+
+Source removal now purges cached descendants even when independently connected,
+survives reopening, and requires explicit Rescan for rediscovery inside managed
+Patches (external sources require Add). The browser suppresses identical
+ZIP/extracted programs by model, sound hash and name while retaining different
+sounds and original bank slots. Required assets are copied into ROMs without
+removing originals or overwriting different files. Patches holds additional
+libraries and Skins custom skins. The required zero Wave ROM is still created
+and selected by default. Silver Init is removed from production BinaryData and
+startup/package data; the owned BIN remains an explicit test fixture. KS needs
+external All Data/compatible MIDI set or full user Flash, including on DAW
+restore. Multiple MIDI files are validated together and their paths persist.
+
+Actual macOS validation (`silver-assets-20261018`): Standalone/VST3/AU built;
+five ROM-free product tests passed (clock, workflow, native editor, Performance
+editor, persistence/rescan). Native editor checks with private K and KS firmware
+and user All Data passed, including click/drag/numeric entry, caption timeout,
+LED direction, PW/LFO binding, O/Options geometry and Extra containment. Live
+and reopened browser tests passed for removal, cache purge, explicit managed
+Rescan and ZIP/extracted deduplication. Private K/KS startup/state checks passed
+with user All Data, missing-Data rejection and recreation of the zero Wave ROM;
+project restoration preserved new-instance settings. Raw assets, audio and
+machine-specific logs remain private outside tracked source.
+
+All fourteen held-arpeggio audio scenarios also passed with user All Data:
+Host 90/180 BPM; Internal 94 BPM against conflicting host/MIDI tempos; MIDI
+90/180 against different host tempos; return from MIDI to Host. Pulse edits and
+live state reads continued during each scenario. No C++ audio-callback
+allocations were counted. These verify clock isolation and live handovers,
+not physical latency or sound equivalence.
+
+No physical-device sound-equivalence, new CPU result or Windows runtime result
+is established by these macOS checks. Next platform step: build these same
+sources on Windows and verify the native editor, Data file selection, source
+removal/rescan, state restoration and clock-source handovers there.
+
 ## 2026-10-18 — Publish the accepted Windows Release VST3 link policy
 
 The user explicitly requested transferring the verified /INCREMENTAL:NO setting
