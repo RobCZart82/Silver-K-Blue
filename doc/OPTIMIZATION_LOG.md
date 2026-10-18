@@ -4,6 +4,61 @@ This versioned journal is shared between Windows and macOS work. Append dated
 entries; do not replace earlier measurements with results from another machine.
 Raw local reports are not committed. A hypothesis is not a measured result.
 
+## 2026-10-18 — Publish the accepted Windows Release VST3 link policy
+
+The user explicitly requested transferring the verified /INCREMENTAL:NO setting
+to the shared codex/stable-windows-optimization branch, preserving Mac changes.
+Base: a0eeecdd477ec7033063791c795515a5a45abbda (Drum Edit key-selection fix).
+The only build/source change is target_link_options on silverK_VST3, guarded by
+WIN32 AND MSVC and the Release configuration. macOS, other formats and other
+configurations receive no new option. No DSP/JIT, controller, guest timing,
+worker wait/placement, resampling, buffers, priority or Windows policy changes.
+Full semantic KS migration remains paused. Existing dirty checkouts are kept.
+
+This preserves the user's accepted Windows "Do" endpoint; it is not a new
+optimization or a claim of universal CPU improvement. The earlier same-object
+final-link trial (windows-vst3-final-link-20261018) had mixed per-scenario CPU
+results. The subsequent comparison below validates the selected product basis,
+not the isolated causal effect of this flag.
+
+Windows evidence: VST3 and Standalone built from a0eeecd plus this link setting;
+8/8 regressions and Drum Edit checks completed under windows-do-integration-20261018.
+Measured VST3 SHA-256: c13410a4fb82b8aa39a4c003a074f1ba8474aaccba4b541fd9286246f638e97f
+(embedded a0eeecdd477e + dirty). The local Windows persistence-test entrypoint
+fix and diagnostic-host/JUCE changes are not part of this source transfer.
+The earlier WASAPI and paced-host failures remain historical failures; no
+driver-independent dropout fix or new macOS build/audio validation is claimed.
+
+Latest Windows comparison: windows-vst3-asio-cpu-20261018/protocol-v3,
+i5-13600KF (14C/20T), Windows 10 Pro 22H2 / 19045.6466, common JUCE VST3 host,
+ASIO4ALL 2.22 / HD Audio Speaker 1/2. Actual 48 kHz/256, 16 total held notes,
+Single or four parts x four notes, dry or delay/reverb/chorus. Actual musical
+state, all parts, MIDI/sustain and FX checked before CPU; 16/16 sound/fresh-instance
+restore checks pass. Fixed Silver/Os, Os/Silver, Silver/Os pairs: 24/24 admitted
+30-second CPU windows, no replacement of failed attempts. CPU is GetProcessTimes
+user+kernel for ALL process threads / actual elapsed wall; 100% = one core.
+Setup/warmup/state I/O and sample analysis are outside the CPU window. ASIO
+thread cost is fully included, not subtracted. OsTIrus is 2.2.25 / actual TI2.
+
+Median [min; max], percent of one core:
+
+| Scenario | Silver-K 0.2.4 | OsTIrus TI2 | Silver relative to Os |
+| --- | ---: | ---: | ---: |
+| Single dry | 128.28 [128.07; 128.39] | 125.88 [125.05; 127.65] | +1.91% |
+| Single FX | 128.33 [127.19; 130.00] | 125.99 [125.57; 127.50] | +1.86% |
+| Multi dry | 128.07 [127.66; 128.13] | 132.66 [129.27; 132.97] | -3.46% |
+| Multi FX | 127.97 [126.56; 129.17] | 130.16 [129.74; 130.99] | -1.68% |
+
+All Silver timed missing/zero-frame counts are zero. State-loading/preparation
+can still lose frames; seamless switching is not established. Os internal lost
+counter and ASIO xrun counter are unavailable (-1); no acoustic loopback or
+continuous ETW/core/frequency attribution. Synths perform different DSP work.
+The driver has a large process-CPU contribution; do not pool older no-driver
+or direct-Processor series. The earlier v2 host's callback-lock-confounded
+sound attempts are retained separately and excluded from this CPU comparison.
+Private firmware, banks, states, audio, traces, SDK, binaries and raw personal
+reports stay local/ignored. No new candidate is authorized by this publication.
+
 ## Current state — 2026-10-16
 
 - KS production is now independent of the H8 core. Original H8 is linked only

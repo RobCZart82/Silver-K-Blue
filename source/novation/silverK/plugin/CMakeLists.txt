@@ -20,6 +20,10 @@ endif()
 target_compile_definitions(silverK PRIVATE SILVER_DIAGNOSTICS_REVISION="${SILVER_PERF_REV}" SILVER_DIAGNOSTICS_SOURCE_STATE="${SILVER_PERF_STATE}" SILVER_DIAGNOSTICS_CONFIG="$<CONFIG>")
 target_compile_definitions(silverK PUBLIC JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_VST3_CAN_REPLACE_VST2=0 JUCE_DISPLAY_SPLASH_SCREEN=0 JUCE_REPORT_APP_USAGE=0)
 target_link_libraries(silverK PRIVATE kstationLib ksLib silverData jucePluginLib juce::juce_audio_utils juce::juce_audio_plugin_client)
+# Match the accepted Windows Release VST3 final-link policy.
+if(WIN32 AND MSVC)
+ target_link_options(silverK_VST3 PRIVATE "$<$<CONFIG:Release>:/INCREMENTAL:NO>")
+endif()
 # Standalone's own JUCE module objects must use the same optional ASIO setting
 # as the shared juce_plugin_modules target.
 if(WIN32 AND SilverK_ASIO_SDK_PATH AND EXISTS "${SilverK_ASIO_SDK_PATH}/common/iasiodrv.h")
