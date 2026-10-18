@@ -4,6 +4,21 @@ This versioned journal is shared between Windows and macOS work. Append dated
 entries; do not replace earlier measurements with results from another machine.
 Raw local reports are not committed. A hypothesis is not a measured result.
 
+## 2026-10-18 — Release 0.4a Windows test-entrypoint repair
+
+Release preparation on macOS from `58e1787` exposed the existing Windows CI
+failure on `79fffe0`: the persistence test linked JUCEApplicationBase::main
+with argc/argv, but the pinned Windows JUCE implementation exports only main().
+The test now selects that entry point on Windows; its explicit test arguments
+remain in the existing testArgc/testArgv storage. macOS keeps its argc/argv
+entry point and message loop. This changes test startup only, not production
+code, DSP/JIT, scheduling, buffers, priorities or controller behavior.
+
+Validation at this repair: inspected the pinned JUCE implementation and the
+Windows LNK2019/LNK1120 CI log; the repaired Windows Release build and checks
+are the next validation step. No new Windows audio or CPU result is claimed.
+The public release identifier is 0.4a; platform plugin metadata is 0.4.0.
+
 ## 2026-10-18 — Interface, clock-source selection and required KS assets
 
 Source/build identity: `codex/stable-windows-optimization`, base `79fffe0`
