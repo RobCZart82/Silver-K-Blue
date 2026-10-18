@@ -2,6 +2,7 @@
 #include "ksControllerTimers.h"
 #include "ksDspTransport.h"
 #include "ksControllerJobs.h"
+#include "ksDemo.h"
 #include <cstdlib>
 #include <cstring>
 #include <algorithm>
@@ -20,6 +21,7 @@ Board::Board(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,con
     uint32_t sum=0;for(size_t n=0;n<os.size();n+=2)sum+=(os[n]<<8)|os[n+1];
     for(int s:{24,16,8,0})rom.push_back(sum>>s);
     if(!storage.empty()){if(storage.size()!=flash.size())throw std::invalid_argument("KS flash size mismatch");flash=storage;}
+    hasDemo=validDemoSong(flash.data(),flash.size()) && std::all_of(flash.begin()+0x45800+99*1024,flash.begin()+0x45800+100*1024,[](uint8_t b){return b<128;});
     std::copy(rom.begin(),rom.end(),flash.begin()+0x4000);
     h8->loadmem(rom.data(),rom.size(),0);
     // Everything outside explicit RAM/ROM mappings fails instead of reading
@@ -65,6 +67,30 @@ Board::Board(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,con
         h8->nativeLowBase=rom.data();h8->nativeLowSize=unsigned(rom.size());
     }else h8->boot();
 }
+bool Board::setDemoSong(bool enabled){
+    if(!ready || (enabled && !hasDemo))return false;
+    if(enabled && demoActive())return true;
+    panelKeys.fill(255);
+    if(enabled){
+        // MENUS is a toggle. Keep an already open menu open.
+        demoPhase=h8->memory[0xa16784]?2:1;
+        if(demoPhase==1)panelKeys[0]&=uint8_t(~0x08);
+    }else{
+        if(!demoActive())return true;
+        demoPhase=5;panelKeys[0]&=uint8_t(~0x04); // PROG
+    }
+    panelDue=h8->cycles+ControllerClockHz/8;return true;
+}
+void Board::advancePanel(){
+    panelKeys.fill(255);
+    switch(demoPhase){
+    case 1:demoPhase=2;break; // release MENUS before the chord
+    case 2:panelKeys[1]&=uint8_t(~0x40);panelKeys[2]&=uint8_t(~0x40);demoPhase=3;break;
+    case 3:demoPhase=4;panelDue=h8->cycles+ControllerClockHz*2;return;
+    default:demoPhase=0;return; // chord/stop released; actual flag owns playback
+    }
+    panelDue=h8->cycles+ControllerClockHz/8;
+}
 uint8_t Board::read(uint32_t a){
     if(a<0x200000){if(overlay)return h8->memory[0xa00000+a];return a<rom.size()?rom[a]:0xff;}
     if(a>=0x800000 && a<0x880000){
@@ -78,12 +104,75 @@ uint8_t Board::read(uint32_t a){
         return value;
     }
     if(a>=0xfffe00){
-        if(a==0xffff51)return ((io[0x162]&0xf7)==0x32 || (io[0x162]&0xf7)==0x33)?0:0xff; // LCD not busy / keys released (mux refined below).
+        if(a==0xffff51){const auto row=io[0x162];if(row>=0x20 && row<=0x25)return panelKeys[row-0x20];return ((row&0xf7)==0x32 || (row&0xf7)==0x33)?0:0xff;}
         if(a==0xffff50 || a==0xffff53 || a==0xffff5d)return 0xff;
         if(a>=0xffff90 && a<0xffff98)return (a&1)?0:0x80;
         return io[a&511];
     }
     std::ostringstream s;s<<"Unmapped KS read 0x"<<std::hex<<a<<" pc="<<h8->getPC();throw std::runtime_error(s.str());
+}
+bool Board::selectDrumNote(unsigned part,uint8_t note){
+    if(drumPhase)return false;
+    if(part>=PartCount || note<36 || note>84 || !ready || demoActive())return true;
+    drumPart=uint8_t(part);drumNote=note;drumPhase=1;return true;
+}
+bool Board::storeDrumEdits(const State& current,unsigned part){
+    if(part>=PartCount || (!current.performance && part))return false;
+    const auto& p=current.parts[part];const unsigned bank=p[187],slot=p[188];
+    if(bank<5 || bank>8 || slot>=49)return false;
+    const unsigned index=400+(bank-5)*50+slot,fxIndex=400+(bank-5)*50+49;
+    const auto* original=placeholder.enabled?programDesired[index].data():flash.data()+0x20000+index*256;
+    const auto* originalFX=placeholder.enabled?programDesired[fxIndex].data():flash.data()+0x20000+fxIndex*256;
+    // This is the plugin's private working map, not a request to program the
+    // hardware Flash. Serializing 270-byte stores here delayed every following
+    // Note On by 86 ms per message. Retain canonical bytes on the owning worker
+    // at the idle boundary; audition/selection still use the original MIDI path.
+    auto retain=[&](unsigned target,const Program& program){
+        programDesired[target]=program;
+        auto* destination=flash.data()+0x20000+target*256;
+        std::copy(program.begin(),program.end(),destination);
+        if(placeholder.enabled)PlaceholderMidi::muteProgram(destination);
+        ++flashRevision;
+    };
+    bool stored=false;
+    if(!std::equal(p.begin(),p.begin()+84,original) || p[125]!=original[125] || !std::equal(p.begin()+127,p.begin()+179,original+127)){
+        Program saved;std::copy_n(original,256,saved.begin());
+        std::copy(p.begin(),p.begin()+84,saved.begin());saved[125]=p[125];
+        std::copy(p.begin()+127,p.begin()+179,saved.begin()+127);
+        retain(index,saved);stored=true;
+    }
+    // OS 2.1.02 shares bytes 84..124 and 126 through drum slot 49.
+    if(!std::equal(p.begin()+84,p.begin()+125,originalFX+84) || p[126]!=originalFX[126]){
+        Program saved;std::copy_n(originalFX,256,saved.begin());
+        std::copy(p.begin()+84,p.begin()+125,saved.begin()+84);saved[126]=p[126];
+        retain(fxIndex,saved);stored=true;
+    }
+    return stored;
+}
+void Board::serviceDrumEdit(){
+    // A complete MIDI transaction must finish before reading the edit buffer.
+    // Feed no later host events until the edit buffer is retained and selected.
+    if(h8->getPC()!=0x4378 || midiIn.size() || (io[0x18c]&0x40) || h8->cycles<rxDue+ControllerClockHz/1000)return;
+    const auto current=state();
+    if(drumPhase==1){
+        bool stored=false;
+        if(previousDrumPart>=0 && unsigned(previousDrumPart)!=drumPart)stored=storeDrumEdits(current,unsigned(previousDrumPart));
+        stored=storeDrumEdits(current,drumPart)||stored;drumPhase=2;if(stored)return;
+    }
+    if(drumPhase==2){
+        const auto& p=current.parts[drumPart];const uint8_t bank=p[187];
+        if((!current.performance && drumPart) || bank<5 || bank>8){drumPhase=0;return;}
+        if(p[188]==drumNote-36){drumPhase=0;previousDrumPart=drumPart;return;}
+        const auto channel=uint8_t(current.performance?(partMidi.enabled?drumPart:p[181]&15):current.globalChannel);
+        const uint8_t message[]{uint8_t(0xb0|channel),32,uint8_t(current.performance?bank:32+bank),uint8_t(0xc0|channel),uint8_t(drumNote-36)};
+        if(!enqueueNativeMidi(message,sizeof(message)))throw std::runtime_error("KS Drum Edit selection queue full");
+        drumPhase=3;return;
+    }
+    // UART drained does not mean the main-loop MIDI parser has applied the
+    // Program Change yet. Keep later selections/notes behind the transaction
+    // until the controller reports the requested editing slot.
+    if(current.parts[drumPart][188]!=drumNote-36)return;
+    drumPhase=0;previousDrumPart=drumPart;++drumEditRevision;
 }
 void Board::write(uint32_t a,uint8_t v){
     if(nativeRuntime && nativeCodeSealed){
@@ -297,6 +386,10 @@ State Board::state() {
     for(unsigned part=0;part<(result.performance?PartCount:1);++part){auto& p=result.parts[part];const unsigned index=result.performance?part+1:0;
         for(unsigned n=0;n<256;++n)p[n]=read(0x168fc+index*256+n);
         for(unsigned n=0;n<8;++n)p[179+n]=read(0x174ae + 20*index+9+n);
+        const auto address=result.performance?0x167b0+part*2:0x167ac;
+        const auto bank=read(address);
+        if(result.performance || (bank>=5 && bank<=8)){p[187]=bank;p[188]=read(address+1);}
+        else if(p[187]>=5){p[187]=p[188]=0;}
         packMirrors(p);if(result.performance)placeholder.restorePart(part,p.data());else restoreDesiredLevels(p.data());
         if(partMidi.enabled && result.performance)p[181]=partMidi.channels[part];
     }
@@ -313,6 +406,8 @@ void Board::nativeReadyBoundary(){
     if(mainEntered && h8->getPC()==0x4334)ready=true;
 }
 void Board::advance(uint32_t budget){
+    if(demoPhase && h8->cycles>=panelDue)advancePanel();
+    if(drumPhase)serviceDrumEdit();
     using namespace baseLib::performance;
     const bool sample=performance && performance->mode()==2 && ((++diagnosticAdvances&255)==0);
     Scope h8Timing(performance,Metric::H8,0,0,true,sample&&!recordedController);
@@ -329,6 +424,15 @@ void Board::advance(uint32_t budget){
                 while(h8->cycles-begin<budget){
                     const auto before=h8->cycles;nativeStartupBoundary();
                     nativeRuntime->stepStartup(*h8);tickNative(before);nativeReadyBoundary();
+                }
+            }else if(drumPhase){
+                // Observe the idle boundary at instruction boundaries. Sampling
+                // this two-byte branch only at slice ends can miss it for many
+                // main-loop rounds, stalling a note by tens of milliseconds.
+                // Keep the original slice target and peripheral/DSP ordering.
+                while(h8->cycles-begin<budget){
+                    if(drumPhase && h8->getPC()==0x4378){serviceDrumEdit();nativeQueuedMidi=uint32_t(midiIn.size());}
+                    const auto before=h8->cycles;nativeRuntime->step(*h8);tickNative(before);
                 }
             }else if(!eventDspTransport && !eventControlJobs){
                 // Preserve the original tight compatibility loop when the

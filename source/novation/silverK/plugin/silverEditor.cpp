@@ -502,9 +502,12 @@ struct Editor::Surface final : juce::Component, private juce::Timer
     juce::ComboBox firmwareSelect,skinSelect,bufferSelect,controllerSelect;
     juce::TextButton rescanRoms{"Rescan ROMs"};
     juce::TextButton diagnostics{"Performance diagnostics"};
+    juce::TextButton demoSong{"Demo Song"};
     juce::TextButton waveRom{"Wave ROM"},factory{"KS factory data"},customSkin{"Load skin JSON"};
     juce::ToggleButton performanceMode{"Performance (4 parts)"},partActive{"Part active"};
     juce::TextButton performanceSwitch{"Performance"};
+    juce::TextButton drumEdit{"Drum Edit"};
+    juce::Label drumDisplay;
     Browser browser;
     std::unique_ptr<PerformancePanel> performancePanel;
     bool displayedK=false,displayedPerformance=false;
@@ -551,6 +554,10 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         addAndMakeVisible(performanceSwitch);performanceSwitch.setComponentID("performanceSwitch");performanceSwitch.getProperties().set("led",true);performanceSwitch.getProperties().set("dark",true);performanceSwitch.setClickingTogglesState(true);
         performanceSwitch.setTooltip("Enable or disable KS four-part Performance mode");
         performanceSwitch.onClick=[this]{juce::String error;if(!processor.setPerformanceMode(performanceSwitch.getToggleState(),error)){performanceSwitch.setToggleState(processor.performanceMode(),juce::dontSendNotification);showValue(error,false);}};
+        addAndMakeVisible(drumEdit);drumEdit.setComponentID("drumEdit");drumEdit.setClickingTogglesState(true);drumEdit.getProperties().set("led",true);drumEdit.getProperties().set("dark",true);
+        drumEdit.setTooltip("Select a drum for editing by playing its MIDI key. Changes are retained when selecting another drum.");
+        drumEdit.onClick=[this]{processor.setDrumEdit(drumEdit.getToggleState());refreshDrumEdit();};
+        addAndMakeVisible(drumDisplay);drumDisplay.setComponentID("drumEditDisplay");drumDisplay.setFont(juce::Font(13.f));drumDisplay.setColour(juce::Label::textColourId,light);drumDisplay.setColour(juce::Label::backgroundColourId,juce::Colour(0xff075293));
         partActive.setBounds(330,96,200,34);partActive.setComponentID("partActive");partActive.onClick=[this]{juce::String error;processor.setPartActive(processor.currentPart(),partActive.getToggleState(),error);};
         browser.setComponentID("patchBrowser");browser.setBounds(24,86,1232,642);
         skinSelect.setBounds(52,353,230,34);for(const auto& name:juce::StringArray{"Auto","Silver-K","KS Grey","Classic","Custom"})skinSelect.addItem(name,skinSelect.getNumItems()+1);skinSelect.setText(processor.skinChoice,juce::dontSendNotification);skinSelect.onChange=[this]{processor.skinChoice=skinSelect.getText();processor.savePreferences();skin=skinData(processor);if(resizeEditor)resizeEditor();rebuildMain();rebuildAdvanced();repaint();};
@@ -559,6 +566,9 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         bufferSelect.setBounds(52,401,436,34);bufferSelect.setComponentID("audioBuffer");for(const auto& name:juce::StringArray{"Audio buffer: Low latency","Audio buffer: Balanced (recommended)","Audio buffer: Safe","Audio buffer: Maximum reserve"})bufferSelect.addItem(name,bufferSelect.getNumItems()+1);bufferSelect.setSelectedId(processor.bufferProfile()+1,juce::dontSendNotification);bufferSelect.onChange=[this]{processor.setBufferProfile(bufferSelect.getSelectedId()-1);};bufferSelect.setTooltip("Internal audio buffering. The audio interface buffer is set in your DAW.");
         addAndMakeVisible(diagnostics);diagnostics.setBounds(510,401,270,34);diagnostics.setComponentID("performanceDiagnostics");
         diagnostics.setTooltip("Record optional performance measurements and save a JSON report for Windows or macOS.");
+        addAndMakeVisible(demoSong);demoSong.setBounds(510,449,270,34);demoSong.setComponentID("demoSong");
+        demoSong.setTooltip("Play / stop the original KS demo embedded in full KS Flash data. Factory MIDI banks do not contain the song.");
+        demoSong.onClick=[this]{juce::String error;if(!processor.setDemoSong(!processor.demoSongActive(),error))juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::InfoIcon,"KS Demo Song",error);};
         addAndMakeVisible(controllerSelect);controllerSelect.setBounds(52,449,436,34);controllerSelect.setComponentID("ksController");
         if(ks::controllerReferenceAvailable()){
             controllerSelect.addItem("KS controller: H8 (original)",1);controllerSelect.addItem("KS controller: C++ (experimental)",2);
@@ -687,6 +697,21 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         if(name.isEmpty()||name=="default")name="Init Program";
         lcd.setText("Preset\n"+name,juce::dontSendNotification);
     }
+    void refreshDrumEdit(){
+        const auto info=processor.drumEditInfo();const bool available=info.bank!=0;
+        if(!available && processor.drumEditEnabled())processor.setDrumEdit(false);
+        drumEdit.setVisible(available);drumEdit.setEnabled(available);drumEdit.setToggleState(processor.drumEditEnabled(),juce::dontSendNotification);
+        drumDisplay.setVisible(available && processor.drumEditEnabled());
+        if(compactSkin()){
+            const auto base=rect(skin["studioHeader"]["performance"]);
+            performanceSwitch.setBounds(available?base.withWidth(110):base);
+            drumEdit.setBounds(base.getX()+116,base.getY(),110,base.getHeight());
+            drumDisplay.setBounds(231,64,1000,18);
+        }else{drumEdit.setBounds(675,64,160,20);drumDisplay.setBounds(30,64,635,20);}
+        if(!available){drumDisplay.setText({},juce::dontSendNotification);return;}
+        const auto text="Drum Edit / "+juce::String(info.bank*100+info.note-36)+" "+info.name+" / "+juce::MidiMessage::getMidiNoteName(info.note,true,true,3)+" / MIDI "+juce::String(info.note);
+        drumDisplay.setText(text,juce::dontSendNotification);drumDisplay.setTooltip(text);
+    }
     void showValue(const juce::String& message,bool held)
     {
         if(message.isEmpty()){showProgram();return;}
@@ -725,6 +750,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         }
         performanceSwitch.setVisible(compactSkin());
         performanceSwitch.setEnabled(!processor.isKStation()&&processor.firmwareReady());performanceSwitch.setToggleState(processor.performanceMode(),juce::dontSendNotification);
+        refreshDrumEdit();
         for(unsigned i=0;i<4;++i){const bool available=i==0||(!processor.isKStation()&&processor.performanceMode());parts[i].setEnabled(available);parts[i].setAlpha(available?1.f:.3f);parts[i].setToggleState(i==processor.currentPart(),juce::dontSendNotification);}
         for(auto& b:oscillators)b.setVisible(!studio);lfoSelect.setVisible(!studio);pw.setVisible(!studio);
         for(auto& b:lfoIndicators)b.setVisible(!studio);for(auto& b:effects)b->setVisible(!studio);
@@ -901,6 +927,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         for(juce::Component* c:std::array<juce::Component*,6>{&status,&latency,&loadRom,&folder,&channel,&help})c->setVisible(isSetup);
         rescanRoms.setVisible(isSetup);bufferSelect.setVisible(isSetup);waveRom.setVisible(isSetup);factory.setVisible(isSetup);skinSelect.setVisible(isSetup);customSkin.setVisible(isSetup);
         diagnostics.setVisible(isSetup);controllerSelect.setVisible(isSetup);refreshControllerSelection();
+        demoSong.setVisible(isSetup && !processor.isKStation());
         loadRom.setBounds(52,245,200,38);folder.setBounds(266,245,170,38);
         if(page==1)rebuildSections();if(page==2)performancePanel->refresh();
         if(studioSkin())updateExtraVisibility();repaint();
@@ -974,6 +1001,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
     {
         refreshControllerSelection();
         diagnostics.setButtonText(processor.performanceDiagnosticsMode()?"Diagnostics: recording":"Performance diagnostics");
+        demoSong.setButtonText(processor.demoSongActive()?"Stop Demo Song":"Demo Song");demoSong.setEnabled(!processor.isKStation() && processor.firmwareReady() && !processor.isFirmwareLoading());
         if(processor.isFirmwareLoading()){
             juce::String error;
             if(!processor.finishFirmwareLoad(error)){setEnabled(false);lcd.setText("Loading firmware...",juce::dontSendNotification);status.setText("Loading firmware...",juce::dontSendNotification);return;}
@@ -983,6 +1011,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         }
         if(!displayHeld&&juce::Time::getMillisecondCounterHiRes()>=displayUntil)showProgram();
         processor.refreshControls();
+        refreshDrumEdit();
         performancePanel->refresh();
         if(displayedK!=processor.isKStation() || displayedPart!=processor.currentPart() || displayedPerformance!=processor.performanceMode())refreshModel();
         performanceMode.setEnabled(!processor.isKStation() && processor.firmwareReady());performanceMode.setToggleState(processor.performanceMode(),juce::dontSendNotification);

@@ -26,8 +26,11 @@ static void lighting(juce::Slider& s){
 static void verify(Processor& p){
  std::unique_ptr<juce::AudioProcessorEditor> e(p.createEditor());click(*e,"pageMain");auto* main=find(*e,"mainPanel");check(main&&main->getWidth()==1280&&main->getHeight()==1000,"Canvas dimensions");
  auto* diagnostics=find(*e,"performanceDiagnostics");check(diagnostics&&!diagnostics->isVisible(),"Diagnostics escaped Setup");
+ check(find(*e,"drumEdit") && !find(*e,"drumEdit")->isVisible(),"Drum Edit exposed without a Drum Map");
+ auto* demo=find(*e,"demoSong");check(demo&&!demo->isVisible(),"Demo escaped Setup");
  auto* controller=dynamic_cast<juce::ComboBox*>(find(*e,"ksController"));check(controller&&!controller->isVisible(),"Controller selector escaped Setup");
  click(*e,"pageSetup");check(diagnostics->isVisible()&&diagnostics->getParentComponent()->getLocalBounds().contains(diagnostics->getBounds()),"Diagnostics missing/outside Setup");
+ check(demo->isVisible()==!p.isKStation(),"Demo visible in wrong model");check(!demo->getBounds().intersects(controller->getBounds()),"Demo/controller overlap");
  check(controller->isVisible()&&controller->getParentComponent()->getLocalBounds().contains(controller->getBounds()),"Controller missing/outside Setup");
  check(controller->isEnabled()==!p.isKStation() && controller->getSelectedId()==p.ksControllerMode()+1,"Controller model/selection mismatch");
  auto* channel=find(*e,"controlChannel");auto* buffer=find(*e,"audioBuffer");check(channel&&buffer&&!channel->getBounds().intersects(buffer->getBounds())&&!controller->getBounds().intersects(buffer->getBounds()),"Setup controls overlap");

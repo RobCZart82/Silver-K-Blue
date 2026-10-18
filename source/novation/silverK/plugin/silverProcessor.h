@@ -87,6 +87,12 @@ bool isKStation()const{return kMode.load();}
  void setBufferProfile(int);
  int ksControllerMode()const{return ks::controllerReferenceAvailable()?int(ksController.load()):int(ks::ControllerMode::Native);}
  bool setKSControllerMode(int,juce::String& error); // UI/control thread only.
+ bool demoSongActive()const;
+ bool setDemoSong(bool,juce::String& error);
+ struct DrumEditInfo{int bank=0,note=-1;juce::String name;};
+ DrumEditInfo drumEditInfo()const;
+ bool drumEditEnabled()const{return drumEditing.load();}
+ void setDrumEdit(bool enabled){drumEditing.store(enabled && drumEditInfo().bank!=0);}
  // Message/control thread only. Mode: 0 stop, 1 new summary, 2 new detailed session.
  bool setPerformanceDiagnostics(int mode);
  int performanceDiagnosticsMode()const{return performanceDiagnostics.mode();}
@@ -98,6 +104,8 @@ private:
  double performanceStartedMs=0,performanceStoppedMs=0;
  juce::String performanceStopReason;
  MidiNoteLearn noteLearn;
+ std::atomic<bool> drumEditing{false};
+ uint64_t seenDrumRevision=0;
  pluginLib::HostAudioWorkgroup hostAudioWorkgroup;
  std::atomic<int> buffering{1};
  std::atomic<ks::ControllerMode> ksController{ks::Device::environmentControllerMode()};

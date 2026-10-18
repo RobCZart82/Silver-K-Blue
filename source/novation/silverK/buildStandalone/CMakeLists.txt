@@ -73,6 +73,13 @@ target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksRuntimeVoices.c
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksRuntimeExtended.cpp")
 
 target_link_libraries(ksLib PUBLIC baseLib dsp56kEmu)
+add_executable(ksDemo_test "${ROOT}/source/novation/ks/ksLib/ksDemo_test.cpp")
+target_link_libraries(ksDemo_test PRIVATE ksLib)
+add_test(NAME ks_demo_data COMMAND ksDemo_test)
+add_executable(ksDrumEdit_test "${ROOT}/source/novation/ks/ksLib/ksDrumEdit_test.cpp")
+target_link_libraries(ksDrumEdit_test PRIVATE ksLib)
+add_test(NAME ks_drum_edit COMMAND ksDrumEdit_test)
+set_tests_properties(ks_drum_edit PROPERTIES SKIP_RETURN_CODE 77)
 # Frequency tracing is a separate diagnostic build; no per-boundary profile
 # checks or storage are present in an ordinary Release controller.
 option(SILVER_KS_CONTROLLER_PROFILING "Compile KS boundary-frequency diagnostics" OFF)

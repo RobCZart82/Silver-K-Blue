@@ -65,15 +65,31 @@ public:
     uint64_t waveReads=0, hostWrites[2]{}, bankLow=0xffffff, bankHigh=0;
     bool overlay=false, mainEntered=false, ready=false;
     bool boot();
+    bool demoAvailable()const{return hasDemo;}
+    bool demoActive()const{return demoPhase || h8->memory[0xa1678c]!=0;}
+    // Worker only. Emulate MENUS, then keypad 1+2; PROG stops playback.
+    bool setDemoSong(bool enabled);
+    bool selectDrumNote(unsigned part,uint8_t note);
+    bool drumEditBusy()const{return drumPhase!=0;}
+    uint64_t drumEditRevision=0;
     std::vector<uint8_t> saveUserFlash() const;
     void copyUserFlash(std::vector<uint8_t>&) const;
-    uint64_t flashRevision=0; // Worker-owned; publish completed Flash pages only.
+    uint64_t flashRevision=0; // Worker-owned; completed Flash pages/working-map edits.
     State state(); // Worker only: read controller state, never execute guest helpers.
     void discardAudio(){audio.reset();}
     std::string lcd;
 private:
     baseLib::performance::Diagnostics* performance=nullptr; // worker-owned attachment
     uint64_t diagnosticAdvances=0;
+    bool hasDemo=false;
+    uint8_t demoPhase=0;
+    uint64_t panelDue=0;
+    std::array<uint8_t,6> panelKeys{{255,255,255,255,255,255}};
+    void advancePanel();
+    uint8_t drumPhase=0,drumPart=0,drumNote=36;
+    int previousDrumPart=-1;
+    void serviceDrumEdit();
+    bool storeDrumEdits(const State&,unsigned part);
     void nativeStartupBoundary();
     void nativeReadyBoundary();
     void tick(uint64_t previous);

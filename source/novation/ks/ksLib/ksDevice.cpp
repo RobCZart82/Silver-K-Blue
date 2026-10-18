@@ -28,9 +28,10 @@ Device::Device(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,c
   try{board=std::make_unique<Board>(os,bank,flash,true,controllerMode()==ControllerMode::Native);if(!board->boot())throw std::runtime_error("KS controller boot timeout");
    if(controllerMode()==ControllerMode::Native)board->enableNativeController();else if(controllerMode()==ControllerMode::Hybrid)board->enableLiveMidiController();
    activeControllerBackend.store(board->controllerBackend());
+   hasDemo.store(board->demoAvailable());
    if(program.size()==270 || program.size()==1038){
-    const uint8_t select[]{uint8_t(0xb0|(flash[0x1ff08]&15)),32,uint8_t(program.size()==1038?65:33),uint8_t(0xc0|(flash[0x1ff08]&15)),0};
-    board->enqueueMidi(select,sizeof(select));board->enqueueMidi(program.data(),program.size());
+    auto select=singleSelection(program.data()+13,flash[0x1ff08]);if(program.size()==1038){select[2]=65;select[4]=0;}
+    board->enqueueMidi(select.data(),select.size());board->enqueueMidi(program.data(),program.size());
     if(program.size()==270){const auto metadata=singleMetadata(program.data()+13,flash[0x1ff08]);board->enqueueMidi(metadata.data(),metadata.size());}
     for(unsigned n=0;n<20000;++n)board->renderSample();}
    // Compile ordinary voice branches before opening audio. Keep warm-up notes
@@ -63,7 +64,7 @@ Device::Device(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,c
    for(unsigned n=0;n<8192;++n)board->renderSample();
    for(uint8_t part=0;part<PartCount;++part){for(uint8_t note:{36,60,69,96}){const uint8_t off[]{uint8_t(0x80|part),note,0};board->enqueueMidi(off,3);}const uint8_t off[]{uint8_t(0xb0|part),120,0};board->enqueueMidi(off,3);}
    for(unsigned n=0;n<45340;++n)board->renderSample();
-   if(!originalState.performance){const uint8_t select[]{uint8_t(0xb0|channel),32,33,uint8_t(0xc0|channel),0};board->enqueueMidi(select,sizeof(select));}
+   if(!originalState.performance){const auto select=singleSelection(originalState.parts[0].data(),channel);board->enqueueMidi(select.data(),select.size());}
    board->enqueueMidi(original.data(),original.size());
    if(!originalState.performance){const auto metadata=singleMetadata(originalState.parts[0].data(),channel);board->enqueueMidi(metadata.data(),metadata.size());}
    for(unsigned n=0;n<20000;++n)board->renderSample();
@@ -94,12 +95,14 @@ Device::Device(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,c
      {std::lock_guard lock(controllerMutex);controllerError=std::move(error);controllerCompleted=true;}controllerCV.notify_one();
     }
     const auto block=realtimeBlock.load();if(block!=configuredBlock){dsp56k::ThreadTools::setCurrentThreadRealtimeParameters(int(rate),int(block));board->configureDspWorkers(int(rate),block);configuredBlock=block;}
+    if(requestedDemo.load(std::memory_order_relaxed)>=0){const int demo=requestedDemo.exchange(-1);if(demo>=0)board->setDemoSong(demo!=0);}
     audioWorkgroup.update();
     // Event parking reduced wake latency but regressed KS throughput in repeated
     // 64- and 128-frame tests. Keep the legacy wait for KS until that is resolved.
     if(produced>=consumed.load()+lead){workTiming.flush();baseLib::performance::Scope sleepTiming(performance,baseLib::performance::Metric::Sleep);std::this_thread::sleep_for(std::chrono::microseconds(50));continue;}
     workTiming.start();
-    Event e{};while(events.peek(e) && e.due<=produced){
+    Event e{};while(!board->drumEditBusy() && events.peek(e) && e.due<=produced){
+     if(e.drum){if(!board->selectDrumNote(e.part,e.value))break;events.pop(e);continue;}
      if(e.part<PartCount){
       std::array<uint8_t,9> packet{};const auto part=e.part,length=e.length;
       for(unsigned n=0;n<length;++n){events.peekAt(n,e);packet[n]=e.value;}
@@ -146,6 +149,10 @@ bool Device::partMidi(unsigned part,const uint8_t* b,size_t n){
  const auto due=consumed.load()+lead;
  if(!events.pushGenerated(n,[&](size_t i){return Event{due,b[i],uint8_t(part),uint8_t(n)};})){++overflow;return false;}return true;
 }
+bool Device::selectDrumNote(unsigned part,uint8_t note,uint64_t offset){
+ if(part>=PartCount || note<36 || note>84)return false;
+ if(!events.push(Event{consumed.load()+lead+offset,note,uint8_t(part),0,true})){++overflow;return false;}return true;
+}
 void Device::process(float* l,float* r,size_t n,bool offline){
  process({l,r,nullptr,nullptr},n,offline);
 }
@@ -171,6 +178,7 @@ void Device::process(const std::array<float*,OutputCount>& channels,size_t n,boo
  if(epoch){performance->add(Metric::MissingFrames,epoch,missing);performance->add(Metric::StaleFrames,epoch,stale);}
 }
 void Device::publish(){
+ playingDemo.store(board->demoActive());
  baseLib::performance::Scope snapshotTiming(performance,baseLib::performance::Metric::Snapshot);
  diagnosticProduced.store(produced);diagnosticMidi.store(board->midiReceived);diagnosticWave.store(board->waveReads);
  if(publishedFlashRevision!=board->flashRevision){
@@ -181,7 +189,7 @@ void Device::publish(){
  const auto state=board->state();if(!initialPublished){initialSnapshot=state;initialPublished=true;}
  const auto current=publishedSnapshot.load();
  for(unsigned slot=0;slot<snapshots.size();++slot)if(slot!=current && !snapshots[slot].readers.load()){
-  snapshots[slot].value=state;publishedSnapshot.store(slot);return;
+  snapshots[slot].value=state;publishedSnapshot.store(slot);publishedDrumRevision.store(board->drumEditRevision);return;
  }
  // Readers may pin both retired buffers. Skip this GUI update, never wait.
 }

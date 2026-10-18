@@ -21,6 +21,7 @@ Silver-K combines **K-Station** and **KS** firmware emulation in one desktop syn
 - K-Station: one part, stereo output; tabs 2–4 are dimmed.
 - KS: four parts and four output channels; routing and MIDI settings on **Perf**.
 - Shared patch browser: single-selection loading, sortable columns, recursive folders, tags, favourites, source model and compatibility reports.
+- KS memory-bank filter and complete Drum Maps (banks 5–8, 49 keys + shared effects). **Drum Edit** selects a drum from the MIDI keyboard, refreshes its controls and retains edits across key changes; **Save current** exports the edited map. K-Station hides these controls. **Setup → Demo Song** uses the internal KS player when a full user-supplied Flash contains the song. See the [user guide](doc/silver_k.md#ks-demo-song).
 - A-Station and X-Station programs and banks import through SYX/MIDI/ZIP. A/K bank pairs are expanded into individual sounds. V-Station FXB/FXP import works directly, through folders and ZIP; V-Station is a distinct source model.
 - Host tempo and transport drive the original firmware MIDI clock; realtime clock bytes take priority over queued parameter edits.
 - K-Station ↔ KS patch conversion. KS-only oscillator waves become sine on K-Station, filters become LP 12, and unsupported features use target defaults.

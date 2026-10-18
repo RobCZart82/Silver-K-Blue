@@ -3011,3 +3011,54 @@ gates, without DSP/JIT/guest timing/buffer/priority/Windows policy changes.
 Existing Windows GetProcessTimes helpers support own-engine comparisons;
 the Mac AudioToolbox benchmark is not a Windows host. Next step belongs on
 the Windows machine; no remote build/test or controller migration was started.
+
+## 2026-10-18 — Drum Edit key-selection latency on the stable Mac branch
+
+User reported a pause on MIDI keys while Drum Edit is enabled. Source basis:
+codex/stable-windows-optimization, 781b1fa + existing banks/demo/Drum Edit
+working-tree changes. macOS arm64 Release, AppleClang 21, pinned dependencies,
+controller profiling OFF. Full semantic controller migration remains paused.
+
+Two causes were reproduced: retaining edits through 270-byte stored-program
+SysEx occupied 86.4 ms of emulated UART time per voice/FX message; observing
+the short main-loop idle branch only at slice ends could repeatedly miss it.
+The original implementation's private test measured 158.510 ms after a voice
+edit, 149.995 ms after an FX edit and 206.510 ms after both. Unchanged/repeated
+selection also varied widely (including 170.470 ms for the first same key).
+Test ID: drum-latency-20261018-baseline; these are controller-cycle durations,
+not process CPU, physical MIDI latency or a hardware-instrument measurement.
+
+The worker now retains canonical voice/shared-FX bytes in the private working
+Flash, preserving unknown fields and zero-wave desired/muted representations.
+Flash snapshots are invalidated. External source files are unchanged. Original
+MIDI Program Change still selects the editing sound; repeated selection of the
+same sound avoids reloading it. While selection is pending, the existing native
+instruction path observes the idle boundary within each unchanged controller
+slice, with the same peripheral/DSP ordering. Completion requires the requested
+slot to appear in the controller state, rather than only an empty UART.
+Normal playback scheduling, clocks, DSP/JIT, buffers and priorities are unchanged.
+
+Actual validation: ksDrumEdit_test PASS with synthetic generated-wave drum data
+and both zero and user-supplied nonzero Wave ROM. All 24 selections per run stay
+below 20 ms of controller time. Different-key selections: 4.239–12.128 ms;
+same key: 0.266 ms. Voice/FX bytes survive return to both keys and Flash save;
+zero H8 interpreter steps. The first working-map-only candidate still failed
+the latency guard, and an early completion candidate failed rapid alternating
+selection; both issues are fixed in the final candidate.
+
+The processor workflow passes with both Wave ROMs: a 64 ms host-render window
+(previously one second), immediate knob/key changes, shared FX, MIDI guards,
+DAW restore, full-map export, shared-channel Performance part isolation and
+zero allocations on the audio callback. ROM-free demo-data and patch-workflow
+CTest checks pass. Private logs/ROMs/audio are not committed. This checks the
+plugin integration and synthetic scenarios, not original sampled-kit fidelity.
+No total-process CPU benchmark, Windows runtime validation or physical KS
+latency comparison was performed. AU/VST3/Standalone built and signed; installed
+in both existing Mac AU locations, user VST3 and user Applications with backups
+under local test ID installed-backup-before-drum-latency-20261018-164434.
+Installed hashes match the package; strict signatures and AU validation pass.
+Package/test identity: build/drum-edit-latency-2026-10-18/BUILD-IDENTITY.json.
+ROM-free final CTest: two PASS, private-input drum test explicitly SKIP77;
+its two actual private-input PASS runs are recorded above, not inferred from
+the skip. Next: user DAW evaluation after restart; repeat on Windows before
+making Windows claims.

@@ -18,6 +18,8 @@ public:
     const std::string& error()const{return failure;}
     bool midi(const uint8_t*,size_t,uint64_t offset=0);
     bool partMidi(unsigned part,const uint8_t*,size_t);
+    bool selectDrumNote(unsigned part,uint8_t note,uint64_t offset=0);
+    uint64_t drumEditRevision()const{return publishedDrumRevision.load();}
     void process(float* left,float* right,size_t n,bool offline=false);
     void process(const std::array<float*,OutputCount>&,size_t n,bool offline=false);
     std::vector<uint8_t> dumpProgram(); // Control thread, canonical mirrors; no guest execution.
@@ -36,6 +38,9 @@ public:
     // Control thread only; the worker applies/acknowledges between samples.
     // Failed native validation retains the current controller and state.
     bool setControllerMode(ControllerMode,std::string& error);
+    bool demoAvailable()const{return hasDemo.load();}
+    bool demoActive()const{return playingDemo.load();}
+    bool setDemoSong(bool enabled){if(!valid() || (enabled && !demoAvailable()))return false;requestedDemo.store(enabled?1:0);return true;}
     const WorkerPlacement& workerPlacement()const{return placement;}
     void setAudioBuffer(unsigned block,unsigned floor);
     void ensureAudioBlock(unsigned block) noexcept;
@@ -46,12 +51,15 @@ private:
     std::atomic<ControllerMode> currentController;
     std::atomic<const char*> activeControllerBackend{"original-h8"};
     std::atomic<int> requestedController{-1};
+    std::atomic<int> requestedDemo{-1};
+    std::atomic<bool> hasDemo{false},playingDemo{false};
     std::mutex controllerMutex;
     std::condition_variable controllerCV;
     bool controllerCompleted=false;
     std::string controllerError;
     WorkerPlacement placement;
-    struct Event{uint64_t due;uint8_t value;uint8_t part=255,length=0;};
+    struct Event{uint64_t due;uint8_t value;uint8_t part=255,length=0;bool drum=false;};
+    std::atomic<uint64_t> publishedDrumRevision{0};
     struct Frame{uint64_t due;std::array<float,OutputCount> value;};
     std::unique_ptr<Board> board;
     kstation::Queue<Event,65536> events;
