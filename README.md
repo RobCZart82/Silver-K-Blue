@@ -2,6 +2,8 @@
 
 K-Station and KS firmware emulation for desktop hosts and Standalone use.
 
+Based on the open-source code of [Gearmulator](https://github.com/dsp56300/gearmulator). Plugins appear under NK Stuff in host lists.
+
 | Platform | Formats |
 | --- | --- |
 | Windows x64 | VST3, Standalone |

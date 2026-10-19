@@ -11,6 +11,7 @@ import subprocess
 import tempfile
 import zipfile
 from pathlib import Path
+from check_plugin_identity import check_identity
 
 VERSION = '0.4a'
 PLUGIN_VERSION = '0.4.0'
@@ -35,6 +36,7 @@ def main():
         parser.error('Variant must be a short alphanumeric/hyphen label')
     if args.test_guide and not args.test_guide.is_file():
         parser.error('Test guide must exist')
+    plugin_identity = check_identity(args.products)
     commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
     name = f'Silver-K-{VERSION}-{args.platform}'
     if args.variant:
@@ -128,7 +130,7 @@ No original firmware or factory sounds are included in this binary archive.
 '''
         (stage / 'SOURCES.txt').write_text(sources, encoding='utf-8')
         manifest = dict(version=VERSION, channel='experimental' if args.variant else 'release', variant=args.variant or None, plugin_version=PLUGIN_VERSION, platform=args.platform,
-                        source_commit=commit, source_dirty=dirty, source_snapshot_sha256=digest(source_archive), firmware_included=False, factory_presets_included=False,
+                        source_commit=commit, source_dirty=dirty, source_snapshot_sha256=digest(source_archive), plugin_identity=plugin_identity, firmware_included=False, factory_presets_included=False,
                         ks_data_required=True, synthetic_ks_data_included=False, synthetic_wave_rom=wave_manifest,
                         macos_signing='ad-hoc; not notarized' if args.platform.startswith('macOS') else None)
         (stage / 'release-manifest.json').write_text(json.dumps(manifest, indent=2)+'\n', encoding='utf-8')

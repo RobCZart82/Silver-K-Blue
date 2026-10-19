@@ -1,5 +1,7 @@
 # Project continuity
 
+- Latest release decision, 2026-10-19: make `main` the current/default branch, display NK Stuff as plugin manufacturer, rebuild both desktop platforms and refresh release/tag v0.4a. Preserve AU/VST3 identifiers and existing user data paths. Credit Gearmulator's open-source code in the concise README. The semantic controller migration remains paused; do not import the other worktree.
+
 - Release decision, 2026-10-18: publish all current changes on the existing branch as Silver-K 0.4a, tag v0.4a, with English release notes and both desktop platform packages. Numeric CMake/AU/VST3 version is 0.4.0.
 
 - Documentation decision, 2026-10-18: keep README short and plain, without emojis or repeated development reports. The user guide covers plugin setup, file loading and operation, not synthesis. Describe external inputs generically as firmware BIN and one complete Data MIDI file or several compatible MIDI files; do not publish concrete private asset names or acquisition/download advice.
