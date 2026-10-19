@@ -28,7 +28,7 @@ The all-zero Silver-K placeholder is recognized as silence. An unchanged placeho
 
 Saving ROM preserves final PCM; saving a project also preserves how it was made. Use the project when you expect to change boundaries or processing later.
 
-## Build and validation
+## Build
 
 The application shares Silver-K's pinned JUCE source and builds as a separate target, without linking the synthesizer engine. A dedicated entrypoint downloads JUCE only:
 
@@ -41,5 +41,3 @@ ctest --test-dir build-wave -C Release --output-on-failure -R '^silver_wave_bank
 Dedicated-build products are in `build-wave/app/silverWaveRomBuilder_artefacts/Release`. The normal Silver-K build also includes these targets, with products in `waveRomBuilder/silverWaveRomBuilder_artefacts/Release` beside `silverPlugin`. Desktop release packaging includes the application and this guide in `Tools`. Windows uses the same targets with `-A x64` at configure time. macOS builds are ad hoc signed, not notarized.
 
 The core check covers all 8/16-bit PCM codes, exact ROM decode/export, isolation of slot edits, silent placeholders, cycle and transient detection, normalization, fades, downsampling rejection, note pitch, and allocation-free preview rendering and buffer replacement. GUI smoke mode (`--smoke <directory>`) uses only generated signals to check projects and ROM reopening, and captures tonal/rhythmic screens. Platform results are recorded with the delivered build; a macOS test does not validate Windows.
-
-Validation, 2026-10-19, macOS arm64, local test `wave-builder-20261019`: Release build and core CTest passed. Address/undefined-behavior sanitizer checks passed, including concurrent preview publication. GUI smoke passed actual stereo PCM24 WAV decoding (left channel retained with antiphase right channel), project/audio/note restoration, invalid-project rejection without data loss and byte-exact ROM reopening. Native-window checks covered slot changes, A4 selection, Play/Stop and a manual boundary change updating the seam. A separate JUCE-only configure also passed. These checks used generated signals, not original sample content. Windows CI targets are configured; Windows build/runtime and final playback in Silver-K are not validated by this local run.

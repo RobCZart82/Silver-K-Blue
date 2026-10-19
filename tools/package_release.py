@@ -13,8 +13,8 @@ import zipfile
 from pathlib import Path
 from check_plugin_identity import check_identity
 
-VERSION = '0.4a'
-PLUGIN_VERSION = '0.4.0'
+VERSION = '0.4.1a'
+PLUGIN_VERSION = '0.4.1'
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -90,6 +90,7 @@ def main():
         copy(ROOT / 'doc/WAVE_ROM_BUILDER.md', 'Tools/WAVE_ROM_BUILDER.md')
         for folder in ('ROMs', 'Patches', 'Skins'):
             (stage / 'Silver-K' / folder).mkdir(parents=True)
+        copy(ROOT / 'assets/skins/Silver Flat', 'Silver-K/Skins/Silver Flat')
         waves = stage / 'Silver-K/ROMs/ks-wave-zero.bin'
         waves.write_bytes(bytes(129024))
         wave_manifest = dict(origin='Silver-K synthetic zero bank', size=129024,
@@ -99,7 +100,8 @@ def main():
         (stage / 'Silver-K/ROMs/ks-wave-zero.manifest.json').write_text(json.dumps(wave_manifest, indent=2)+'\n')
         for src, dest in [('doc/INSTALL.md', 'INSTALL.md'),
                           ('doc/USER_GUIDE.md', 'USER_GUIDE.md'),
-                          ('doc/releases/0.4a.md', 'RELEASE_NOTES.md'),
+                          ('doc/SKINS.md', 'SKINS.md'),
+                          (f'doc/releases/{VERSION}.md', 'RELEASE_NOTES.md'),
                           ('LICENSE.md', 'LICENSE.md'), ('THIRD_PARTY.md', 'THIRD_PARTY.md')]:
             copy(ROOT / src, dest)
         if args.test_guide:
@@ -114,8 +116,13 @@ def main():
         source_archive = stage / 'Silver-K-source.zip'
         roots = ('source/','cmake/','assets/','tools/','doc/','.github/')
         top = {'CMakeLists.txt','README.md','LICENSE.md','THIRD_PARTY.md','.gitignore'}
+        public_docs = {'doc/BUILD.md', 'doc/INSTALL.md', 'doc/USER_GUIDE.md',
+                       'doc/SKINS.md', 'doc/WAVE_ROM_BUILDER.md',
+                       'doc/releases/0.4a.md', f'doc/releases/{VERSION}.md'}
         with zipfile.ZipFile(source_archive,'w',zipfile.ZIP_DEFLATED) as source_zip:
             for relative in sorted(set(source_files)):
+                if relative.startswith('doc/') and relative not in public_docs:
+                    continue
                 path = ROOT / relative
                 if (relative.startswith(roots) or relative in top) and path.is_file():
                     if path.suffix.lower() in {'.bin','.syx','.mid','.midi','.os','.fxb','.fxp','.wav','.skwave'} and relative!='assets/ks-init-flash.bin':
@@ -143,6 +150,7 @@ No original firmware or factory sounds are included in this binary archive.
                         source_commit=commit, source_dirty=dirty, source_snapshot_sha256=digest(source_archive), plugin_identity=plugin_identity, firmware_included=False, factory_presets_included=False,
                         ks_data_required=True, synthetic_ks_data_included=False, synthetic_wave_rom=wave_manifest,
                         wave_rom_builder_included=True, wave_rom_builder_version='0.1.0',
+                        bundled_skins=['Silver Flat'], skin_schema_version=1,
                         macos_signing='ad-hoc; not notarized' if args.platform.startswith('macOS') else None)
         (stage / 'release-manifest.json').write_text(json.dumps(manifest, indent=2)+'\n', encoding='utf-8')
         files = sorted(p for p in stage.rglob('*') if p.is_file() and not p.is_symlink())

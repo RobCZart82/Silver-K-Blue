@@ -397,7 +397,7 @@ struct Control final : juce::Component, private juce::Timer
                 setSkinColour(label,juce::Label::outlineWhenEditingColourId,juce::Colour(0xff087fe5));
                 setSkinColour(label,juce::TextEditor::backgroundColourId,isDark?juce::Colour(0xff24262a):juce::Colour(0xfff1f4f7));
                 setSkinColour(label,juce::TextEditor::textColourId,isDark?juce::Colour(0xfff1f4f7):juce::Colour(0xff171b20));
-                label.setEditable(true,false,false);label.setTooltip(juce::String(s.label)+" — click the name to enter a value");
+                label.setEditable(true,false,false);label.setTooltip(juce::String(s.label)+juce::String::fromUTF8(" \xe2\x80\x94 click the name to enter a value"));
                 label.onEditorShow=[this]{
                     stopTimer();showingValue=true;
                     if(auto* editor=label.getCurrentTextEditor()){editor->setText(valueText(),false);editor->selectAll();}
@@ -774,7 +774,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         {
             auto& b=extraButtons[i];main.addAndMakeVisible(b);b.setButtonText(i==7?"Options":"O");
             b.setComponentID("extra:"+domains[int(i)]);b.getProperties().set("small",true);
-            b.setTooltip(juce::StringArray{"Oscillator 1","Oscillator 2","Oscillator 3","Mixer","Filter","Envelopes","LFO","Program","Volume / Arp / Glide","Effects"}[int(i)]+(i==7?" — Options":" — Extra"));
+            b.setTooltip(juce::StringArray{"Oscillator 1","Oscillator 2","Oscillator 3","Mixer","Filter","Envelopes","LFO","Program","Volume / Arp / Glide","Effects"}[int(i)]+juce::String::fromUTF8(i==7?" \xe2\x80\x94 Options":" \xe2\x80\x94 Extra"));
             b.onClick=[this,domain=domains[int(i)]]{openExtra(domain);};
         }
         main.addAndMakeVisible(fmButton);fmButton.setComponentID("fmSettings");fmButton.getProperties().set("small",true);
@@ -1004,7 +1004,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         const auto names=juce::StringArray{"osc1","osc2","osc3","mixer","filter","envelopes","lfo","voice","arp","fx","fm"};
         const auto regions=juce::StringArray{"Oscillator 1","Oscillator 2","Oscillator 3","Mixer","Filter","Envelopes","LFO","Program","Volume / Arp / Glide","Effects","FM"};
         const int n=names.indexOf(domain);if(n<0)return;
-        localExtra.title=domain=="fm"?"FM settings":domain=="voice"?"Options":domain=="lfo"?(processor.isKStation()?"LFO 1 / LFO 2 — Extra":"LFO "+juce::String(lfo)+" — Extra"):regions[n];
+        localExtra.title=domain=="fm"?"FM settings":domain=="voice"?"Options":domain=="lfo"?((processor.isKStation()?juce::String("LFO 1 / LFO 2"):"LFO "+juce::String(lfo))+juce::String::fromUTF8(" \xe2\x80\x94 Extra")):regions[n];
         localExtra.setTitle(localExtra.title);
         localExtra.clockRow.setVisible(domain=="voice");
         localExtra.clockSelect.setSelectedId(int(processor.clockSource())+1,juce::dontSendNotification);
@@ -1311,16 +1311,18 @@ void Editor::resized()
 }
 void Editor::mouseDown(const juce::MouseEvent& event)
 {
-    if(event.mods.isPopupMenu()&&!m_sizeMenuOpen)showSizeMenu();
+    if(event.mods.isPopupMenu()&&!m_sizeMenuOpen)showSizeMenu(event.getScreenPosition());
 }
-void Editor::showSizeMenu()
+void Editor::showSizeMenu(juce::Point<int> screenPosition)
 {
     m_sizeMenuOpen=true;
     juce::PopupMenu sizes,menu;
     for(int percent:{50,75,100})sizes.addItem(percent,juce::String(percent)+"%",true,std::abs(getUiScale()*100-percent)<.1);
-    sizes.addSeparator();sizes.addItem(1,"Custom…");menu.addSubMenu("Size",sizes);
+    sizes.addSeparator();sizes.addItem(1,juce::String::fromUTF8("Custom\xe2\x80\xa6"));menu.addSubMenu("Size",sizes);
     const juce::Component::SafePointer<Editor> self(this);
-    menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(this).withTargetScreenArea({juce::Desktop::getMousePosition(),{1,1}}),[self](int result){
+    // Rectangle(Point, Point) takes two corners, not a position and size.
+    const juce::Rectangle<int> target(screenPosition.x,screenPosition.y,1,1);
+    menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(this).withTargetScreenArea(target),[self](int result){
         if(!self)return;
         self->m_sizeMenuOpen=false;
         if(result==1)self->showCustomSize();else if(result>=50)self->setUiScale(result/100.);
@@ -1329,7 +1331,7 @@ void Editor::showSizeMenu()
 void Editor::showCustomSize()
 {
     if(m_sizeDialog)return;
-    m_sizeDialog=std::make_unique<juce::AlertWindow>("Plugin size","Scale: 50–150%",juce::MessageBoxIconType::NoIcon,this);
+    m_sizeDialog=std::make_unique<juce::AlertWindow>("Plugin size",juce::String::fromUTF8("Scale: 50\xe2\x80\x93" "150%"),juce::MessageBoxIconType::NoIcon,this);
     m_sizeDialog->addTextEditor("percent",juce::String(getUiScale()*100,1),"Size (%)");
     m_sizeDialog->addButton("Apply",1,juce::KeyPress(juce::KeyPress::returnKey));
     m_sizeDialog->addButton("Cancel",0,juce::KeyPress(juce::KeyPress::escapeKey));

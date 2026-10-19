@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.22)
-project(SilverK VERSION 0.4.0 LANGUAGES C CXX)
+project(SilverK VERSION 0.4.1 LANGUAGES C CXX)
+# This directory can also be configured directly, without the root CMake file.
+if(MSVC)
+    add_compile_options(/utf-8)
+endif()
 set(CMAKE_OSX_DEPLOYMENT_TARGET 12.0 CACHE STRING "Deployment target")
 enable_testing()
 set(CMAKE_CXX_STANDARD 17)

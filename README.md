@@ -1,4 +1,4 @@
-# Silver-K 0.4a
+# Silver-K 0.4.1a
 
 K-Station and KS firmware emulation for desktop hosts and Standalone use.
 
@@ -38,7 +38,7 @@ Setup remembers the selected root. Required files selected elsewhere are copied 
 Alpha. Performance and latency remain under development. KS external audio input is not implemented.
 
 - [Build instructions](doc/BUILD.md)
-- [Technical notes](doc/silver_k.md)
+- [Custom skins](doc/SKINS.md)
 - [Licenses and provenance](THIRD_PARTY.md)
 
 Licensed under [GPLv3](LICENSE.md).

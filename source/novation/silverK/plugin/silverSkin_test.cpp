@@ -198,7 +198,7 @@ class SkinTestApplication final:public juce::JUCEApplication
     juce::File root;
     juce::Component* oldSurface=nullptr;
     bool queueProbe=false;int attempts=0;
-    void fail(const juce::String& error){std::cerr<<error<<'\n';setApplicationReturnValue(1);quit();}
+    void fail(const juce::String& error){std::cerr<<error<<'\n';juce::PopupMenu::dismissAllActiveMenus();setApplicationReturnValue(1);quit();}
 public:
     const juce::String getApplicationName()override{return "Silver-K skin checks";}
     const juce::String getApplicationVersion()override{return "1";}
@@ -232,7 +232,58 @@ public:
         if(find(*editor,"surface")==oldSurface && attempts++<100){juce::Timer::callAfterDelay(25,[this]{afterReload();});return;}
         check(find(*editor,"surface")!=oldSurface,"Reload button did not rebuild the editor");
         check(std::abs(processor->uiParameter("cutoff")->getValue()-.3f)<.001f,"UI skin switch changed the sound parameter");
-        std::cout<<"PASS: real message-loop Export, catalog selection and deferred Reload\n";setApplicationReturnValue(0);quit();
+        std::cout<<"PASS: real message-loop Export, catalog selection and deferred Reload\n";
+        const auto* display=juce::Desktop::getInstance().getDisplays().getPrimaryDisplay();
+        check(display!=nullptr,"Resize-menu checks require a graphical desktop");
+        const auto area=display->userArea;
+        editor->setTopLeftPosition(area.getPosition()+juce::Point<int>(100,80));
+        checkSizeMenu(0);
+    }catch(const std::exception& e){fail(e.what());}}
+    void checkSizeMenu(int index){try{
+        editor->setUiScale(index==0?.5:index==1?.75:1.);
+        auto* source=find(*editor,"extra:osc1");check(source!=nullptr,"Resize click source");
+        const auto now=juce::Time::getCurrentTime();
+        const juce::MouseEvent event(juce::Desktop::getInstance().getMainMouseSource(),{5,5},juce::ModifierKeys::rightButtonModifier,1,0,0,0,0,source,source,now,{5,5},now,1,false);
+        const auto position=event.getScreenPosition();
+        editor->mouseDown(event);
+        auto* popup=juce::Component::getCurrentlyModalComponent();check(popup && popup->getName()=="menu","Resize popup missing at scale index "+juce::String(index));
+        const auto bounds=popup->getScreenBounds();
+        check(std::abs(bounds.getX()-position.x)<32 && std::abs(bounds.getY()-position.y)<32,"Resize popup is detached from the right-click: "+bounds.toString()+" vs "+position.toString());
+        popup->keyPressed(juce::KeyPress(juce::KeyPress::downKey));
+        popup->keyPressed(juce::KeyPress(juce::KeyPress::rightKey));
+        auto* submenu=juce::Component::getCurrentlyModalComponent();check(submenu && submenu!=popup,"Resize submenu missing");
+        bool custom=false;
+        for(auto* item:submenu->getChildren())if(auto* handler=item->getAccessibilityHandler())
+            custom|=handler->getTitle()==juce::String("Custom")+juce::String::charToString(0x2026);
+        check(custom,"Custom menu item contains incorrectly decoded Unicode");
+        const auto capture=juce::SystemStats::getEnvironmentVariable("SILVER_K_UI_CAPTURE",{});
+        if(capture.isNotEmpty())::capture(*submenu,juce::File(capture).getChildFile("Resize-Menu-"+juce::String(index)+".png"));
+        // Continue after JUCE dispatches the menu's completion callbacks, which
+        // clear the editor's open-menu guard and may create the size dialog.
+        juce::ModalComponentManager::getInstance()->attachCallback(popup,juce::ModalCallbackFunction::create([this,index](int){
+            juce::MessageManager::callAsync([this,index]{if(index<2)checkSizeMenu(index+1);else checkSizeDialog();});
+        }));
+        if(index<2){
+            juce::PopupMenu::dismissAllActiveMenus();
+        }else{
+            // Three presets, a separator, then Custom. Activate the actual item
+            // so the asynchronous menu callback and size dialog are exercised.
+            for(int n=0;n<3;++n)submenu->keyPressed(juce::KeyPress(juce::KeyPress::downKey));
+            submenu->keyPressed(juce::KeyPress(juce::KeyPress::returnKey));
+        }
+    }catch(const std::exception& e){fail(e.what());}}
+    void checkSizeDialog(){try{
+        auto* dialog=dynamic_cast<juce::AlertWindow*>(juce::Component::getCurrentlyModalComponent());check(dialog!=nullptr,"Custom resize dialog missing");
+        check(dialog->getDescription()==juce::String("Plugin size. Scale: 50")+juce::String::charToString(0x2013)+"150%","Size range contains incorrectly decoded Unicode");
+        auto* program=dynamic_cast<juce::TextButton*>(find(*editor,"extra:voice"));
+        check(program && program->getTooltip()==juce::String("Program ")+juce::String::charToString(0x2014)+" Options","Options tooltip contains incorrectly decoded Unicode");
+        juce::ModalComponentManager::getInstance()->attachCallback(dialog,juce::ModalCallbackFunction::create([this](int){
+            juce::MessageManager::callAsync([this]{try{
+                check(editor->getWidth()==1050 && editor->getHeight()==820,"Custom resize did not apply through the menu/dialog callbacks");
+                std::cout<<"PASS: right-click popup placement at 50/75/100%, Unicode menu/dialog/tooltips and Custom resize\n";setApplicationReturnValue(0);quit();
+            }catch(const std::exception& e){fail(e.what());}});
+        }));
+        dialog->getTextEditor("percent")->setText("82");dialog->exitModalState(1);
     }catch(const std::exception& e){fail(e.what());}}
     void shutdown()override{editor.reset();processor.reset();if(root!=juce::File{})root.deleteRecursively();}
 };
