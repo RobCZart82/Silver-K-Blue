@@ -11,9 +11,14 @@ public:
     ~Editor() override;
     void resized() override;
     void mouseDown(const juce::MouseEvent&) override;
+    bool keyPressed(const juce::KeyPress&) override;
     void setUiScale(double);
     double getUiScale() const;
+    bool loadSkin(const juce::File&, juce::String& error);
+    bool reloadSkin(juce::String& error);
 private:
+    bool selectSkin(const juce::File&, const juce::String& builtinChoice, juce::String& error);
+    void connectSurface();
     void showSizeMenu();
     void showCustomSize();
     Processor& m_processor;

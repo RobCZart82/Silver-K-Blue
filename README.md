@@ -12,6 +12,7 @@ Based on the open-source code of [Gearmulator](https://github.com/dsp56300/gearm
 - [Releases](https://github.com/temaniak/Silver-K/releases)
 - [Installation](doc/INSTALL.md)
 - [User guide](doc/USER_GUIDE.md)
+- [Wave ROM Builder](doc/WAVE_ROM_BUILDER.md)
 
 ## Setup
 

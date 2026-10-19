@@ -25,6 +25,10 @@ jobs:
           & build/Release/silver_create_init_flash.exe "$env:RUNNER_TEMP/ks-init-flash.bin"
           if ($LASTEXITCODE -ne 0) { throw 'Init Flash generation failed' }
           if ((Get-FileHash assets/ks-init-flash.bin).Hash -ne (Get-FileHash "$env:RUNNER_TEMP/ks-init-flash.bin").Hash) { throw 'Init Flash is not reproducible' }
+      - name: Build and test Wave ROM Builder
+        run: |
+          cmake --build build --config Release --target silverWaveRomBuilder silverWaveBank_test --parallel 4
+          ctest --test-dir build -C Release --output-on-failure -R '^silver_wave_bank$'
       - name: Package binaries, zero Wave ROM and documentation
         run: python tools/package_release.py --products build/source/novation/silverK/buildStandalone/silverPlugin/silverK_artefacts/Release --dependencies build/_deps --platform Windows-x64 --output release-output
       - uses: actions/upload-artifact@v4

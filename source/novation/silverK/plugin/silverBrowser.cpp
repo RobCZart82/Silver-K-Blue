@@ -1,4 +1,5 @@
 #include "silverBrowser.h"
+#include "silverSkin.h"
 #include <map>
 #include <tuple>
 namespace silverK {
@@ -13,14 +14,15 @@ bool matchesName(const Patch& patch,const juce::String& query){
 }
 Browser::Browser(Processor& processor):p(processor){
  for(auto* c:std::initializer_list<juce::Component*>{&table,&search,&tags,&tagFilter,&model,&source,&favourite,&onlyFavourites,&showAllSlots,&ksBankSelect,&bankHint,&addFolder,&addFile,&refresh,&remove,&saveTags,&exportPatch,&saveCurrent,&info})addAndMakeVisible(*c);
- table.setComponentID("patchTable");table.setModel(this);table.setColour(juce::ListBox::backgroundColourId,juce::Colour(0xffe5e7ea));table.setRowHeight(29);int id=1;for(const auto& col:std::initializer_list<std::pair<const char*,int>>{{"Name",260},{"Model",90},{"Type",100},{"Tags",210},{"Compatibility",190},{"Source",280},{"No.",80},{"Bank",135}})table.getHeader().addColumn(col.first,id++,col.second,40,900);
+ table.setComponentID("patchTable");table.setModel(this);setSkinColour(table,juce::ListBox::backgroundColourId,juce::Colour(0xffe5e7ea));table.setRowHeight(29);int id=1;for(const auto& col:std::initializer_list<std::pair<const char*,int>>{{"Name",260},{"Model",90},{"Type",100},{"Tags",210},{"Compatibility",190},{"Source",280},{"No.",80},{"Bank",135}})table.getHeader().addColumn(col.first,id++,col.second,40,900);
+ addFolder.setComponentID("addPatchFolder");addFile.setComponentID("addPatchFile");saveCurrent.setComponentID("saveCurrentPatch");saveTags.setComponentID("savePatchTags");exportPatch.setComponentID("exportPatch");tags.setComponentID("patchTags");favourite.setComponentID("patchFavourite");onlyFavourites.setComponentID("patchFavouritesOnly");info.setComponentID("patchInfo");bankHint.setComponentID("patchBankHint");
  refresh.setComponentID("rescanPatches");remove.setComponentID("removePatchSource");
  search.setComponentID("patchSearch");model.setComponentID("patchModel");tagFilter.setComponentID("patchTagFilter");source.setComponentID("patchSource");
  table.getHeader().moveColumn(7,0);table.getHeader().moveColumn(8,1);table.getHeader().setSortColumnId(7,true);
  showAllSlots.setComponentID("showAllBankSlots");showAllSlots.setTooltip("Include unnamed and default User-number slots from V-Station banks. All sound data is retained.");
  source.setTooltip("Folders, banks and individually added presets. Rescan refreshes all connected paths.");
  ksBankSelect.setComponentID("ksBank");ksBankSelect.setTooltip("KS memory banks within the selected source. Drum Maps include 49 keys and shared effects.");
- bankHint.setText("Drums: banks 5-8 / MIDI keys 36-84 / shared FX",juce::dontSendNotification);bankHint.setColour(juce::Label::textColourId,juce::Colour(0xff171b20));
+ bankHint.setText("Drums: banks 5-8 / MIDI keys 36-84 / shared FX",juce::dontSendNotification);setSkinColour(bankHint,juce::Label::textColourId,juce::Colour(0xff171b20));
  ksBankSelect.addItem("All KS banks / other presets",1);
  ksBankSelect.addItem("Drums - all Drum Maps (banks 5-8)",11);
  for(int bank=1;bank<=8;++bank)ksBankSelect.addItem("Bank "+juce::String(bank)+" - "+(bank<=4?"Programs ":"Drums / Drum Map ")+juce::String(bank*100)+"-"+juce::String(bank*100+(bank<=4?99:49)),bank+1);
@@ -45,7 +47,7 @@ Browser::Browser(Processor& processor):p(processor){
  updateModel();startTimerHz(10);
 }
 Browser::~Browser(){stopTimer();rememberView();if(handle!=g_invalidSearchHandle)p.patchLibrary.cancelSearch(handle);table.setModel(nullptr);}
-void Browser::resized(){auto area=getLocalBounds().reduced(8);auto top=area.removeFromTop(32);search.setBounds(top.removeFromLeft(220).reduced(2));model.setBounds(top.removeFromLeft(140).reduced(2));tagFilter.setBounds(top.removeFromLeft(160).reduced(2));source.setBounds(top.removeFromLeft(320).reduced(2));onlyFavourites.setBounds(top.removeFromLeft(170));showAllSlots.setBounds(top);if(!p.isKStation()){auto banks=area.removeFromTop(34);ksBankSelect.setBounds(banks.removeFromLeft(440).reduced(2));bankHint.setBounds(banks.reduced(8,2));}area.removeFromTop(8);auto actions=area.removeFromTop(32);for(auto* b:{&addFolder,&addFile,&refresh,&remove,&saveCurrent})b->setBounds(actions.removeFromLeft(140).reduced(2));area.removeFromTop(8);auto bottom=area.removeFromBottom(72);info.setBounds(bottom.removeFromBottom(32));tags.setBounds(bottom.removeFromLeft(420).reduced(2));favourite.setBounds(bottom.removeFromLeft(130));for(auto* b:{&saveTags,&exportPatch})b->setBounds(bottom.removeFromLeft(135).reduced(2));table.setBounds(area);}
+void Browser::resized(){auto area=getLocalBounds().reduced(8);auto top=area.removeFromTop(32);search.setBounds(top.removeFromLeft(220).reduced(2));model.setBounds(top.removeFromLeft(140).reduced(2));tagFilter.setBounds(top.removeFromLeft(160).reduced(2));source.setBounds(top.removeFromLeft(320).reduced(2));onlyFavourites.setBounds(top.removeFromLeft(170));showAllSlots.setBounds(top);if(!p.isKStation()){auto banks=area.removeFromTop(34);ksBankSelect.setBounds(banks.removeFromLeft(440).reduced(2));bankHint.setBounds(banks.reduced(8,2));}area.removeFromTop(8);auto actions=area.removeFromTop(32);for(auto* b:{&addFolder,&addFile,&refresh,&remove,&saveCurrent})b->setBounds(actions.removeFromLeft(140).reduced(2));area.removeFromTop(8);auto bottom=area.removeFromBottom(72);info.setBounds(bottom.removeFromBottom(32));tags.setBounds(bottom.removeFromLeft(420).reduced(2));favourite.setBounds(bottom.removeFromLeft(130));for(auto* b:{&saveTags,&exportPatch})b->setBounds(bottom.removeFromLeft(135).reduced(2));table.setBounds(area);applySkin(*this,false);}
 void Browser::query(){resultsDirty=true;if(handle!=g_invalidSearchHandle)p.patchLibrary.cancelSearch(handle);SearchRequest request;const auto queryName=search.getText().trim();const int n=source.getSelectedId()-2;if(n>=0 && n<int(sources.size()))request.sourceNode=sources[n];const auto selected=model.getSelectedId()>1?model.getText():juce::String{};const auto tag=tagFilter.getText().trim();const bool favourites=onlyFavourites.getToggleState(),allSlots=showAllSlots.getToggleState(),k=p.isKStation();const unsigned bank=k?0:unsigned(ksBankSelect.getSelectedId()-1);request.customCompareFunc=[selected,tag,favourites,allSlots,queryName,k,bank](const Patch& patch){if(k && ksDrum(patch.sysex.data(),patch.sysex.size()))return false;if(bank==10){if(!ksDrum(patch.sysex.data(),patch.sysex.size()))return false;}else if(bank && ksBank(patch.sysex.data(),patch.sysex.size())!=bank)return false;if(!matchesName(patch,queryName))return false;if(!allSlots && emptyVStationSlot(patch))return false;if(!selected.isEmpty() && modelName(patchModel(patch))!=selected)return false;if(favourites && patch.getTags(TagType::Favourites).getAdded().empty())return false;if(!tag.isEmpty()){bool match=false;for(const auto& t:patch.getTags(TagType::Tag).getAdded())match|=juce::String(t).containsIgnoreCase(tag);if(!match)return false;}return true;};handle=p.patchLibrary.search(std::move(request));}
 void Browser::timerCallback(){
  if(p.firmwareReady() && !p.isFirmwareLoading() && !p.isKStation() && indexedFirmware!=p.osFile){indexedFirmware=p.osFile;p.publishFactoryPresets();}
@@ -114,7 +116,7 @@ void Browser::updateRows(std::vector<PatchPtr> next){
  if(old){auto it=std::find(rows.begin(),rows.end(),old);if(it==rows.end()){const auto source=old->source.lock();it=std::find_if(rows.begin(),rows.end(),[&](const auto& patch){const auto nextSource=patch->source.lock();return source && nextSource && *source==*nextSource && patch->program==old->program && patch->hash==old->hash;});}if(it==rows.end())it=std::find_if(rows.begin(),rows.end(),[&](const auto& patch){return identity(patch)==identity(old);});if(it!=rows.end())table.selectRow(int(it-rows.begin()));}
  selectedRowsChanged(table.getSelectedRow());table.repaint();
 }
-void Browser::paintRowBackground(juce::Graphics& g,int row,int width,int height,bool selected){g.fillAll(selected?juce::Colour(0xff087fe5):row%2?juce::Colour(0xffd5d8dc):juce::Colour(0xffe5e7ea));}
+void Browser::paintRowBackground(juce::Graphics& g,int row,int width,int height,bool selected){g.fillAll(selected?skinColour(*this,0xff087fe5):row%2?skinColour(*this,0xffd5d8dc):skinColour(*this,0xffe5e7ea));}
 juce::String Browser::cellText(const PatchPtr& patch,int column)const{
  const auto m=patchModel(*patch);
  switch(column){
@@ -128,7 +130,7 @@ juce::String Browser::cellText(const PatchPtr& patch,int column)const{
  }
  return {};
 }
-void Browser::paintCell(juce::Graphics& g,int row,int column,int width,int height,bool selected){if(row<0 || row>=int(rows.size()))return;g.setColour(selected?juce::Colours::white:juce::Colour(0xff171b20));g.setFont(13.f);g.drawText(cellText(rows[row],column),5,0,width-10,height,juce::Justification::centredLeft,true);}
+void Browser::paintCell(juce::Graphics& g,int row,int column,int width,int height,bool selected){if(row<0 || row>=int(rows.size()))return;g.setColour(selected?skinColour(*this,0xffffffff):skinColour(*this,0xff171b20));g.setFont(skinFont(*this,13.f));g.drawText(cellText(rows[row],column),5,0,width-10,height,juce::Justification::centredLeft,true);}
 void Browser::selectedRowsChanged(int row){if(row<0 || row>=int(rows.size())){tags.clear();favourite.setToggleState(false,juce::dontSendNotification);info.setText({},juce::dontSendNotification);return;}tags.setText(tagText(rows[row],TagType::Tag),false);favourite.setToggleState(!rows[row]->getTags(TagType::Favourites).getAdded().empty(),juce::dontSendNotification);info.setText(patchName(*rows[row])+" / "+modelName(patchModel(*rows[row])),juce::dontSendNotification);if(!updatingRows)activate(row);}
 void Browser::cellClicked(int row,int,const juce::MouseEvent& event){
  if(row<0 || row>=int(rows.size()) || updatingRows)return;

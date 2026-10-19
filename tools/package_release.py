@@ -30,6 +30,7 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--variant', default='', help='Optional archive label for a separate experimental build')
     parser.add_argument('--test-guide', type=Path, help='Optional tester instructions to include')
+    parser.add_argument('--wave-builder', type=Path, help='Companion application bundle or executable; otherwise discover beside silverPlugin')
     parser.add_argument('--staging-directory', type=Path, help='Keep a new staging directory instead of using/cleaning a system temporary folder')
     args = parser.parse_args()
     if args.variant and not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9-]{0,79}', args.variant):
@@ -78,6 +79,15 @@ def main():
                     raise RuntimeError(f'Unexpected architecture: {arches}')
                 subprocess.run(['codesign', '--verify', '--deep', '--strict', str(built)], check=True)
             copy(built, target + '/' + filename)
+        builder_name = 'Silver-K Wave ROM Builder' + ('.app' if args.platform.startswith('macOS') else '.exe')
+        builder = args.wave_builder or (args.products.parents[2] / 'waveRomBuilder' /
+                  'silverWaveRomBuilder_artefacts' / args.products.name / builder_name)
+        if not builder.exists():
+            raise RuntimeError('Build silverWaveRomBuilder before packaging, or provide --wave-builder')
+        if args.platform.startswith('macOS'):
+            subprocess.run(['codesign', '--verify', '--deep', '--strict', str(builder)], check=True)
+        copy(builder, 'Tools/' + builder_name)
+        copy(ROOT / 'doc/WAVE_ROM_BUILDER.md', 'Tools/WAVE_ROM_BUILDER.md')
         for folder in ('ROMs', 'Patches', 'Skins'):
             (stage / 'Silver-K' / folder).mkdir(parents=True)
         waves = stage / 'Silver-K/ROMs/ks-wave-zero.bin'
@@ -108,7 +118,7 @@ def main():
             for relative in sorted(set(source_files)):
                 path = ROOT / relative
                 if (relative.startswith(roots) or relative in top) and path.is_file():
-                    if path.suffix.lower() in {'.bin','.syx','.mid','.midi','.os','.fxb','.fxp','.wav'} and relative!='assets/ks-init-flash.bin':
+                    if path.suffix.lower() in {'.bin','.syx','.mid','.midi','.os','.fxb','.fxp','.wav','.skwave'} and relative!='assets/ks-init-flash.bin':
                         raise RuntimeError(f'Private/binary asset in source snapshot: {relative}')
                     source_zip.write(path,relative)
         dirty = bool(subprocess.check_output(['git','status','--porcelain'],cwd=ROOT,text=True).strip())
@@ -132,6 +142,7 @@ No original firmware or factory sounds are included in this binary archive.
         manifest = dict(version=VERSION, channel='experimental' if args.variant else 'release', variant=args.variant or None, plugin_version=PLUGIN_VERSION, platform=args.platform,
                         source_commit=commit, source_dirty=dirty, source_snapshot_sha256=digest(source_archive), plugin_identity=plugin_identity, firmware_included=False, factory_presets_included=False,
                         ks_data_required=True, synthetic_ks_data_included=False, synthetic_wave_rom=wave_manifest,
+                        wave_rom_builder_included=True, wave_rom_builder_version='0.1.0',
                         macos_signing='ad-hoc; not notarized' if args.platform.startswith('macOS') else None)
         (stage / 'release-manifest.json').write_text(json.dumps(manifest, indent=2)+'\n', encoding='utf-8')
         files = sorted(p for p in stage.rglob('*') if p.is_file() and not p.is_symlink())

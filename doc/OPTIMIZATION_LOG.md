@@ -4,6 +4,41 @@ This versioned journal is shared between Windows and macOS work. Append dated
 entries; do not replace earlier measurements with results from another machine.
 Raw local reports are not committed. A hypothesis is not a measured result.
 
+## 2026-10-19 — Windows skin texture minification
+
+Source/build identity: `main`, base `aa012cf825f4` plus the current uncommitted
+skin-package work and this graphics fix; Silver-K 0.4a / numeric 0.4.0.
+Actual validation platform: macOS arm64, Release, pinned JUCE dependencies.
+Test ID: `silver-win-ui-minification-20261019`. This is an editor graphics
+repair, with no DSP/controller, audio callback, timing, buffer, worker, priority
+or Windows system-setting changes. No audio or CPU result is claimed.
+
+The user's Windows screenshot showed aliasing on heavily reduced knob artwork
+and button caps. The same defect was reproduced locally with JUCE's software
+renderer; medium/high quality produced identical pixels. CoreGraphics rendered
+the same assets cleanly at the same physical dimensions. Windows now draws
+area-filtered artwork from a per-editor cache of half-size levels and final
+physical sizes, accounting for the editor transform and host/monitor DPI.
+Premultiplied alpha is averaged with colour; sources and final sizes are bounded
+to eight entries each. Built-in stand, classic and rotating-grip knobs, volume
+artwork and button caps use this path. The native macOS path and the shared
+skin files/PNG assets are retained.
+
+Actual checks: macOS Standalone, VST3 and AU built successfully; native editor,
+skin-package and Performance editor CTests passed (3/3) with a fresh isolated
+data folder. The raster regression exercises fine-line minification against
+analytical pixel-area averages, transparent edges, bitmap reuse/replacement
+and 16 combinations of editor scale (50/75/100/150%) and DPI (100/125/150/200%).
+The test uses the software filter explicitly on macOS and verifies that native
+macOS drawing still receives the original artwork. A visual software-renderer
+comparison using the actual knob/button PNGs also passed inspection.
+Repository audit and diff whitespace checks passed. Captures and build logs
+remain local, outside tracked source.
+
+No Windows build, real DAW or Windows monitor/DPI handover has been validated
+in this entry. Next step: build the same sources on Windows and inspect the
+editor in Standalone/VST3 at the supported UI/DPI scales and across monitors.
+
 ## 2026-10-18 — Release 0.4a Windows test-entrypoint repair
 
 Release preparation on macOS from `58e1787` exposed the existing Windows CI

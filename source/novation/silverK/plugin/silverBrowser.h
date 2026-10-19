@@ -7,6 +7,7 @@ public:
  explicit Browser(Processor&);~Browser()override;
  void resized()override;
  void pollLibrary(){timerCallback();}
+ void saveViewState(){rememberView();}
  bool stepPatch(int direction,juce::String* error=nullptr);
  std::vector<pluginLib::patchDB::PatchPtr> filteredPrograms()const;
  bool activateProgram(unsigned,const pluginLib::patchDB::PatchPtr&,juce::String&);

@@ -2755,5 +2755,157 @@
     798,
     174,
     28
-  ]
+  ],
+  "drawPanels": true,
+  "performanceCanvas": [
+    1254,
+    904
+  ],
+  "components": {
+    "setupStatus": {
+      "bounds": [
+        52,
+        144,
+        1120,
+        72
+      ]
+    },
+    "setupLatency": {
+      "bounds": [
+        52,
+        225,
+        1100,
+        30
+      ]
+    },
+    "loadFirmware": {
+      "bounds": [
+        52,
+        245,
+        200,
+        38
+      ]
+    },
+    "dataFolder": {
+      "bounds": [
+        266,
+        245,
+        170,
+        38
+      ]
+    },
+    "rescanRoms": {
+      "bounds": [
+        450,
+        245,
+        150,
+        38
+      ]
+    },
+    "waveRom": {
+      "bounds": [
+        52,
+        295,
+        180,
+        38
+      ]
+    },
+    "factoryData": {
+      "bounds": [
+        246,
+        295,
+        190,
+        38
+      ]
+    },
+    "skinSelect": {
+      "bounds": [
+        52,
+        353,
+        230,
+        34
+      ]
+    },
+    "loadSkin": {
+      "bounds": [
+        298,
+        353,
+        170,
+        34
+      ]
+    },
+    "reloadSkin": {
+      "bounds": [
+        480,
+        353,
+        96,
+        34
+      ]
+    },
+    "exportSkin": {
+      "bounds": [
+        588,
+        353,
+        170,
+        34
+      ]
+    },
+    "openSkins": {
+      "bounds": [
+        770,
+        353,
+        140,
+        34
+      ]
+    },
+    "controlChannel": {
+      "bounds": [
+        922,
+        353,
+        270,
+        34
+      ]
+    },
+    "audioBuffer": {
+      "bounds": [
+        52,
+        401,
+        436,
+        34
+      ]
+    },
+    "performanceDiagnostics": {
+      "bounds": [
+        510,
+        401,
+        270,
+        34
+      ]
+    },
+    "ksController": {
+      "bounds": [
+        52,
+        449,
+        436,
+        34
+      ]
+    },
+    "demoSong": {
+      "bounds": [
+        510,
+        449,
+        270,
+        34
+      ]
+    },
+    "setupHelp": {
+      "bounds": [
+        52,
+        494,
+        1120,
+        84
+      ]
+    }
+  },
+  "decorations": []
 }

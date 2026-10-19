@@ -38,6 +38,7 @@ Testing/
 *.flac
 *.mp3
 *.state
+*.skwave
 # Firmware, sampled waves and external patches are always private
 *.[bB][iI][nN]
 *.rom
