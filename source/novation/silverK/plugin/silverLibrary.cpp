@@ -33,7 +33,7 @@ juce::String patchName(const Patch& patch){
 }
 std::shared_ptr<Library> sharedLibrary(const juce::File& dir){static std::mutex mutex;static std::map<juce::String,std::weak_ptr<Library>> instances;std::lock_guard guard(mutex);auto& weak=instances[dir.getFullPathName()];if(auto existing=weak.lock())return existing;auto library=std::make_shared<Library>(dir);weak=library;return library;}
 
-Library::Library(const juce::File& dir):DB(dir),importVersion(dir.getChildFile("silver-import-version.txt")),sourceSettings(dir.getChildFile("silver-sources.json")),migrateImports(importVersion.loadFileAsString().trim()!="5"){
+Library::Library(const juce::File& dir):DB(dir),importVersion(dir.getChildFile("silver-import-version.txt")),sourceSettings(dir.getChildFile("silver-sources.json")),migrateImports(importVersion.loadFileAsString().trim()!="6"){
  const auto saved=juce::JSON::parse(sourceSettings);managedFolder=saved["managedFolder"].toString();
  if(const auto* paths=saved["excluded"].getArray())for(const auto& path:*paths)if(juce::File::isAbsolutePath(path.toString()))excludedPaths.insert(path.toString());
  if(const auto* paths=saved["included"].getArray())for(const auto& path:*paths)if(juce::File::isAbsolutePath(path.toString()))includedPaths.insert(path.toString());
@@ -46,7 +46,7 @@ Library::Library(const juce::File& dir):DB(dir),importVersion(dir.getChildFile("
  if(migrateImports)runOnLoaderThread([this]{std::vector<DataSourceNodePtr> sources;getDataSources(sources);for(const auto& ds:sources)if(ds->origin==DataSourceOrigin::Manual && (ds->type==SourceType::File || ds->type==SourceType::Folder) && juce::File(ds->name).exists())refreshDataSource(ds);});
 }
 Library::~Library(){stopLoaderThread();}
-void Library::onLoadFinished(){if(migrateImports && importVersion.replaceWithText("5\n"))migrateImports=false;}
+void Library::onLoadFinished(){if(migrateImports && importVersion.replaceWithText("6\n"))migrateImports=false;}
 PatchPtr Library::initializePatch(Data&& data,const std::string& fallback){const auto original=data;std::string importedName;const bool vStation=unpackVStationPatch(data,importedName);if(!vStation)unpackNamedRecord(data,importedName);if(!validPatch(data))return {};auto p=std::make_shared<Patch>();const auto model=modelOf(data);p->sysex=std::move(data);p->bank=p->sysex[11];p->program=p->sysex[12];const bool perf=p->sysex.size()==1038;const unsigned offset=perf?192:(model==Model::KS || model==Model::XStation)?151:0;
  if(model==Model::KS || model==Model::XStation){juce::String name;for(unsigned i=offset;i<offset+16;++i){auto c=p->sysex[13+i];name+=juce::String::charToString(c>=32 && c<127?c:' ');}p->name=name.trim().toStdString();}if(!importedName.empty())p->name=importedName;if(p->name.empty()){const auto stem=juce::String(fallback).trim();p->name=(stem.isNotEmpty()?stem:numberedName(vStation?Model::VStation:model,p->bank*100+p->program+1)).toStdString();}
  if(drumMap(p->sysex.data(),p->sysex.size())){
@@ -157,6 +157,7 @@ bool Library::parseFileData(DataList& output,const Data& input,const std::string
   }else output.push_back(std::move(frame));
  };
  for(auto& frame:frames){
+  if(parseVStationSysex(output,frame))continue;
   if(validPatch(frame)){append(std::move(frame));continue;}
   const auto model=modelOf(frame);
   // A/K bank messages hold two consecutive 128-byte programs, rather than

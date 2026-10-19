@@ -4,6 +4,8 @@ on:
 permissions:
   contents: read
 jobs:
+  macos-universal:
+    uses: ./.github/workflows/macos-build.yml
   windows-x64:
     runs-on: windows-latest
     timeout-minutes: 45

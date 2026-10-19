@@ -14,11 +14,12 @@ static Data preset(const std::string& name,uint8_t sound=1){
  word(bytes,4,201);word(bytes,12,1);word(bytes,24,1);word(bytes,56,149);bytes[60]=sound;
  std::copy_n(name.begin(),std::min(size_t(20),name.size()),bytes.begin()+188);return bytes;
 }
-static Data bank(const std::vector<std::string>& names){
- const size_t count=names.size(),chunk=1+count*149+7;Data data(160+chunk,0);
+static Data bank(const std::vector<std::string>& names,uint8_t version=1){
+ const size_t count=names.size(),prefix=version==2?3:1,chunk=prefix+count*149+(version==2?6:7);Data data(160+chunk,0);
  std::copy_n("CcnK",4,data.begin());std::copy_n("FBCh",4,data.begin()+8);std::copy_n("NvS0",4,data.begin()+16);
- word(data,4,uint32_t(data.size()-8));word(data,12,1);word(data,24,uint32_t(count));word(data,156,uint32_t(chunk));data[160]=1;
- for(size_t n=0;n<count;++n){data[161+n*128]=uint8_t(n+1);std::copy_n(names[n].begin(),std::min(size_t(20),names[n].size()),data.begin()+161+count*128+n*21);}return data;
+ word(data,4,uint32_t(data.size()-8));word(data,12,1);word(data,24,uint32_t(count));word(data,156,uint32_t(chunk));data[160]=version;
+ if(version==2){data[161]=1;data[162]=76;}
+ for(size_t n=0;n<count;++n){data[160+prefix+n*128]=uint8_t(n%127+1);std::copy_n(names[n].begin(),std::min(size_t(20),names[n].size()),data.begin()+160+prefix+count*128+n*21);}return data;
 }
 static void write(const juce::File& file,const Data& data){check(file.getParentDirectory().createDirectory().wasOk(),"Create fixture folder");check(file.replaceWithData(data.data(),data.size()),"Write fixture");}
 static void dataMidi(const juce::File& file,uint8_t program,const char* name){
@@ -57,6 +58,51 @@ static void parserChecks(const juce::File& root){
  native[13]=42;library.addFactory({native,native},"Fixture Factory");idle(library);check(patches(library).size()==2,"Factory source did not update");
  library.addFactory({native},"Fixture Factory");idle(library);auto factory=patches(library);check(factory.size()==1 && factory[0]->sysex[13]==42,"Old Flash programs remained in factory source");
  std::cout<<"PASS: FXP, padded/legacy names, partial/list FXB, original slot order, atomic rejection, factory refresh\n";
+}
+static void vStationCompatibilityChecks(const juce::File& root){
+ Library library(root.getChildFile("vstation-compatibility"));std::vector<std::string> names;
+ for(unsigned n=0;n<400;++n)names.push_back("Compatibility "+std::to_string(n));
+ auto verifyBank=[&](const Data& input,unsigned version){
+  DataList parsed;check(library.parseFileData(parsed,input,"compatibility.fxb") && parsed.size()==400,"Compatible FXB rejected");
+  const size_t soundBase=version==2?163:161,nameBase=soundBase+400*128;std::set<PatchHash> hashes;
+  for(unsigned n=0;n<400;++n){auto p=library.createPatch(Data(parsed[n]),{});check(p && patchModel(*p)==Model::VStation,"FXB source identity");
+   check(p->name==names[n] && p->bank==1+n/100 && p->program==n%100,"FXB names/order/address");
+   check(std::equal(p->sysex.begin()+13,p->sysex.end()-1,input.begin()+soundBase+n*128),"FXB changed sound bytes");
+   check(std::equal(parsed[n].end()-21,parsed[n].end(),input.begin()+nameBase+n*21),"FXB changed raw name bytes");hashes.insert(p->hash);
+  }check(hashes.size()==400,"FXB slots collapsed");
+ };
+ for(unsigned version:{1u,2u}){
+  const auto original=bank(names,uint8_t(version));verifyBank(original,version);
+  auto stale=original;word(stale,4,uint32_t(stale.size()-108));verifyBank(stale,version);
+  auto footer=original;footer.insert(footer.end(),112,'#');verifyBank(footer,version);
+  auto reject=[&](const Data& invalid){DataList parsed{Data{42}};check(!library.parseFileData(parsed,invalid,"invalid.fxb") && parsed==DataList{Data{42}},"Invalid FXB accepted/partially appended");};
+  for(auto size:{size_t(156),size_t(160),original.size()-8,original.size()-1}){auto invalid=original;invalid.resize(size);reject(invalid);}
+  auto invalid=original;invalid[160]=3;reject(invalid);
+  invalid=original;word(invalid,24,401);reject(invalid);word(invalid,24,0);reject(invalid);
+  invalid=original;word(invalid,156,uint32_t(original.size()-161));reject(invalid);
+  invalid=original;invalid[(version==2?163:161)+399*128]=128;reject(invalid);
+  invalid=original;invalid[(version==2?163:161)+400*128+399*21]=31;reject(invalid);
+  invalid=original;invalid[16]='X';reject(invalid);
+ }
+ auto one=preset("MIDI name from chunk");for(unsigned n=0;n<128;++n)one[60+n]=uint8_t((n*7)%128);
+ DataList expected;check(library.parseFileData(expected,one,"reference.fxp"),"MIDI reference FXP");
+ Data frame{0xf0,0,0x20,0x29,1,0x41,0x7f,1,0,8,9,0,0};frame.insert(frame.end(),one.begin()+60,one.end());frame.push_back(0xf7);
+ auto verifySingle=[&](const Data& input,const char* filename){DataList parsed;check(library.parseFileData(parsed,input,filename) && parsed==expected,"V-Station MIDI/SysEx differs from identical FXP");auto p=library.createPatch(Data(parsed[0]),{});check(p && p->name=="MIDI name from chunk" && patchModel(*p)==Model::VStation,"MIDI name/source identity");};
+ for(uint8_t command:{uint8_t(0),uint8_t(1)}){
+  frame[7]=command;verifySingle(frame,"different-filename.syx");
+  for(uint8_t length:{uint8_t(0x0d),uint8_t(0x22)}){
+   // Some exporters declare 141 bytes, omitting the 21-byte name, instead of 162.
+   Data midi{'M','T','h','d',0,0,0,6,0,0,0,1,3,0xc0,'M','T','r','k',0,0,0,0,0,0xf0,0x81,length};
+   midi.insert(midi.end(),frame.begin()+1,frame.end());midi.insert(midi.end(),{0,0xff,0x2f,0});word(midi,18,uint32_t(midi.size()-22));verifySingle(midi,"different-filename.mid");
+  }
+ }
+ auto rejectSingle=[&](const Data& invalid){DataList parsed{Data{42}};check(!library.parseFileData(parsed,invalid,"invalid.syx") && parsed==DataList{Data{42}},"Invalid extended SysEx accepted/partially appended");};
+ auto invalid=frame;invalid.pop_back();rejectSingle(invalid);
+ invalid=frame;invalid[7]=2;rejectSingle(invalid);invalid=frame;invalid[5]=0x40;rejectSingle(invalid);
+ invalid=frame;invalid[13+127]=128;rejectSingle(invalid);invalid=frame;invalid[141]=31;rejectSingle(invalid);
+ const auto user=preset("User 123");std::copy(user.begin()+188,user.end(),frame.begin()+141);DataList parsed;
+ check(library.parseFileData(parsed,frame,"user.syx") && !emptyVStationSlot(*library.createPatch(Data(parsed[0]),{})),"Individual MIDI hidden as bank filler");
+ std::cout<<"PASS: v1/v2 FXB, stale size/footer, all 400 names/sounds/slots, extended MIDI/SysEx and malformed-input rejection\n";
 }
 static void rescanChecks(const juce::File& root){
  {
@@ -213,7 +259,7 @@ static int runChecks(int argc,char** argv){try{
 #else
  setenv("SILVER_K_DATA",root.getFullPathName().toRawUTF8(),1);
 #endif
- parserChecks(root);rescanChecks(root);managedSourceChecks(root);requiredDataChecks(root);preferenceChecks(root);browserChecks(root);duplicateBrowserChecks(root);if(argc>=3){if(argc>=5){Processor assets;juce::String error;check(assets.setFlashRom(juce::File(argv[3]),error) && assets.setWaveRom(juce::File(argv[4]),error),error.toRawUTF8());}firmwareChecks(root,juce::File(argv[1]),juce::File(argv[2]));}return 0;
+ parserChecks(root);vStationCompatibilityChecks(root);rescanChecks(root);managedSourceChecks(root);requiredDataChecks(root);preferenceChecks(root);browserChecks(root);duplicateBrowserChecks(root);if(argc>=3){if(argc>=5){Processor assets;juce::String error;check(assets.setFlashRom(juce::File(argv[3]),error) && assets.setWaveRom(juce::File(argv[4]),error),error.toRawUTF8());}firmwareChecks(root,juce::File(argv[1]),juce::File(argv[2]));}return 0;
 }catch(const std::exception& error){std::cerr<<error.what()<<'\n';return 1;}}
 
 static int testArgc=0;static char** testArgv=nullptr;

@@ -208,10 +208,10 @@ static void cacheMigrationChecks(const juce::File& root){
  {
   Library library(db);library.addPath(file);auto patch=wait(library,false);TypedTags tags;tags.add(TagType::Favourites,"Favourite");check(library.modifyTags({patch},tags),"Favourite fixture");
   for(int n=0;n<30;++n){library.uiProcess();std::this_thread::sleep_for(std::chrono::milliseconds(10));}
-  patch->name=" 0";check(db.getChildFile("silver-import-version.txt").deleteFile(),"Reset disposable old-cache marker");
+  patch->name=" 0";check(db.getChildFile("silver-import-version.txt").replaceWithText("5\n"),"Mark disposable old import cache");
  }
  {
-  Library library(db);auto patch=wait(library,true);check(patch->getTags(TagType::Favourites).containsAdded("Favourite"),"Source migration lost favourites");check(db.getChildFile("silver-import-version.txt").loadFileAsString().trim()=="5","Migration completion not remembered");
+  Library library(db);auto patch=wait(library,true);check(patch->getTags(TagType::Favourites).containsAdded("Favourite"),"Source migration lost favourites");check(db.getChildFile("silver-import-version.txt").loadFileAsString().trim()=="6","Migration completion not remembered");
  }
  std::cout<<"PASS: old zero-name cache refreshed from source, favourites preserved, migration remembered\n";
 }

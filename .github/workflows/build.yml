@@ -4,6 +4,10 @@ concurrency:
   group: desktop-build-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  macos-universal:
+    permissions:
+      contents: read
+    uses: ./.github/workflows/macos-build.yml
   windows-x64:
     runs-on: windows-latest
     timeout-minutes: 45

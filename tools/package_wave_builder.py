@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import zipfile
 from pathlib import Path
+from check_macos_compatibility import check_bundle
 
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = '0.1.0'
@@ -21,9 +22,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--application', type=Path, required=True)
     parser.add_argument('--juce-source', type=Path, required=True)
-    parser.add_argument('--platform', choices=['macOS-arm64', 'Windows-x64'], required=True)
+    parser.add_argument('--platform', choices=['macOS-arm64', 'macOS-universal', 'Windows-x64'], required=True)
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
+    compatibility = None
     name = f'Silver-K-Wave-ROM-Builder-{VERSION}-{args.platform}'
     stage = args.output / name
     archive = args.output / (name + '.zip')
@@ -35,9 +37,8 @@ def main():
         info = plistlib.loads((args.application / 'Contents/Info.plist').read_bytes())
         if info['CFBundleShortVersionString'] != VERSION:
             raise RuntimeError('Application version mismatch')
-        binary = args.application / 'Contents/MacOS' / info['CFBundleExecutable']
-        if subprocess.check_output(['lipo', '-archs', str(binary)], text=True).strip() != 'arm64':
-            raise RuntimeError('Expected an arm64 application')
+        architectures = ['arm64', 'x86_64'] if args.platform == 'macOS-universal' else ['arm64']
+        compatibility = check_bundle(args.application, architectures)
         subprocess.run(['codesign', '--verify', '--deep', '--strict', str(args.application)], check=True)
     else:
         if args.application.read_bytes()[:2] != b'MZ':
@@ -53,7 +54,8 @@ def main():
     source = stage / 'Wave-ROM-Builder-source.zip'
     with zipfile.ZipFile(source, 'w', zipfile.ZIP_DEFLATED) as output:
         files = list((ROOT / 'source/novation/waveRomBuilder').rglob('*'))
-        files += [ROOT / 'cmake/JuceCompatibility.cmake', ROOT / 'doc/WAVE_ROM_BUILDER.md', ROOT / 'LICENSE.md']
+        files += [ROOT / 'cmake/JuceCompatibility.cmake', ROOT / 'cmake/MacOSDefaults.cmake',
+                  ROOT / 'doc/WAVE_ROM_BUILDER.md', ROOT / 'LICENSE.md']
         for path in sorted(files):
             if path.is_file():
                 if path.suffix not in {'.cpp', '.h', '.txt', '.md', '.cmake'}:
@@ -74,6 +76,8 @@ def main():
                     base_commit=revision, local_changes=True, source_sha256=sha(source),
                     juce_source_sha256=sha(dependency), firmware_included=False,
                     sampled_wave_bank_included=False, signing='ad-hoc; not notarized' if args.platform.startswith('macOS') else None)
+    if compatibility:
+        manifest['macos_compatibility'] = compatibility
     (stage / 'BUILD-IDENTITY.json').write_text(json.dumps(manifest, indent=2) + '\n')
     (stage / 'SOURCES.txt').write_text(
         'Application source: Wave-ROM-Builder-source.zip\n'

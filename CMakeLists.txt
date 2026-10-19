@@ -1,7 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-if(NOT CMAKE_OSX_DEPLOYMENT_TARGET)
-    set(CMAKE_OSX_DEPLOYMENT_TARGET 12.0 CACHE STRING "Deployment target" FORCE)
-endif()
+include(cmake/MacOSDefaults.cmake)
 project(SilverK VERSION 0.4.1 LANGUAGES C CXX)
 if(MSVC)
     add_compile_options(/utf-8 /bigobj /MP2)

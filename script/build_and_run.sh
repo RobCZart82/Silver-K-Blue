@@ -10,7 +10,7 @@ case "$silver_mode" in
   *) echo "usage: $0 [run|--debug|--logs|--telemetry|--verify]" >&2; exit 2 ;;
 esac
 if [[ ! -f "$silver_build/CMakeCache.txt" ]]; then
-  cmake -S "$silver_root" -B "$silver_build" -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64
+  cmake -S "$silver_root" -B "$silver_build" -DCMAKE_BUILD_TYPE=Release
 fi
 silver_app="$silver_build/source/novation/silverK/buildStandalone/silverPlugin/silverK_artefacts/Release/Standalone/Silver-K.app"
 if [[ -d "$silver_build/silverPlugin" ]]; then

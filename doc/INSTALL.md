@@ -2,7 +2,7 @@
 
 ## macOS
 
-Apple Silicon builds require a native arm64 host.
+Universal 2 builds include Apple Silicon and Intel code for Standalone, AU, VST3 and Wave ROM Builder. Use a 64-bit host. The build target is macOS 12.0 or later; runtime validation on older macOS versions and physical Intel Macs is still required. Older arm64-only archives require a native Apple Silicon host.
 
 1. Extract the archive and close the DAW.
 2. Copy the complete AU component to ~/Library/Audio/Plug-Ins/Components/.

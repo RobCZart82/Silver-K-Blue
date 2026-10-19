@@ -12,6 +12,7 @@ import tempfile
 import zipfile
 from pathlib import Path
 from check_plugin_identity import check_identity
+from check_macos_compatibility import check_bundle
 
 VERSION = '0.4.1a'
 PLUGIN_VERSION = '0.4.1'
@@ -26,13 +27,16 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--products', type=Path, required=True)
     parser.add_argument('--dependencies', type=Path, required=True)
-    parser.add_argument('--platform', choices=['Windows-x64', 'macOS-arm64'], required=True)
+    parser.add_argument('--platform', choices=['Windows-x64', 'macOS-arm64', 'macOS-universal'], required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--variant', default='', help='Optional archive label for a separate experimental build')
     parser.add_argument('--test-guide', type=Path, help='Optional tester instructions to include')
     parser.add_argument('--wave-builder', type=Path, help='Companion application bundle or executable; otherwise discover beside silverPlugin')
     parser.add_argument('--staging-directory', type=Path, help='Keep a new staging directory instead of using/cleaning a system temporary folder')
     args = parser.parse_args()
+    macos = args.platform.startswith('macOS')
+    architectures = ['arm64', 'x86_64'] if args.platform == 'macOS-universal' else ['arm64']
+    macos_compatibility = {}
     if args.variant and not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9-]{0,79}', args.variant):
         parser.error('Variant must be a short alphanumeric/hyphen label')
     if args.test_guide and not args.test_guide.is_file():
@@ -60,7 +64,7 @@ def main():
             else:
                 shutil.copy2(src, dest)
             return dest
-        if args.platform == 'macOS-arm64':
+        if macos:
             products = [('Standalone', 'Silver-K.app', 'Standalone'),
                         ('VST3', 'Silver-K.vst3', 'Plugins/VST3'),
                         ('AU', 'Silver-K.component', 'Plugins/AU')]
@@ -69,14 +73,11 @@ def main():
                         ('VST3', 'Silver-K.vst3', 'Plugins/VST3')]
         for source, filename, target in products:
             built = args.products / source / filename
-            if args.platform == 'macOS-arm64':
+            if macos:
                 info = plistlib.loads((built / 'Contents/Info.plist').read_bytes())
                 if info.get('CFBundleShortVersionString') != PLUGIN_VERSION:
                     raise RuntimeError(f'Incorrect bundle version: {built}')
-                executable = built / 'Contents/MacOS' / info['CFBundleExecutable']
-                arches = subprocess.check_output(['lipo', '-archs', str(executable)], text=True).strip()
-                if arches != 'arm64':
-                    raise RuntimeError(f'Unexpected architecture: {arches}')
+                macos_compatibility[filename] = check_bundle(built, architectures)
                 subprocess.run(['codesign', '--verify', '--deep', '--strict', str(built)], check=True)
             copy(built, target + '/' + filename)
         builder_name = 'Silver-K Wave ROM Builder' + ('.app' if args.platform.startswith('macOS') else '.exe')
@@ -85,6 +86,7 @@ def main():
         if not builder.exists():
             raise RuntimeError('Build silverWaveRomBuilder before packaging, or provide --wave-builder')
         if args.platform.startswith('macOS'):
+            macos_compatibility[builder_name] = check_bundle(builder, architectures)
             subprocess.run(['codesign', '--verify', '--deep', '--strict', str(builder)], check=True)
         copy(builder, 'Tools/' + builder_name)
         copy(ROOT / 'doc/WAVE_ROM_BUILDER.md', 'Tools/WAVE_ROM_BUILDER.md')
@@ -152,6 +154,8 @@ No original firmware or factory sounds are included in this binary archive.
                         wave_rom_builder_included=True, wave_rom_builder_version='0.1.0',
                         bundled_skins=['Silver Flat'], skin_schema_version=1,
                         macos_signing='ad-hoc; not notarized' if args.platform.startswith('macOS') else None)
+        if macos:
+            manifest['macos_compatibility'] = macos_compatibility
         (stage / 'release-manifest.json').write_text(json.dumps(manifest, indent=2)+'\n', encoding='utf-8')
         files = sorted(p for p in stage.rglob('*') if p.is_file() and not p.is_symlink())
         checksums = ''.join(f'{digest(p)}  {p.relative_to(stage).as_posix()}\n' for p in files)

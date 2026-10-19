@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.22)
+include("${CMAKE_CURRENT_LIST_DIR}/../../../../cmake/MacOSDefaults.cmake")
 project(SilverK VERSION 0.4.1 LANGUAGES C CXX)
 # This directory can also be configured directly, without the root CMake file.
 if(MSVC)
     add_compile_options(/utf-8)
 endif()
-set(CMAKE_OSX_DEPLOYMENT_TARGET 12.0 CACHE STRING "Deployment target")
 enable_testing()
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
