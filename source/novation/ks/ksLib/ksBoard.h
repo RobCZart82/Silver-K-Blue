@@ -26,6 +26,7 @@ public:
     Board(const std::vector<uint8_t>& os, const std::vector<uint8_t>& bank,const std::vector<uint8_t>& storage={},bool isolateParts=false,bool nativeStartup=false);
     void advance(uint32_t budget=128);
     void enableDspWorkers(int rate,unsigned block);
+    void disableDspWorkers(){dspWorkers.reset();} // Owning worker, between joined slices only.
     void configureDspWorkers(int rate,unsigned block){if(dspWorkers)dspWorkers->configure(rate,block);}
     void setPerformanceDiagnostics(baseLib::performance::Diagnostics* p){performance=p;}
     // Coordinator/quiescent boundaries only. Replay is fixture-only and has no

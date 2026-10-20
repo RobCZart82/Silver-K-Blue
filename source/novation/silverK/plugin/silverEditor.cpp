@@ -606,6 +606,8 @@ struct Editor::Surface final : juce::Component, private juce::Timer
     std::vector<std::unique_ptr<SkinDecoration>> decorations;
     std::function<void(juce::File,juce::String)> requestSkin;
     juce::ToggleButton performanceMode{"Performance (4 parts)"},partActive{"Part active"};
+    juce::ToggleButton twoCoreProcessing{"KS: use two CPU cores (experimental)"};
+    juce::Label twoCoreNotice;
     juce::TextButton performanceSwitch{"Performance"};
     juce::TextButton drumEdit{"Drum Edit"};
     juce::Label drumDisplay;
@@ -681,6 +683,13 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         bufferSelect.setBounds(52,401,436,34);bufferSelect.setComponentID("audioBuffer");for(const auto& name:juce::StringArray{"Audio buffer: Low latency","Audio buffer: Balanced (recommended)","Audio buffer: Safe","Audio buffer: Maximum reserve"})bufferSelect.addItem(name,bufferSelect.getNumItems()+1);bufferSelect.setSelectedId(processor.bufferProfile()+1,juce::dontSendNotification);bufferSelect.onChange=[this]{processor.setBufferProfile(bufferSelect.getSelectedId()-1);};bufferSelect.setTooltip("Internal audio buffering. The audio interface buffer is set in your DAW.");
         addAndMakeVisible(diagnostics);diagnostics.setBounds(510,401,270,34);diagnostics.setComponentID("performanceDiagnostics");
         diagnostics.setTooltip("Record optional performance measurements and save a JSON report for Windows or macOS.");
+        addAndMakeVisible(twoCoreProcessing);twoCoreProcessing.setBounds(52,590,1000,34);twoCoreProcessing.setComponentID("ksTwoCoreProcessing");
+        twoCoreProcessing.setTooltip("Experimental parallel KS DSP processing. Performance improvement is not guaranteed and total CPU usage may increase. Applies to KS only.");
+        twoCoreProcessing.setToggleState(processor.ksTwoCoreProcessing(),juce::dontSendNotification);
+        twoCoreProcessing.onClick=[this]{juce::String error;if(!processor.setKSTwoCoreProcessing(twoCoreProcessing.getToggleState(),error))juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::WarningIcon,"KS two-core processing",error);twoCoreProcessing.setToggleState(processor.ksTwoCoreProcessing(),juce::dontSendNotification);};
+        addAndMakeVisible(twoCoreNotice);twoCoreNotice.setBounds(78,628,1050,26);twoCoreNotice.setComponentID("ksTwoCoreNotice");
+        twoCoreNotice.setText("Experimental: performance improvement is not guaranteed. CPU usage may increase.",juce::dontSendNotification);
+        setSkinColour(twoCoreNotice,juce::Label::textColourId,juce::Colour(0xff171b20));twoCoreNotice.setFont(juce::Font(15.f));
         addAndMakeVisible(demoSong);demoSong.setBounds(510,449,270,34);demoSong.setComponentID("demoSong");
         demoSong.setTooltip("Play / stop the original KS demo embedded in full KS Flash data. Factory MIDI banks do not contain the song.");
         demoSong.onClick=[this]{juce::String error;if(!processor.setDemoSong(!processor.demoSongActive(),error))juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::InfoIcon,"KS Demo Song",error);};
@@ -1099,6 +1108,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         for(juce::Component* c:std::array<juce::Component*,6>{&status,&latency,&loadRom,&folder,&channel,&help})c->setVisible(isSetup);
         rescanRoms.setVisible(isSetup);bufferSelect.setVisible(isSetup);waveRom.setVisible(isSetup);factory.setVisible(isSetup);skinSelect.setVisible(isSetup);customSkin.setVisible(isSetup);reloadSkin.setVisible(isSetup);exportSkin.setVisible(isSetup);openSkins.setVisible(isSetup);
         diagnostics.setVisible(isSetup);controllerSelect.setVisible(isSetup);refreshControllerSelection();
+        twoCoreProcessing.setVisible(isSetup);twoCoreNotice.setVisible(isSetup);
         demoSong.setVisible(isSetup && !processor.isKStation());
         loadRom.setBounds(52,245,200,38);folder.setBounds(266,245,170,38);
         if(page==1)rebuildSections();if(page==2)performancePanel->refresh();
@@ -1178,6 +1188,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
     void timerCallback() override
     {
         refreshControllerSelection();
+        twoCoreProcessing.setToggleState(processor.ksTwoCoreProcessing(),juce::dontSendNotification);twoCoreProcessing.setEnabled(!processor.isKStation()&&!processor.isFirmwareLoading());
         diagnostics.setButtonText(processor.performanceDiagnosticsMode()?"Diagnostics: recording":"Performance diagnostics");
         demoSong.setButtonText(processor.demoSongActive()?"Stop Demo Song":"Demo Song");demoSong.setEnabled(!processor.isKStation() && processor.firmwareReady() && !processor.isFirmwareLoading());
         if(processor.isFirmwareLoading()){

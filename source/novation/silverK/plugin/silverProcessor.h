@@ -88,6 +88,8 @@ bool isKStation()const{return kMode.load();}
  uint8_t editorChannel()const{return isKStation()?controlChannel.load():midiChannel();}
  int bufferProfile()const{return buffering.load();}
  void setBufferProfile(int);
+ bool ksTwoCoreProcessing()const{return twoCoreProcessing.load();}
+ bool setKSTwoCoreProcessing(bool,juce::String& error); // UI/control thread only.
  ClockSource clockSource()const{return requestedClockSource.load();}
  void setClockSource(ClockSource); // Message thread; applied by the next audio block.
  int ksControllerMode()const{return ks::controllerReferenceAvailable()?int(ksController.load()):int(ks::ControllerMode::Native);}
@@ -113,6 +115,7 @@ private:
  uint64_t seenDrumRevision=0;
  pluginLib::HostAudioWorkgroup hostAudioWorkgroup;
  std::atomic<int> buffering{1};
+ std::atomic<bool> twoCoreProcessing{ks::Device::environmentDspWorkersEnabled()};
  std::atomic<ks::ControllerMode> ksController{ks::Device::environmentControllerMode()};
  void applyBufferProfile();
  void notifyHostLatency();

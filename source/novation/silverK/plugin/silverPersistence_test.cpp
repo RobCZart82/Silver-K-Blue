@@ -176,18 +176,22 @@ static void preferenceChecks(const juce::File& root){
   Processor stale;Processor p;
   const auto flash=root.getChildFile(juce::String::fromUTF8("Flash флеш.mid")),wave=root.getChildFile("Wave custom.bin");check(p.flashFile.copyFileTo(flash) && p.bankFile.copyFileTo(wave),"Copy synthetic assets");
   check(p.setFlashRom(flash,error) && p.setWaveRom(wave,error),"Select external assets");
-  p.editorScale.store(.92);p.skinChoice="Classic";p.setEditorChannel(5);p.setBufferProfile(3);p.savePreferences();
+  p.editorScale.store(.92);p.skinChoice="Classic";p.setEditorChannel(5);p.setBufferProfile(3);check(p.setKSTwoCoreProcessing(true,error),"Set two-core preference");p.savePreferences();
   stale.skinChoice="Silver-K";stale.savePreferences();
-  auto saved=juce::JSON::parse(settings);check(double(saved["editorScale"])==.92 && int(saved["bufferProfile"])==3 && saved["skinChoice"].toString()=="Silver-K","Stale instance overwrote unrelated settings");
+  auto saved=juce::JSON::parse(settings);check(double(saved["editorScale"])==.92 && int(saved["bufferProfile"])==3 && saved["skinChoice"].toString()=="Silver-K" && bool(saved["ksTwoCoreProcessing"]),"Stale instance overwrote unrelated settings");
   check(p.setDataFolder(p.dataFolder,error),"Reopen folder");saved=juce::JSON::parse(settings);check(saved["flash"].toString()==p.flashFile.getFullPathName() && p.flashFile.isAChildOf(p.dataFolder.getChildFile("ROMs")),"ROM catalog save discarded managed assets");
  }
  {
   Processor p;check(p.editorScale.load()==.92 && p.skinChoice=="Silver-K" && p.bufferProfile()==3 && p.editorChannel()==5,"Global options lost on restart");
+  check(p.ksTwoCoreProcessing(),"Two-core preference lost on restart");
   check(p.flashFile.getFileName()==juce::String::fromUTF8("Flash флеш.mid") && p.bankFile.getFileName()=="Wave custom.bin" && p.flashFile.isAChildOf(p.dataFolder.getChildFile("ROMs")),"Flash/Wave choices lost on restart");
   auto project=std::make_unique<Processor>();juce::MemoryBlock state;p.getStateInformation(state);auto xml=juce::AudioProcessor::getXmlFromBinary(state.getData(),int(state.getSize()));check(bool(xml),"Read host state");xml->setAttribute("editorScale",.6);xml->setAttribute("bufferProfile",0);xml->setAttribute("skinChoice","Classic");xml->setAttribute("dataFolder",root.getFullPathName());juce::AudioProcessor::copyXmlToBinary(*xml,state);project->setStateInformation(state.getData(),int(state.getSize()));
+  check(project->ksTwoCoreProcessing(),"Two-core choice lost in host state");
+  xml->removeAttribute("ksTwoCoreProcessing");juce::AudioProcessor::copyXmlToBinary(*xml,state);project->setStateInformation(state.getData(),int(state.getSize()));check(!project->ksTwoCoreProcessing(),"Legacy project did not retain sequential execution");
   const auto selectedWave=p.bankFile,collision=p.dataFolder.getChildFile(selectedWave.getFileName());check(selectedWave.copyFileTo(collision),"Wave relocation fixture");check(project->setWaveRom(selectedWave,error),"Explicit asset choice inside project");project.reset();
   {Processor next;check(next.bankFile==selectedWave,"Project-relative asset path resolved against global folder");}
-  auto saved=juce::JSON::parse(settings);check(double(saved["editorScale"])==.92 && int(saved["bufferProfile"])==3 && saved["skinChoice"].toString()=="Silver-K","Opening a project changed new-instance defaults");check(saved["dataFolder"].toString()!=root.getFullPathName(),"Project changed global data folder");
+  auto saved=juce::JSON::parse(settings);check(double(saved["editorScale"])==.92 && int(saved["bufferProfile"])==3 && saved["skinChoice"].toString()=="Silver-K" && bool(saved["ksTwoCoreProcessing"]),"Opening a project changed new-instance defaults");check(saved["dataFolder"].toString()!=root.getFullPathName(),"Project changed global data folder");
+  check(p.setKSTwoCoreProcessing(false,error),"Restore sequential default");
  }
  std::cout<<"PASS: global UI/buffer/channel options, Unicode Flash/Wave paths, merging instances, project isolation\n";
 }

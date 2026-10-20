@@ -13,8 +13,9 @@ ControllerMode Device::environmentControllerMode(){
  const auto* v=std::getenv("SILVER_KS_CONTROLLER");
  return v&&std::strcmp(v,"native")==0?ControllerMode::Native:v&&std::strcmp(v,"native-midi")==0?ControllerMode::Hybrid:ControllerMode::H8;
 }
-Device::Device(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,const std::vector<uint8_t>& flash,double hostRate,int block,const std::vector<uint8_t>& program,baseLib::performance::Diagnostics* diagnostics,ControllerMode controller)
-:performance(diagnostics),parallelDSPs([]{const auto* v=std::getenv("SILVER_KS_DSP_THREADS");return v&&std::strcmp(v,"2")==0;}()),currentController(controller==ControllerMode::Environment?environmentControllerMode():controller),baseLead(std::min(4096,std::max(256,block+128))),lead(baseLead),rate(hostRate){
+bool Device::environmentDspWorkersEnabled(){const auto* v=std::getenv("SILVER_KS_DSP_THREADS");return v&&std::strcmp(v,"2")==0;}
+Device::Device(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,const std::vector<uint8_t>& flash,double hostRate,int block,const std::vector<uint8_t>& program,baseLib::performance::Diagnostics* diagnostics,ControllerMode controller,bool dspWorkersEnabled)
+:performance(diagnostics),parallelDSPs(dspWorkersEnabled),currentController(controller==ControllerMode::Environment?environmentControllerMode():controller),baseLead(std::min(4096,std::max(256,block+128))),lead(baseLead),rate(hostRate){
  if(!controllerReferenceAvailable())currentController.store(ControllerMode::Native);
  realtimeBlock.store(unsigned(std::max(64,block)));
  const auto* cores=std::getenv("SILVER_KS_WORKER_CORES");
@@ -74,13 +75,22 @@ Device::Device(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,c
    dsp56k::ThreadTools::setCurrentThreadPriority(dsp56k::ThreadPriority::Highest);
    dsp56k::ThreadTools::setCurrentThreadRealtimeParameters(int(rate),std::max(64,block));
    placement=applyWorkerPlacement(performanceCores);
-   if(parallelDSPs)board->enableDspWorkers(int(rate),unsigned(std::max(64,block)));
+   if(parallelDSPs.load())board->enableDspWorkers(int(rate),unsigned(std::max(64,block)));
    running.store(true);{std::lock_guard lock(startMutex);started=true;}startCV.notify_one();
    auto configuredBlock=realtimeBlock.load();
    board->setPerformanceDiagnostics(performance);
    baseLib::performance::WorkerSegment workTiming(performance);
    while(!stopping.load()){
     if(pause.load()){workTiming.flush();paused.store(true);while(pause.load() && !stopping.load())std::this_thread::sleep_for(std::chrono::microseconds(50));paused.store(false);continue;}
+    const int dspRequest=requestedDspWorkers.load();
+    if(dspRequest>=0){
+     requestedDspWorkers.store(-1);
+     // No slice is active here. Creating/joining helpers never touches the host callback.
+     workTiming.flush();std::string error;
+     try{if(dspRequest)board->enableDspWorkers(int(rate),realtimeBlock.load());else board->disableDspWorkers();parallelDSPs.store(dspRequest!=0);}
+     catch(const std::exception& e){error=e.what();}
+     {std::lock_guard lock(controllerMutex);dspWorkersError=std::move(error);dspWorkersCompleted=true;}controllerCV.notify_one();
+    }
     const int request=requestedController.load();
     if(request>=0){
      requestedController.store(-1);
@@ -117,6 +127,15 @@ Device::Device(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,c
   }catch(const std::exception& e){{std::lock_guard lock(controllerMutex);failure=e.what();running.store(false);}controllerCV.notify_one();{std::lock_guard lock(startMutex);started=true;}startCV.notify_one();}
  });
  std::unique_lock lock(startMutex);startCV.wait(lock,[this]{return started;});
+}
+bool Device::setDspWorkersEnabled(bool enabled,std::string& error){
+ std::lock_guard serial(coldMutex);std::unique_lock lock(controllerMutex);error.clear();
+ if(!running.load() || stopping.load()){error=failure.empty()?"KS engine is stopped":failure;return false;}
+ if(enabled==parallelDSPs.load())return true;
+ dspWorkersCompleted=false;dspWorkersError.clear();requestedDspWorkers.store(enabled?1:0);
+ controllerCV.wait(lock,[this]{return dspWorkersCompleted || !running.load() || stopping.load();});
+ if(!dspWorkersCompleted){error=failure.empty()?"KS engine stopped before switching DSP workers":failure;return false;}
+ error=dspWorkersError;return error.empty();
 }
 bool Device::setControllerMode(ControllerMode mode,std::string& error){
  if(mode!=ControllerMode::Native && !controllerReferenceAvailable()){error="KS H8/hybrid is available only in comparison tests";return false;}

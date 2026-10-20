@@ -65,6 +65,8 @@ LFO and effect Sync settings remain separate from the clock source.
 
 Setup → Audio buffer sets the plugin's scheduling reserve. Balanced is the default. A larger reserve can reduce dropouts and adds latency. The audio-device buffer is set in the DAW or Standalone audio settings.
 
+Setup includes **KS: use two CPU cores (experimental)**. It applies to KS only and can be changed while the firmware is loaded. Performance improvement is not guaranteed; total CPU usage may increase. It is off by default. The choice is saved for new instances and in DAW/Standalone state.
+
 ## Saving a session
 
 Save the DAW project or Standalone state to retain the current sound, parts and clock choice. Firmware and Wave ROM remain external files. Use Save current for a separate reusable patch.
