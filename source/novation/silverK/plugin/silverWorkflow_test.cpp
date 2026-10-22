@@ -351,7 +351,7 @@ static void filterClock(Processor& p,const juce::File& dir){
  // A known dry program avoids threshold movement from tails, modulation or
  // changing pulse width. Keep incoming host notes identical in each case.
  auto message=program(p.isKStation()?Model::KStation:Model::KS);
- auto patch=p.patchLibrary.createPatch(Data(std::move(message)),{});juce::String error;
+ auto patch=p.patchLibrary.createPatch(Data(message.begin(),message.end()),{});juce::String error;
  check(p.activatePatch(patch,error),error.toRawUTF8());for(int n=0;n<100;++n)render();
  for(auto item:{std::pair<const char*,int>{"arp_on",1},{"arp_sync",9},{"arp_gate",32},{"arp_keysync",1},{"arp_latch",0},{"arp_rate",36},{"amp_release",0},{"amp_attack",0},{"amp_sustain",127},{"delay_level",0},{"reverb_level",0},{"chorus_level",0},{"volume",127},{"osc1_wave",2},{"osc1_level",127},{"osc2_level",0},{"osc3_level",0},{"noise_level",0},{"ring_level",0},{"filter_env",64},{"filter_keytrack",0},{"resonance",0}})set(item.first,item.second);
  bool passed=true;
