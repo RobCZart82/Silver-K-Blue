@@ -2,6 +2,7 @@
 #include "kstationLib/kstationRomLoader.h"
 #include "kstationLib/kstationMidiQueue.h"
 #include "ksLib/ksRom.h"
+#include "silverKCutoffMidi.h"
 #include <iostream>
 #include <stdexcept>
 #include <thread>
@@ -216,6 +217,17 @@ static void cacheMigrationChecks(const juce::File& root){
  std::cout<<"PASS: old zero-name cache refreshed from source, favourites preserved, migration remembered\n";
 }
 static void queueChecks(){
+ KCutoffMidi cutoff;
+ const uint8_t first[]{0xb0,105,127},changed[]{0xb0,105,64},otherChannel[]{0xb1,105,64},clock[]{0xf8};
+ check(!cutoff.duplicate(first,3),"First cutoff was suppressed");cutoff.accepted(first,3);
+ for(int n=0;n<10000;++n){check(cutoff.duplicate(first,3),"Repeated cutoff reached UART");cutoff.accepted(clock,1);}
+ check(!cutoff.duplicate(changed,3),"Changed cutoff was suppressed");cutoff.accepted(changed,3);
+ check(!cutoff.duplicate(otherChannel,3),"Different MIDI channel was suppressed");
+ for(const auto& message:std::vector<std::vector<uint8_t>>{{0x90,60,100},{0x80,60,0},{0xb0,64,127},{0xb0,98,11},{0xb0,6,64},{0xc0,1},{0xf0,0,0xf7},{0xfa},{0xfc}}){
+  cutoff.accepted(changed,3);cutoff.accepted(message.data(),message.size());check(!cutoff.duplicate(changed,3),"Cutoff cache survived an intervening message");
+  check(!cutoff.duplicate(message.data(),message.size()),"Non-cutoff MIDI was suppressed");
+ }
+ cutoff.accepted(first,3);cutoff.reset();check(!cutoff.duplicate(first,3),"Rejected MIDI poisoned cutoff cache");
  kstation::MidiSerialQueue<1024,16> queue;
  const uint8_t cc[]{0xb0,72,42};for(int n=0;n<300;++n)check(queue.push(cc,3),"Controller queue");
  const uint8_t rt[]{0xfa,0xf8,0xfc};check(queue.push(rt,3),"Realtime queue");uint8_t b=0;
@@ -327,6 +339,112 @@ static void vStationFolderPlayback(Processor& p,const juce::File& folder){
  for(const auto& file:files){DataList frames;check(p.patchLibrary.loadFile(frames,file.getFullPathName().toStdString()),"FXP playback parse");auto patch=p.patchLibrary.createPatch(Data(frames[0]),{});const auto category=juce::String(patch->name).upToFirstOccurrenceOf(" ",false,false);if(!categories.insert(category).second)continue;juce::String error;check(p.activatePatch(patch,error),"FXP activate");for(int n=0;n<40;++n)render();midi.addEvent(juce::MidiMessage::noteOn(1,60,uint8_t(100)),0);for(int n=0;n<188;++n)render();midi.addEvent(juce::MidiMessage::noteOff(1,60),0);midi.addEvent(juce::MidiMessage::controllerEvent(1,120,0),0);for(int n=0;n<40;++n)render();}
  p.setPlayHead(nullptr);check(categories.size()>=6 && peak>1e-4,"FXP category sound coverage");std::cout<<"PASS: "<<(p.isKStation()?"K":"KS")<<" recursive FXP rows="<<rows->getNumRows()<<", V-Station filter/click, categories played="<<categories.size()<<", finite sound/no allocations, peak="<<peak<<'\n';
 }
+// Optional private-ROM regression for filter-dependent arp phase. Measure every
+// attack against the sample grid: mean spacing alone hides accumulated drift.
+static void filterClock(Processor& p,const juce::File& dir){
+ PlayHead head;head.bpm=100;p.setPlayHead(&head);p.setNonRealtime(true);
+ const juce::ScopeGuard clearHead{[&]{p.setPlayHead(nullptr);}};
+ constexpr int rate=48000,block=256,steps=12,period=28800;
+ juce::AudioBuffer<float> audio(4,block);juce::MidiBuffer midi;midi.ensureSize(4096);
+ auto set=[&](const char* id,int value){auto* parameter=p.uiParameter(id);check(parameter!=nullptr,id);parameter->setValueNotifyingHost(parameter->convertTo0to1(float(value)));};
+ auto render=[&]{inAudio=true;p.processBlock(audio,midi);inAudio=false;check(audioAllocations==0,"Filter/clock audio callback allocated");head.ppq+=block*head.bpm/(60*rate);};
+ // A known dry program avoids threshold movement from tails, modulation or
+ // changing pulse width. Keep incoming host notes identical in each case.
+ auto message=program(p.isKStation()?Model::KStation:Model::KS);
+ auto patch=p.patchLibrary.createPatch(std::move(message),{});juce::String error;
+ check(p.activatePatch(patch,error),error.toRawUTF8());for(int n=0;n<100;++n)render();
+ for(auto item:{std::pair<const char*,int>{"arp_on",1},{"arp_sync",9},{"arp_gate",32},{"arp_keysync",1},{"arp_latch",0},{"arp_rate",36},{"amp_release",0},{"amp_attack",0},{"amp_sustain",127},{"delay_level",0},{"reverb_level",0},{"chorus_level",0},{"volume",127},{"osc1_wave",2},{"osc1_level",127},{"osc2_level",0},{"osc3_level",0},{"noise_level",0},{"ring_level",0},{"filter_env",64},{"filter_keytrack",0},{"resonance",0}})set(item.first,item.second);
+ bool passed=true;
+ for(auto source:{ClockSource::Internal,ClockSource::Host}){
+  p.setClockSource(source);head.ppq=0;for(int n=0;n<1200;++n)render();
+  for(int key:{36,60,84}){
+   std::vector<int> reference;
+   for(int variant=0;variant<3;++variant){
+    const int cutoff=variant==1?127:64;const bool sweep=variant==2;set("cutoff",cutoff);
+    const int channel=1+p.midiChannel();midi.addEvent(juce::MidiMessage::controllerEvent(channel,120,0),0);
+    for(int n=0;n<100;++n)render();
+    const auto snapshot=dir.getChildFile("filter-clock-current.syx");check(p.saveCurrentPatch(snapshot,error),error.toRawUTF8());juce::MemoryBlock saved;check(snapshot.loadFileAsData(saved) && saved.getSize()>59 && static_cast<const uint8_t*>(saved.getData())[59]==cutoff,"Cutoff did not reach the engine snapshot");
+    const auto missedBefore=p.underruns();
+    std::vector<float> samples(steps*period);midi.addEvent(juce::MidiMessage::noteOn(channel,key,uint8_t(100)),0);
+    for(int n=0;n<int(samples.size());n+=block){
+     if(sweep)set("cutoff",64+(n/block)%64);
+     render();std::copy_n(audio.getReadPointer(0),std::min(block,int(samples.size())-n),samples.begin()+n);
+    }
+    check(p.underruns()==missedBefore,"Missing audio frames invalidate filter/clock measurement");
+    midi.addEvent(juce::MidiMessage::noteOff(channel,key),0);midi.addEvent(juce::MidiMessage::controllerEvent(channel,120,0),0);for(int n=0;n<100;++n)render();
+    std::vector<int> attacks;
+    // Search each expected beat after a long silent gate. The threshold is
+    // relative to that beat's own peak, with a fixed -120 dBFS noise floor.
+    // This records audio onset, not a claim about the controller's note time.
+    for(int beat=1;beat<steps;++beat){
+     const int begin=beat*period-rate/5,end=beat*period+rate/5;
+     float peak=0;for(int n=begin;n<end;++n)peak=std::max(peak,std::abs(samples[n]));check(peak>1e-5f,"Filter/clock arp silent");
+     const float threshold=std::max(1e-6f,peak*.001f);int onset=begin;while(onset<end && std::abs(samples[onset])<=threshold)++onset;
+     check(onset>begin && onset<end,"Arp onset missing or outside the grid window");attacks.push_back(onset);
+    }
+    double minPhase=1e9,maxPhase=-1e9,maxReference=0;
+    for(size_t n=0;n<attacks.size();++n){const double phase=attacks[n]-(n+1)*period;minPhase=std::min(minPhase,phase);maxPhase=std::max(maxPhase,phase);if(!reference.empty())maxReference=std::max(maxReference,double(std::abs(attacks[n]-reference[n])));}
+    if(variant==0)reference=attacks;
+    const double drift=attacks.back()-attacks.front()-(steps-2)*period;
+    const bool ok=std::abs(drift)<=rate*.002 && maxPhase-minPhase<=rate*.004 && maxReference<=rate*.004;
+    passed=passed && ok;
+    std::cout<<"FILTER_CLOCK model="<<(p.isKStation()?"K":"KS")<<" source="<<(source==ClockSource::Internal?"internal":"host")<<" key="<<key<<" cutoff="<<cutoff<<" sweep="<<sweep<<" drift_ms="<<1000*drift/rate<<" phase_span_ms="<<1000*(maxPhase-minPhase)/rate<<" vs_cutoff64_ms="<<1000*maxReference/rate<<" result="<<(ok?"PASS":"FAIL")<<'\n'<<std::flush;
+    const auto name=juce::String(p.isKStation()?"K":"KS")+"-filter-"+(source==ClockSource::Internal?"internal":"host")+"-"+juce::String(key)+"-"+juce::String(cutoff)+(sweep?"-sweep":"")+".wav";
+    auto stream=dir.getChildFile(name).createOutputStream();juce::WavAudioFormat wav;std::unique_ptr<juce::AudioFormatWriter> writer(wav.createWriterFor(stream.release(),rate,1,24,{},0));const float* channels[]{samples.data()};check(writer && writer->writeFromFloatArrays(channels,1,int(samples.size())),"Filter/clock audio capture");
+   }
+  }
+ }
+ set("arp_on",0);check(passed,"Filter/clock phase regression; inspect FILTER_CLOCK measurements");
+}
+// Long external-preset probe for comparison with a tester's DAW captures.
+// Preserve the patch's envelopes, oscillator phase, arp division and keysync.
+static void filterPatchClock(Processor& p,const juce::File& file,const juce::File& dir){
+ const bool ccFlood=juce::SystemStats::getEnvironmentVariable("SILVER_TEST_FILTER_CC_FLOOD",{}).isNotEmpty();
+ const int key=juce::SystemStats::getEnvironmentVariable("SILVER_TEST_FILTER_NOTE","24").getIntValue();check(key>=0 && key<=127,"Filter probe MIDI note outside 0..127");
+ const auto source=juce::SystemStats::getEnvironmentVariable("SILVER_TEST_FILTER_SOURCE","internal");check(source=="host" || source=="internal","Filter probe clock must be host or internal");
+ const int selectedCase=juce::SystemStats::getEnvironmentVariable("SILVER_TEST_FILTER_CASE","-1").getIntValue();check(selectedCase>=-1 && selectedCase<8,"Filter probe case outside 0..7");
+ const bool realtime=juce::SystemStats::getEnvironmentVariable("SILVER_TEST_FILTER_REALTIME",{}).isNotEmpty();
+ PlayHead head;head.bpm=100;p.setPlayHead(&head);p.setNonRealtime(true);const juce::ScopeGuard clearHead{[&]{p.setPlayHead(nullptr);p.setNonRealtime(true);}};
+ DataList frames;check(p.patchLibrary.loadFile(frames,file.getFullPathName().toStdString()) && frames.size()==1,"Filter probe requires one program dump");
+ auto patch=p.patchLibrary.createPatch(Data(frames[0]),{});check(patch!=nullptr,"Invalid filter probe patch");juce::String error;
+ constexpr int rate=48000,block=256,half=921600,length=1958400; // 8 and 17 bars, 100 BPM, 4/4.
+ juce::AudioBuffer<float> audio(4,block);juce::MidiBuffer midi;midi.ensureSize(4096);
+ auto set=[&](const char* id,int value){auto* q=p.uiParameter(id);check(q!=nullptr,id);q->setValueNotifyingHost(q->convertTo0to1(float(value)));};
+ auto render=[&]{inAudio=true;p.processBlock(audio,midi);inAudio=false;head.ppq+=block/28800.;};
+ p.setClockSource(source=="host"?ClockSource::Host:ClockSource::Internal);
+ bool passed=true;
+ for(bool arp:{false,true})for(int variant=0;variant<4;++variant){
+  if(selectedCase>=0 && selectedCase!=(arp?4:0)+variant)continue;
+  check(p.activatePatch(patch,error),error.toRawUTF8());for(int n=0;n<200;++n)render();
+  set("arp_rate",36);set("arp_on",arp?1:0);set("cutoff",variant==0?64:127);set("filter_keytrack",variant<2?0:127);
+  for(int n=0;n<1200;++n)render();
+  const auto name=juce::String(p.isKStation()?"K":"KS")+"-tester-"+source+"-"+juce::String(key)+(arp?"-arp":"-held")+"-v"+juce::String(variant)+(realtime?"-realtime":"-offline");
+  check(p.saveCurrentPatch(dir.getChildFile(name+"-before.syx"),error),error.toRawUTF8());
+  const auto misses=p.underruns();const auto allocationBefore=audioAllocations;const int channel=1+p.midiChannel();
+  struct MissingBlock{int offset;uint64_t count;int64_t finishedLateUs;};std::vector<MissingBlock> dropoutBlocks;dropoutBlocks.reserve(length/block);uint64_t previousMissing=misses;
+  juce::AudioBuffer<float> capture(2,length);head.ppq=0;midi.addEvent(juce::MidiMessage::noteOn(channel,key,uint8_t(100)),0);
+  p.setNonRealtime(!realtime);const auto start=std::chrono::steady_clock::now();
+  for(int n=0;n<length;n+=block){
+   if(variant==3 && n>=half){const double phase=std::min(1.,double(n-half)/half);set("cutoff",int(std::round(127*std::abs(2*phase-1))));}
+   if(ccFlood){const int value=variant==0?64:variant==3 && n>=half?int(std::round(127*std::abs(2*std::min(1.,double(n-half)/half)-1))):127;midi.addEvent(juce::MidiMessage::controllerEvent(channel,105,value),0);}
+   render();const auto currentMissing=p.underruns();if(currentMissing>previousMissing){const auto elapsed=std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now()-start).count();dropoutBlocks.push_back({n,currentMissing-previousMissing,elapsed-int64_t(n+block)*1000000/rate});}previousMissing=currentMissing;
+   for(int c=0;c<2;++c)capture.copyFrom(c,n,audio,c,0,block);
+   if(realtime)std::this_thread::sleep_until(start+std::chrono::microseconds(int64_t(n+block)*1000000/rate));
+  }
+  p.setNonRealtime(true);const auto missing=p.underruns()-misses;const auto allocated=audioAllocations-allocationBefore;
+  midi.addEvent(juce::MidiMessage::noteOff(channel,key),0);midi.addEvent(juce::MidiMessage::controllerEvent(channel,120,0),0);for(int n=0;n<200;++n)render();
+  check(p.saveCurrentPatch(dir.getChildFile(name+"-after.syx"),error),error.toRawUTF8());
+  const float peak=capture.getMagnitude(0,0,length);bool finite=true;
+  // Right contains the sound plus a quarter-note click; left is untouched.
+  for(int n=0;n<length;++n){finite=finite && std::isfinite(capture.getSample(0,n)) && std::isfinite(capture.getSample(1,n));const int tick=n%28800;if(tick<480)capture.addSample(1,n,float(.2*std::exp(-tick/80.)*std::sin(tick*2*juce::MathConstants<double>::pi*3000/rate)));}
+  auto stream=dir.getChildFile(name+".wav").createOutputStream();juce::WavAudioFormat wav;std::unique_ptr<juce::AudioFormatWriter> writer(wav.createWriterFor(stream.release(),rate,2,24,{},0));check(writer && writer->writeFromAudioSampleBuffer(capture,0,length),"Tester filter capture");
+  juce::XmlElement meta("FilterClockProbe");meta.setAttribute("operatingSystem",juce::SystemStats::getOperatingSystemName());meta.setAttribute("sourceFile",file.getFullPathName());meta.setAttribute("sourceModel",modelName(modelOf(patch->sysex)));meta.setAttribute("model",p.isKStation()?"K":"KS");meta.setAttribute("clockSource",source);meta.setAttribute("ksControllerMode",p.ksControllerMode());meta.setAttribute("reportedLatencySamples",p.getLatencySamples());meta.setAttribute("repeatedCutoffCC",ccFlood);meta.setAttribute("note",key);meta.setAttribute("arpOn",arp);meta.setAttribute("cutoff",variant==0?64:127);meta.setAttribute("keytrack",variant<2?0:127);meta.setAttribute("sweepAfterEightBars",variant==3);meta.setAttribute("bpm",100);meta.setAttribute("sampleRate",rate);meta.setAttribute("blockSize",block);meta.setAttribute("samples",length);meta.setAttribute("realtime",realtime);meta.setAttribute("missingFrames",juce::String(missing));meta.setAttribute("callbackAllocations",juce::String(allocated));meta.setAttribute("peak",double(peak));
+  for(const auto& lost:dropoutBlocks){auto* entry=meta.createNewChildElement("MissingBlock");entry->setAttribute("sampleOffset",lost.offset);entry->setAttribute("count",juce::String(lost.count));entry->setAttribute("callbackFinishedLateUs",juce::String(lost.finishedLateUs));}check(meta.writeTo(dir.getChildFile(name+".xml")),"Tester dropout metadata");
+  const bool ok=missing==0 && allocated==0 && finite && peak>1e-6f;passed=passed && ok;
+  std::cout<<"FILTER_PATCH "<<name<<" missing="<<missing<<" callback_allocations="<<allocated<<" peak="<<peak<<" result="<<(ok?"PASS":"FAIL")<<'\n'<<std::flush;
+ }
+ check(passed,"Tester filter probe lost frames, allocated, or produced invalid/silent audio; inspect captures");
+}
 static void audioClock(Processor& p,const juce::File& dir){
  PlayHead head;p.setPlayHead(&head);p.setNonRealtime(true);juce::AudioBuffer<float> audio(4,256);juce::MidiBuffer midi;midi.ensureSize(4096);
  HostClock incoming;double incomingBpm=0;int64_t incomingSamples=0;bool noteHeld=false;
@@ -403,6 +521,16 @@ int main(int argc,char** argv){std::cout<<std::unitbuf;std::cerr<<std::unitbuf;t
  if(argc>=6 && !juce::SystemStats::getEnvironmentVariable("SILVER_TEST_IMPORTS_ONLY",{}).isEmpty()){Library library(root.getChildFile("reference-db"));nativeImports(library,juce::File(argv[2]),juce::File(argv[4]),juce::File(argv[3]),juce::File(argv[5]));return 0;}
  const bool browserOnly=!juce::SystemStats::getEnvironmentVariable("SILVER_TEST_BROWSER_ONLY",{}).isEmpty();
  Processor p;folderChecks(p,root);bufferChecks(p);p.prepareToPlay(48000,256);
+ if(!juce::SystemStats::getEnvironmentVariable("SILVER_TEST_FILTER_CLOCK_ONLY",{}).isEmpty()){
+  check(argc>=5,"Filter clock probe requires K OS, KS OS, KS Data and Wave ROM paths");
+  const auto testerPatch=juce::SystemStats::getEnvironmentVariable("SILVER_TEST_FILTER_PATCH",{});
+  for(int model:{1,2}){
+   if(!juce::SystemStats::getEnvironmentVariable(model==1?"SILVER_TEST_SKIP_K":"SILVER_TEST_SKIP_KS",{}).isEmpty())continue;
+   p.flashFile=juce::File(argv[3]);p.bankFile=juce::File(argv[4]);juce::String error;check(p.loadFirmware(juce::File(argv[model]),error),error.toRawUTF8());
+   if(model==2)check(p.setKSControllerMode(1,error),error.toRawUTF8());
+   if(testerPatch.isEmpty())filterClock(p,root);else filterPatchClock(p,juce::File(testerPatch),root);
+  }return 0;
+ }
  if(argc>=2 && !juce::SystemStats::getEnvironmentVariable("SILVER_TEST_DRUMS_ONLY",{}).isEmpty()){
   juce::String error;const auto waveFile=juce::SystemStats::getEnvironmentVariable("SILVER_TEST_DRUM_WAVES",{});if(waveFile.isNotEmpty())p.bankFile=juce::File(waveFile);check(p.loadFirmware(juce::File(argv[1]),error),error.toRawUTF8());drumBrowserChecks(p,root);drumPlaybackChecks(p,root);
   if(argc>=3){check(p.loadFirmware(juce::File(argv[2]),error),error.toRawUTF8());drumBrowserChecks(p,root);}return 0;
