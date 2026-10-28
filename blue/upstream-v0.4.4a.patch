@@ -1,0 +1,476 @@
+diff --git a/source/novation/silverK/plugin/silverEditor.cpp b/source/novation/silverK/plugin/silverEditor.cpp
+index 6fcd971..6a615f5 100644
+--- a/source/novation/silverK/plugin/silverEditor.cpp
++++ b/source/novation/silverK/plugin/silverEditor.cpp
+@@ -180,11 +180,12 @@ public:
+         const auto appearance=s.getProperties()["silverSkinStyle"];
+         const auto& track=image(appearance.getProperty("faderTrack","faderTrack").toString());
+         const auto& thumb=image(appearance.getProperty("faderThumb","faderThumb").toString());
++        const float thumbScale=juce::jlimit(1.f,8.f,float(appearance.getProperty("faderThumbScale",1.)));
+         if(style!=juce::Slider::LinearVertical){
+             if((track.isValid()||thumb.isValid()) && style==juce::Slider::LinearHorizontal){
+                 if(track.isValid())g.drawImage(track,{float(x),float(y),float(w),float(h)},juce::RectanglePlacement::stretchToFit);
+                 else{g.setColour(s.findColour(juce::Slider::trackColourId));g.fillRoundedRectangle(float(x),y+h*.5f-2,float(w),4,2);}
+-                if(thumb.isValid()){const float tw=juce::jmin(float(w),float(thumb.getWidth())),th=juce::jmin(float(h),float(thumb.getHeight()));g.drawImage(thumb,{pos-tw*.5f,y+(h-th)*.5f,tw,th},juce::RectanglePlacement::stretchToFit);}
++                if(thumb.isValid()){const float tw=juce::jmin(float(w),float(thumb.getWidth())/thumbScale),th=juce::jmin(float(h),float(thumb.getHeight())/thumbScale);g.drawImage(thumb,{pos-tw*.5f,y+(h-th)*.5f,tw,th},juce::RectanglePlacement::stretchToFit);}
+                 else{g.setColour(s.findColour(juce::Slider::thumbColourId));g.fillEllipse(pos-4,y+h*.5f-4,8,8);}return;
+             }
+             LookAndFeel_V4::drawLinearSlider(g,x,y,w,h,pos,0,0,style,s);return;
+@@ -196,7 +197,7 @@ public:
+         for(int i=0;i<=10;++i){float yy=y+h*i/10.f;g.drawLine(cx-w*.32f,yy,cx+w*.32f,yy,1.f);}
+         g.setColour(skinColour(s,0xff0b0d10));g.fillRoundedRectangle(cx-3,float(y),6,float(h),2);
+         }
+-        if(thumb.isValid()){const float tw=juce::jmin(float(w),float(thumb.getWidth())),th=juce::jmin(float(h),float(thumb.getHeight()));g.drawImage(thumb,{cx-tw*.5f,pos-th*.5f,tw,th},juce::RectanglePlacement::stretchToFit);return;}
++        if(thumb.isValid()){const float tw=juce::jmin(float(w),float(thumb.getWidth())/thumbScale),th=juce::jmin(float(h),float(thumb.getHeight())/thumbScale);g.drawImage(thumb,{cx-tw*.5f,pos-th*.5f,tw,th},juce::RectanglePlacement::stretchToFit);return;}
+         g.setGradientFill(juce::ColourGradient(skinColour(s,0xff5b6068),cx,pos-8,skinColour(s,0xff11151b),cx,pos+9,false));
+         g.fillRoundedRectangle(cx-18,pos-8,36,16,5);
+         g.setColour(skinColour(s,0xfff1f4f7).withAlpha(.8f));g.drawLine(cx-12,pos-5,cx+12,pos-5,1.5f);
+@@ -221,11 +222,16 @@ public:
+         auto bounds=b.getLocalBounds().toFloat().reduced(1);
+         const auto style=b.getProperties()["silverSkinStyle"];
+         const auto& custom=image(style[b.getToggleState()?"buttonOn":"buttonOff"].toString());
++        const bool waveformHoverOnly=bool(style.getProperty("waveformHoverOnly",false));
++        if(waveformHoverOnly && b.getProperties().contains("waveform") && hover && b.isEnabled()){
++            g.setColour(skinColour(b,0xff087fe5).withAlpha(.08f));
++            g.fillRoundedRectangle(bounds,isFlat()?0.f:3.f);
++        }
+         if(custom.isValid()){const auto artwork=imageScaleCache.forDrawing(g,custom,bounds.getWidth(),bounds.getHeight());g.setOpacity(b.isEnabled()?1.f:.4f);g.drawImage(artwork,bounds,juce::RectanglePlacement::stretchToFit);g.setOpacity(1.f);return;}
+         const bool on=b.getToggleState();
+         if(b.getProperties().contains("waveform"))
+         {
+-            if(on||hover){g.setColour(skinColour(b,0xff087fe5).withAlpha(on?.13f:.07f));g.fillRoundedRectangle(bounds,isFlat()?0.f:3.f);}
++            if(!waveformHoverOnly && (on||hover)){g.setColour(skinColour(b,0xff087fe5).withAlpha(on?.13f:.07f));g.fillRoundedRectangle(bounds,isFlat()?0.f:3.f);}
+             const float cx=bounds.getCentreX();
+             drawCap(g,on,{cx-10,2,20,8},b.isEnabled(),down);
+             const float left=4,right=float(b.getWidth()-4),top=14,bottom=24;
+@@ -272,6 +278,10 @@ public:
+     }
+     void drawComboBox(juce::Graphics& g,int w,int h,bool,int,int,int,int,juce::ComboBox& c) override
+     {
++        if(drawLcdComboBackground(g,c)){
++            g.setColour(skinColour(c,0xfff1f4f7).withMultipliedAlpha(c.isEnabled()?1.f:.45f));
++            juce::Path arrow;arrow.addTriangle(float(w-15),h*.43f,float(w-7),h*.43f,float(w-11),h*.62f);g.fillPath(arrow);return;
++        }
+         if(isFlat()){
+             g.setColour(skinColour(c,0xffe0e5ea));g.fillRect(0,0,w,h);
+             g.setColour(skinColour(c,c.hasKeyboardFocus(true)?0xff087fe5:0xffbdc7cf));g.drawRect(0,0,w,h);
+@@ -295,7 +305,7 @@ public:
+     }
+     void drawLabel(juce::Graphics& g,juce::Label& label) override
+     {
+-        if(label.getComponentID()!="setupHelp" || label.isBeingEdited()){LookAndFeel_V4::drawLabel(g,label);return;}
++        if(label.getComponentID()!="setupHelp" || label.isBeingEdited()){SkinLookAndFeel::drawLabel(g,label);return;}
+         // Keep explicit data-folder help lines readable, fitting long user
+         // paths and file names independently.
+         g.fillAll(label.findColour(juce::Label::backgroundColourId));g.setFont(label.getFont());
+@@ -642,6 +652,9 @@ struct Editor::Surface final : juce::Component, private juce::Timer
+     explicit Surface(Processor& p,SkinPackage loaded):processor(p),package(std::move(loaded)),skin(package.layout),look(package),browser(p)
+     {
+         setComponentID("surface");setLookAndFeel(&look);
++        // The rounded tooltip leaves its corner pixels transparent.
++        // Declaring it opaque lets the compositor expose a rectangular backing.
++        tooltip.setOpaque(false);
+         status.setComponentID("setupStatus");latency.setComponentID("setupLatency");help.setComponentID("setupHelp");
+         loadRom.setComponentID("loadFirmware");folder.setComponentID("dataFolder");loadProgram.setComponentID("patchBrowserButton");panic.setComponentID("panic");waveRom.setComponentID("waveRom");factory.setComponentID("factoryData");content.setComponentID("advancedContent");
+         performancePanel=std::make_unique<PerformancePanel>(processor,browser);addAndMakeVisible(*performancePanel);
+@@ -856,7 +869,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
+         displayHeld=false;displayUntil=0;
+         auto name=processor.currentName();
+         if(name.isEmpty()||name=="default")name="Init Program";
+-        lcd.setText("Preset\n"+name,juce::dontSendNotification);
++        lcd.setText("Preset\n"+name,juce::dontSendNotification);lcd.setTooltip("Preset\n"+name);
+     }
+     void refreshDrumEdit(){
+         const auto info=processor.drumEditInfo();const bool available=info.bank!=0;
+@@ -878,7 +891,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
+     {
+         if(message.isEmpty()){showProgram();return;}
+         displayHeld=held;displayUntil=juce::Time::getMillisecondCounterHiRes()+900;
+-        lcd.setText(message,juce::dontSendNotification);
++        lcd.setText(message,juce::dontSendNotification);lcd.setTooltip(message);
+     }
+     void addControl(std::vector<std::unique_ptr<Control>>& list,juce::Component& parent,juce::String id,juce::String caption,juce::String kind,bool isDark,juce::Rectangle<int> bounds)
+     {
+diff --git a/source/novation/silverK/plugin/silverPerformance.cpp b/source/novation/silverK/plugin/silverPerformance.cpp
+index 558ee52..71ec36f 100644
+--- a/source/novation/silverK/plugin/silverPerformance.cpp
++++ b/source/novation/silverK/plugin/silverPerformance.cpp
+@@ -88,10 +88,14 @@ struct Channel final:juce::Component {
+   controls.toBack();applySkin(*this,false);
+  }
+  void refresh(bool enabled,const juce::String& name){
+-  controls.setEnabled(enabled);on.setEnabled(enabled);const bool active=(p.activeParts()&(1u<<part))!=0;on.setToggleState(active,juce::dontSendNotification);on.setButtonText(active?"On":"Off");volume.setAlpha(active?1.f:.45f);program.setAlpha(active?1.f:.45f);
++  controls.setEnabled(enabled);on.setEnabled(enabled);const bool active=(p.activeParts()&(1u<<part))!=0;on.setToggleState(active,juce::dontSendNotification);on.setButtonText(active?"On":"Off");
++  // Image-backed knobs and faders do not dim themselves when disabled.
++  // Fade their complete parameter groups, including the first active K part.
++  transpose.setAlpha(enabled?1.f:.35f);fine.setAlpha(enabled?1.f:.35f);
++  volume.setAlpha(!enabled?.35f:active?1.f:.45f);program.setAlpha(active?1.f:.45f);
+   for(auto* c:{&midi,&output,&transpose,&fine,&velocity,&volume})c->refresh();
+   low.button.setButtonText(noteName(int(p.parameters.getRawParameterValue(Processor::parameterId(spec("part_low"),part))->load()))+"  v");high.button.setButtonText(noteName(int(p.parameters.getRawParameterValue(Processor::parameterId(spec("part_high"),part))->load()))+"  v");
+-  if(!program.isPopupActive())program.setText(name.isEmpty()?"Init Program":name,juce::dontSendNotification);repaint();
++  if(!program.isPopupActive())program.setText(name.isEmpty()?"Init Program":name,juce::dontSendNotification);program.setTooltip(name.isEmpty()?"Init Program":name);repaint();
+  }
+ };
+ struct NoteEditor final:juce::Component {
+diff --git a/source/novation/silverK/plugin/silverSkin.cpp b/source/novation/silverK/plugin/silverSkin.cpp
+index c95f928..3013ef8 100644
+--- a/source/novation/silverK/plugin/silverSkin.cpp
++++ b/source/novation/silverK/plugin/silverSkin.cpp
+@@ -202,7 +202,11 @@ bool SkinPackage::load(const juce::File& file,SkinPackage& result,juce::String&
+             const auto resource=localFile(root,p.value.toString());
+             if(!resource.existsAsFile() || resource.getSize()>32*1024*1024){error="Missing or oversized image: "+p.value.toString();return false;}
+             auto image=juce::ImageFileFormat::loadFrom(resource);
+-            if(!image.isValid() || image.getWidth()>8192 || image.getHeight()>8192){error="Invalid image: "+p.value.toString();return false;}
++            // A 128-frame Retina strip is bounded to 256px per square frame.
++            const int shortEdge=juce::jmin(image.getWidth(),image.getHeight());
++            const int longEdge=juce::jmax(image.getWidth(),image.getHeight());
++            const bool retinaStrip=shortEdge>0 && shortEdge<=256 && longEdge==shortEdge*128;
++            if(!image.isValid() || ((image.getWidth()>8192 || image.getHeight()>8192) && !retinaStrip)){error="Invalid image: "+p.value.toString();return false;}
+             candidate.images[p.name.toString()]=image;
+         }
+         const auto font=candidate.theme["font"]["file"].toString();
+@@ -225,11 +229,26 @@ bool SkinPackage::load(const juce::File& file,SkinPackage& result,juce::String&
+     const auto juceColours=candidate.theme["juceColours"];
+     if(!juceColours.getDynamicObject()){error="Theme juceColours must be an object";return false;}
+     for(const auto& p:juceColours.getDynamicObject()->getProperties())if(!juceColourIds().count(p.name.toString()) || !colourString(p.value)){error="Invalid JUCE colour: "+p.name.toString();return false;}
++    const auto validWidget=[&](const juce::var& owner)->bool{
++        for(const auto* section:{"lcd","comboBoxLcd"})if(owner.hasProperty(section)){
++            const auto cfg=owner[juce::Identifier(section)];
++            if(!cfg.isObject()){error="Invalid widget config: "+juce::String(section);return false;}
++            for(const auto* key:{"enabled","dotMatrixText","wrap","fitText"})if(cfg.hasProperty(key)&&!cfg[juce::Identifier(key)].isBool()){error="Widget flag must be boolean: "+juce::String(key);return false;}
++            const auto range=[&](const char* key,double low,double high,bool integer=false){const auto v=cfg[juce::Identifier(key)];return !cfg.hasProperty(key)||(number(v)&&double(v)>=low&&double(v)<=high&&(!integer||double(v)==int(v)));};
++            if(!range("columns",8,80,true)||!range("rows",1,4,true)||!range("dotSize",.5,4)||!range("inactiveAlpha",0,.3)||!range("gridAlpha",0,.3)||!range("gridPitch",1,8)){error="Widget numeric value out of range";return false;}
++            for(const auto* key:{"textColour","topColour","bottomColour","gridColour","borderColour"})if(cfg.hasProperty(key)&&!colourString(cfg[juce::Identifier(key)])){error="Invalid widget colour";return false;}
++        }
++        return true;
++    };
++    if(!validWidget(candidate.theme))return false;
+     const auto styles=candidate.theme["components"];
+     if(!styles.getDynamicObject()){error="Theme components must be an object";return false;}
+     for(const auto& p:styles.getDynamicObject()->getProperties()){
+         const auto style=p.value;
+         if(!style.getDynamicObject()){error="Invalid component style: "+p.name.toString();return false;}
++        if(!validWidget(style))return false;
++        if(style.hasProperty("waveformHoverOnly") && !style["waveformHoverOnly"].isBool()){error="waveformHoverOnly must be boolean";return false;}
++        if(style.hasProperty("faderThumbScale") && (!number(style["faderThumbScale"]) || double(style["faderThumbScale"])<1. || double(style["faderThumbScale"])>8.)){error="Invalid component faderThumbScale";return false;}
+         if(style.hasProperty("fontSize") && (!number(style["fontSize"]) || double(style["fontSize"])<4 || double(style["fontSize"])>256)){error="Invalid component fontSize";return false;}
+         if(style.hasProperty("palette")){
+             if(!style["palette"].getDynamicObject()){error="Invalid component palette";return false;}
+@@ -302,9 +321,284 @@ const juce::Image& SkinLookAndFeel::image(const juce::String& id)const{const aut
+ juce::Typeface::Ptr SkinLookAndFeel::getTypefaceForFont(const juce::Font& f){return package.typeface?package.typeface:LookAndFeel_V4::getTypefaceForFont(f);}
+ juce::Font SkinLookAndFeel::getPopupMenuFont(){const auto base=LookAndFeel_V4::getPopupMenuFont();return font(base.getHeight(),base.getStyleFlags());}
+ juce::Font SkinLookAndFeel::getTextButtonFont(juce::TextButton&,int){return font(13.f,juce::Font::bold);}
++namespace {
++const char* hardwareLcdGlyph(juce::juce_wchar c)
++{
++    switch(c) {
++        case 'A': return "01110100011000111111100011000110001";
++        case 'B': return "11110100011000111110100011000111110";
++        case 'C': return "01111100001000010000100001000001111";
++        case 'D': return "11110100011000110001100011000111110";
++        case 'E': return "11111100001000011110100001000011111";
++        case 'F': return "11111100001000011110100001000010000";
++        case 'G': return "01111100001000010111100011000101111";
++        case 'H': return "10001100011000111111100011000110001";
++        case 'I': return "11111001000010000100001000010011111";
++        case 'J': return "00111000100001000010000101001001100";
++        case 'K': return "10001100101010011000101001001010001";
++        case 'L': return "10000100001000010000100001000011111";
++        case 'M': return "10001110111010110101100011000110001";
++        case 'N': return "10001110011010110011100011000110001";
++        case 'O': return "01110100011000110001100011000101110";
++        case 'P': return "11110100011000111110100001000010000";
++        case 'Q': return "01110100011000110001101011001001101";
++        case 'R': return "11110100011000111110101001001010001";
++        case 'S': return "01111100001000001110000010000111110";
++        case 'T': return "11111001000010000100001000010000100";
++        case 'U': return "10001100011000110001100011000101110";
++        case 'V': return "10001100011000110001100010101000100";
++        case 'W': return "10001100011000110101101011101110001";
++        case 'X': return "10001100010101000100010101000110001";
++        case 'Y': return "10001100010101000100001000010000100";
++        case 'Z': return "11111000010001000100010001000011111";
++        case '0': return "01110100011001110101110011000101110";
++        case '1': return "00100011000010000100001000010001110";
++        case '2': return "01110100010000100010001000100011111";
++        case '3': return "11110000010000101110000010000111110";
++        case '4': return "00010001100101010010111110001000010";
++        case '5': return "11111100001000011110000010000111110";
++        case '6': return "01110100001000011110100011000101110";
++        case '7': return "11111000010001000100010000100001000";
++        case '8': return "01110100011000101110100011000101110";
++        case '9': return "01110100011000101111000010000101110";
++        case ' ': return "00000000000000000000000000000000000";
++        case '_': return "00000000000000000000000000000011111";
++        case '-': return "00000000000000011111000000000000000";
++        case '+': return "00000001000010011111001000010000000";
++        case '.': return "00000000000000000000000000011000110";
++        case ':': return "00000001100011000000001100011000000";
++        case '/': return "00001000100001000100010000100010000";
++        case '?': return "01110100010000100010001000000000100";
++        case '%': return "11001110100010000100010001011000110";
++        case '(': return "00010001000100001000010000010000010";
++        case ')': return "01000001000001000010000100010001000";
++        case '=': return "00000000001111100000111110000000000";
++        case '<': return "00010001000100010000010000010000010";
++        case '>': return "01000001000001000001000100010001000";
++        case ',': return "00000000000000000000001100010001000";
++        case '!': return "00100001000010000100001000000000100";
++        case '#': return "01010111110101001010111110101000000";
++        case '*': return "00000101010111011111011101010100000";
++        case ';': return "00000001100011000000001100010001000";
++        case '\'': return "00100001000001000000000000000000000";
++        case '"': return "01010010100101000000000000000000000";
++        case '[': return "01110010000100001000010000100001110";
++        case ']': return "01110000100001000010000100001001110";
++        case '&': return "01100100101010001000101011001001101";
++        case '@': return "01110100011011110101101111000001111";
++        case '\\': return "10000010000100000100000100001000001";
++        case '^': return "00100010101000100000000000000000000";
++        case '|': return "00100001000010000100001000010000100";
++        case '$': return "00100011111010001110001011111000100";
++        case '~': return "00000000000110110010000000000000000";
++        case '`': return "01000001000001000000000000000000000";
++        case '{': return "00010001000010001000001000010000010";
++        case '}': return "01000001000010000010001000010001000";
++        default: return "01110100010000100010001000000000100";
++    }
++}
++}
++
++juce::var SkinLookAndFeel::widgetStyle(const juce::Component& c,const char* section) const
++{
++    const auto local=c.getProperties()["silverSkinStyle"][juce::Identifier(section)];
++    return local.isObject()?merge(package.theme[juce::Identifier(section)].clone(),local):package.theme[juce::Identifier(section)];
++}
++namespace {
++juce::String lcdAlphabet(const juce::String& text)
++{
++    juce::String out;
++    for(auto c:text.toUpperCase()){
++        if(c==0x00c1 || c==0x00e1 || c==0x00c0 || c==0x00e0 || c==0x00c2 || c==0x00e2 || c==0x00c4 || c==0x00e4 || c==0x00c3 || c==0x00e3)c='A';
++        else if(c==0x00c9 || c==0x00e9 || c==0x00c8 || c==0x00e8 || c==0x00ca || c==0x00ea || c==0x00cb || c==0x00eb)c='E';
++        else if(c==0x00cd || c==0x00ed || c==0x00cc || c==0x00ec || c==0x00ce || c==0x00ee || c==0x00cf || c==0x00ef)c='I';
++        else if(c==0x00d3 || c==0x00f3 || c==0x00d2 || c==0x00f2 || c==0x00d4 || c==0x00f4 || c==0x00d6 || c==0x00f6 || c==0x0150 || c==0x0151)c='O';
++        else if(c==0x00da || c==0x00fa || c==0x00d9 || c==0x00f9 || c==0x00db || c==0x00fb || c==0x00dc || c==0x00fc || c==0x0170 || c==0x0171)c='U';
++        else if(c==0x00c7 || c==0x00e7)c='C';else if(c==0x00d1 || c==0x00f1)c='N';else if(c==0x00dd || c==0x00fd)c='Y';
++        else if(c==0x2013 || c==0x2014 || c==0x2212)c='-';
++        else if(c==0x2026){out+="...";continue;}
++        else if(c==0x00df){out+="SS";continue;}
++        else if(c=='\t')c=' ';
++        if(c<32 || c>126)return {}; // Let native JUCE render scripts outside the hardware alphabet.
++        out+=juce::String::charToString(c);
++    }
++    return out;
++}
++}
++juce::StringArray SkinLookAndFeel::wrapLcdLines(const juce::String& text,int columns)
++{
++    columns=juce::jlimit(1,80,columns);
++    juce::StringArray result,paragraphs;paragraphs.addLines(text.replace("\r\n","\n").replace("\r","\n"));
++    for(auto line:paragraphs){
++        while(line.length()>columns){
++            const int space=line.substring(0,columns+1).lastIndexOfChar(' ');
++            const int split=space>0?space:columns;
++            result.add(line.substring(0,split).trimEnd());line=line.substring(split).trimStart();
++        }
++        result.add(line);
++    }
++    return result;
++}
++bool SkinLookAndFeel::drawLcdText(juce::Graphics& g,const juce::Component& c,const juce::String& text,
++                                 juce::Rectangle<float> area,int rows,const char* section) const
++{
++    const auto config=widgetStyle(c,section);
++    if(!bool(config["enabled"]) || area.isEmpty())return false;
++    rows=juce::jlimit(1,4,rows);
++    const float requestedPitch=float(config.getProperty("dotSize",1.8));
++    const bool combo=juce::String(section)=="comboBoxLcd";
++    const int defaultColumns=combo?juce::jlimit(1,80,int(area.getWidth()/(6.f*requestedPitch))):24;
++    const int columns=juce::jlimit(1,80,int(config.getProperty("columns",defaultColumns)));
++    const bool wrap=rows>1 && bool(config.getProperty("wrap",false));
++    juce::StringArray lines;
++    if(wrap)lines=wrapLcdLines(text,columns);else lines.addLines(text.replace("\r\n","\n").replace("\r","\n"));
++    juce::StringArray display;
++    for(const auto& line:lines){const auto normalized=lcdAlphabet(line);if(line.isNotEmpty() && normalized.isEmpty())return false;display.add(normalized);}
++    // Wrapping uses fixed-size cells. Legacy skins may still request single-line fitting.
++    int count=columns;
++    if(!wrap && bool(config.getProperty("fitText",!combo))){
++        for(const auto& line:display)count=juce::jmax(count,line.length());
++        count=juce::jmin(count,juce::jmax(columns,int(area.getWidth()/5.f)));
++        count=juce::jmin(80,count);
++    }
++    const float pitch=juce::jmin(float(config.getProperty("dotSize",1.8)),juce::jmin(area.getWidth()/(count*6.f),area.getHeight()/(rows*10.f)));
++    if(pitch<=0.f)return true;
++    const float y0=area.getCentreY()-rows*10.f*pitch*.5f+pitch;
++    const auto foreground=config.hasProperty("textColour")?parseColour(config["textColour"]):juce::Colour(0xffe9f5ff);
++    const float disabled=c.isEnabled()?1.f:.45f;
++    const float inactive=juce::jlimit(0.f,.3f,float(config.getProperty("inactiveAlpha",.055)));
++    const juce::Graphics::ScopedSaveState save(g);g.reduceClipRegion(area.toNearestInt());
++    for(int row=0;row<rows;++row){
++        auto line=row<display.size()?display[row]:juce::String{};
++        if(row==rows-1 && display.size()>rows)line+="...";
++        if(line.length()>count)line=line.substring(0,juce::jmax(0,count-3))+"...";
++        for(int col=0;col<count;++col){
++            const char* bits=hardwareLcdGlyph(col<line.length()?line[col]:' ');
++            for(int yy=0;yy<7;++yy)for(int xx=0;xx<5;++xx){
++                const bool on=bits[yy*5+xx]=='1';
++                g.setColour(foreground.withMultipliedAlpha((on?1.f:inactive)*disabled));
++                g.fillRect(area.getX()+(col*6+xx)*pitch,y0+(row*10+yy)*pitch,pitch*.78f,pitch*.78f);
++            }
++        }
++    }
++    return true;
++}
++void SkinLookAndFeel::drawLabel(juce::Graphics& g,juce::Label& label)
++{
++    if(!label.isBeingEdited()){
++        if(label.getComponentID()=="programDisplay"){
++            g.fillAll(label.findColour(juce::Label::backgroundColourId));
++            const int rows=int(widgetStyle(label,"lcd").getProperty("rows",2));
++            if(drawLcdText(g,label,label.getText(),label.getBorderSize().subtractedFrom(label.getLocalBounds()).toFloat(),rows))return;
++        }
++        if(auto* combo=dynamic_cast<juce::ComboBox*>(label.getParentComponent())){
++            if(bool(combo->getProperties()["performancePreset"])){
++                if(drawLcdText(g,*combo,label.getText(),label.getBorderSize().subtractedFrom(label.getLocalBounds()).toFloat(),1))return;
++            }else if(bool(widgetStyle(*combo,"comboBoxLcd")["dotMatrixText"])){
++                if(drawLcdText(g,*combo,label.getText(),label.getBorderSize().subtractedFrom(label.getLocalBounds()).toFloat(),1,"comboBoxLcd"))return;
++            }
++        }
++    }
++    LookAndFeel_V4::drawLabel(g,label);
++}
++namespace {
++const juce::ComboBox* menuCombo(const juce::PopupMenu::Options& options)
++{
++    if(auto* c=dynamic_cast<juce::ComboBox*>(options.getTargetComponent()))return c;
++    return dynamic_cast<juce::ComboBox*>(options.getTopLevelTargetComponent());
++}
++}
++void SkinLookAndFeel::drawPopupMenuItemWithOptions(juce::Graphics& g,const juce::Rectangle<int>& area,
++        bool highlighted,const juce::PopupMenu::Item& item,const juce::PopupMenu::Options& options)
++{
++    const auto* combo=menuCombo(options);
++    const auto config=combo?widgetStyle(*combo,"comboBoxLcd"):juce::var{};
++    if(!combo || !bool(config["enabled"]) || !bool(config["dotMatrixText"]) || item.isSeparator || item.isSectionHeader || (item.text.isNotEmpty() && lcdAlphabet(item.text).isEmpty())){
++        LookAndFeel_V4::drawPopupMenuItemWithOptions(g,area,highlighted,item,options);return;
++    }
++    auto blank=item;blank.text={};LookAndFeel_V4::drawPopupMenuItemWithOptions(g,area,highlighted,blank,options);
++    auto textArea=area.reduced(1);textArea.reduce(juce::jmin(5,area.getWidth()/20),0);
++    const float iconWidth=textArea.getHeight()/1.3f;textArea.removeFromLeft(juce::roundToInt(iconWidth));
++    if(item.image)textArea.removeFromLeft(juce::roundToInt(iconWidth*.5f));
++    if(item.subMenu)textArea.removeFromRight(juce::roundToInt(.6f*getPopupMenuFont().getAscent()));
++    textArea.removeFromRight(3);
++    if(item.shortcutKeyDescription.isNotEmpty())textArea.removeFromRight(juce::roundToInt(getPopupMenuFont().getStringWidthFloat(item.shortcutKeyDescription)+8));
++    juce::Component textStyle;textStyle.setEnabled(item.isEnabled);
++    auto style=juce::var(new juce::DynamicObject);auto cfg=config.clone();
++    const auto colour=highlighted&&item.isEnabled?findColour(juce::PopupMenu::highlightedTextColourId):item.colour!=juce::Colour()?item.colour:findColour(juce::PopupMenu::textColourId);
++    cfg.getDynamicObject()->setProperty("textColour","#"+colour.toDisplayString(true));
++    cfg.getDynamicObject()->setProperty("inactiveAlpha",0.);
++    style.getDynamicObject()->setProperty("comboBoxLcd",cfg);textStyle.getProperties().set("silverSkinStyle",style);
++    drawLcdText(g,textStyle,item.text,textArea.toFloat(),1,"comboBoxLcd");
++}
++void SkinLookAndFeel::getIdealPopupMenuItemSizeWithOptions(const juce::String& text,bool separator,int standardHeight,
++        int& width,int& height,const juce::PopupMenu::Options& options)
++{
++    LookAndFeel_V4::getIdealPopupMenuItemSizeWithOptions(text,separator,standardHeight,width,height,options);
++    if(const auto* combo=menuCombo(options)){
++        const auto config=widgetStyle(*combo,"comboBoxLcd");
++        if(!separator && bool(config["enabled"]) && bool(config["dotMatrixText"])){
++            const float pitch=float(config.getProperty("dotSize",1.8));
++            width=juce::jmax(width,juce::roundToInt(juce::jmin(80,lcdAlphabet(text).length())*6*pitch+50));
++            height=juce::jmax(height,juce::roundToInt(10*pitch+4));
++        }
++    }
++}
++namespace {
++// One shared painter, using precisely the R2 colours, line width and alpha.
++void paintNavyLcd(juce::Graphics& g,float w,float h,const juce::var& config,bool enabled,bool focused)
++{
++    const auto top=config.hasProperty("topColour")?parseColour(config["topColour"]):juce::Colour(0xff112541);
++    const auto bottom=config.hasProperty("bottomColour")?parseColour(config["bottomColour"]):juce::Colour(0xff061326);
++    const auto grid=config.hasProperty("gridColour")?parseColour(config["gridColour"]):juce::Colour(0xff6aa3d9);
++    const auto border=config.hasProperty("borderColour")?parseColour(config["borderColour"]):juce::Colour(0xff3c5878);
++    const auto r=juce::Rectangle<float>(.5f,.5f,w-1,h-1);
++    const juce::Graphics::ScopedSaveState save(g);
++    g.setGradientFill(juce::ColourGradient(top,0,0,bottom,0,h,false));g.fillRoundedRectangle(r,3.f);
++    {const juce::Graphics::ScopedSaveState clip(g);juce::Path p;p.addRoundedRectangle(r.reduced(1),2.f);g.reduceClipRegion(p);
++     g.setColour(grid.withAlpha(float(config.getProperty("gridAlpha",.055))));
++     const float pitch=float(config.getProperty("gridPitch",2.0));
++     for(float x=1;x<w;x+=pitch)g.fillRect(x,1.f,.24f,h-2);
++     for(float y=1;y<h;y+=pitch)g.fillRect(1.f,y,w-2,.24f);
++    }
++    g.setColour(enabled?border:border.withAlpha(.5f));g.drawRoundedRectangle(r,3.f,focused?1.5f:1.f);
++}
++}
++void SkinLookAndFeel::drawPopupMenuBackgroundWithOptions(juce::Graphics& g,int w,int h,const juce::PopupMenu::Options& options)
++{
++    const auto* combo=menuCombo(options);
++    const auto config=combo?widgetStyle(*combo,"comboBoxLcd"):package.theme["comboBoxLcd"];
++    if(!bool(config["enabled"])){LookAndFeel_V4::drawPopupMenuBackgroundWithOptions(g,w,h,options);return;}
++    g.fillAll(config.hasProperty("bottomColour")?parseColour(config["bottomColour"]):juce::Colour(0xff061326));
++    paintNavyLcd(g,float(w),float(h),config,true,false);
++}
++bool SkinLookAndFeel::drawLcdComboBackground(juce::Graphics& g,const juce::ComboBox& c) const
++{
++    const auto config=widgetStyle(c,"comboBoxLcd");
++    if(!bool(config["enabled"]) || bool(c.getProperties()["performancePreset"]))return false;
++    paintNavyLcd(g,float(c.getWidth()),float(c.getHeight()),config,c.isEnabled(),c.hasKeyboardFocus(true));
++    return true;
++}
++
+ juce::Font SkinLookAndFeel::getLabelFont(juce::Label& l){return l.getFont();}
+ juce::Font SkinLookAndFeel::getComboBoxFont(juce::ComboBox&){return font(12.5f);}
+ juce::Font SkinLookAndFeel::getSliderPopupFont(juce::Slider&){return font(13.f);}
++void SkinLookAndFeel::drawTooltip(juce::Graphics& g,const juce::String& text,int width,int height)
++{
++    if(width<2||height<2)return;
++    const auto bounds=juce::Rectangle<float>(0,0,float(width),float(height));
++    const auto outline=bounds.reduced(.5f);
++    const float radius=juce::jmin(5.f,juce::jmin(outline.getWidth(),outline.getHeight())*.5f);
++    juce::Path shape;shape.addRoundedRectangle(outline,radius);
++    // Fill and outline share one contour; no dark corner can protrude past it.
++    g.setColour(findColour(juce::TooltipWindow::backgroundColourId));g.fillPath(shape);
++    g.setColour(findColour(juce::TooltipWindow::outlineColourId));g.strokePath(shape,juce::PathStrokeType(1.f));
++    // Match pinned JUCE's tooltip typography and sizing algorithm exactly.
++    juce::AttributedString content;content.setJustification(juce::Justification::centred);
++    content.append(text,juce::Font(13.f,juce::Font::bold),findColour(juce::TooltipWindow::textColourId));
++    juce::TextLayout layout;layout.createLayoutWithBalancedLineLengths(content,400.f);layout.draw(g,bounds);
++}
++
+ bool SkinLookAndFeel::drawKnobStrip(juce::Graphics& g,juce::Slider& s,juce::Rectangle<float> r,float position)const
+ {
+     const auto config=package.theme["knobStrip"];const auto style=s.getProperties()["silverSkinStyle"];
+@@ -388,6 +682,6 @@ void SkinDecoration::paint(juce::Graphics& g)
+     if(kind=="image"){g.drawImage(l->image(description["image"].toString()),getLocalBounds().toFloat(),juce::RectanglePlacement::stretchToFit);return;}
+     g.setColour(description.hasProperty("colour")?parseColour(description["colour"]):l->colour(0xff171b20));
+     if(kind=="panel")g.fillRoundedRectangle(getLocalBounds().toFloat(),float(description.getProperty("radius",0.)));
+-    else{g.setFont(l->font(float(description.getProperty("fontSize",14.)),bool(description["bold"])?juce::Font::bold:juce::Font::plain));g.drawFittedText(description["text"].toString(),getLocalBounds(),description["align"].toString()=="centre"?juce::Justification::centred:description["align"].toString()=="right"?juce::Justification::centredRight:juce::Justification::centredLeft,4);}
++    else{if(bool(description["lcdText"])&&l->drawLcdText(g,*this,description["text"].toString(),getLocalBounds().toFloat(),1))return;g.setFont(l->font(float(description.getProperty("fontSize",14.)),bool(description["bold"])?juce::Font::bold:juce::Font::plain));g.drawFittedText(description["text"].toString(),getLocalBounds(),description["align"].toString()=="centre"?juce::Justification::centred:description["align"].toString()=="right"?juce::Justification::centredRight:juce::Justification::centredLeft,4);}
+ }
+ }
+diff --git a/source/novation/silverK/plugin/silverSkin.h b/source/novation/silverK/plugin/silverSkin.h
+index 3f968ae..0f104eb 100644
+--- a/source/novation/silverK/plugin/silverSkin.h
++++ b/source/novation/silverK/plugin/silverSkin.h
+@@ -33,6 +33,20 @@ public:
+     juce::Font getLabelFont(juce::Label&) override;
+     juce::Font getComboBoxFont(juce::ComboBox&) override;
+     juce::Font getSliderPopupFont(juce::Slider&) override;
++    void drawTooltip(juce::Graphics&, const juce::String&, int width, int height) override;
++    // All additions are opt-in. Existing skin packages retain their native text and fields.
++    juce::var widgetStyle(const juce::Component&, const char* section) const;
++    bool drawLcdText(juce::Graphics&, const juce::Component&, const juce::String&,
++                     juce::Rectangle<float>, int rows=1, const char* section="lcd") const;
++    static juce::StringArray wrapLcdLines(const juce::String&, int columns);
++    bool drawLcdComboBackground(juce::Graphics&, const juce::ComboBox&) const;
++    void drawLabel(juce::Graphics&, juce::Label&) override;
++    void drawPopupMenuBackgroundWithOptions(juce::Graphics&, int width, int height,
++                                             const juce::PopupMenu::Options&) override;
++    void drawPopupMenuItemWithOptions(juce::Graphics&, const juce::Rectangle<int>&, bool,
++                                      const juce::PopupMenu::Item&, const juce::PopupMenu::Options&) override;
++    void getIdealPopupMenuItemSizeWithOptions(const juce::String&, bool, int, int&, int&,
++                                              const juce::PopupMenu::Options&) override;
+     bool drawKnobStrip(juce::Graphics&, juce::Slider&, juce::Rectangle<float>, float) const;
+ };
+ 

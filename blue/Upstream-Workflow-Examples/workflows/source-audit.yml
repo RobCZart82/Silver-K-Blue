@@ -1,0 +1,14 @@
+name: Source-only repository audit
+on: [push, pull_request]
+jobs:
+  source-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reject builds, audio and firmware
+        run: python3 tools/check_repository.py
+      - name: Verify our synthetic flash is reproducible
+        run: |
+          c++ -std=c++17 tools/create_init_flash.cpp -o /tmp/silver-create-init-flash
+          /tmp/silver-create-init-flash /tmp/ks-init-flash.bin
+          cmp assets/ks-init-flash.bin /tmp/ks-init-flash.bin

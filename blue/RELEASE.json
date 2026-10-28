@@ -1,0 +1,30 @@
+{
+  "product": "Silver-K Blue",
+  "releaseVersion": "1.0",
+  "releaseDate": "2026-10-25",
+  "skins": [
+    {
+      "id": "silver-k-blue-standard",
+      "name": "Silver-K Blue Standard v1.0",
+      "framePixels": 64,
+      "official044aCompatible": true
+    },
+    {
+      "id": "silver-k-blue-retina-4k",
+      "name": "Silver-K Blue Retina 4K v1.0",
+      "framePixels": 256,
+      "official044aCompatible": false
+    }
+  ],
+  "upstreamTag": "v0.4.4a",
+  "upstreamCommit": "4baaead06e23e2358729cca32b6b511c72022318",
+  "pluginBuild": "local unofficial Universal 2, tooltip fix included",
+  "pluginIdentity": "unchanged Silver-K identity",
+  "history": {
+    "snapshotCount": 32,
+    "fileEntries": 1456,
+    "logicalBytes": 1960334103,
+    "uniqueObjects": 462,
+    "uniqueObjectBytes": 851989794
+  }
+}

@@ -1,0 +1,777 @@
+{
+  "palette": {
+    "ff004fbc": "#004fbc",
+    "ff008bff": "#008bff",
+    "ff075293": "#075293",
+    "ff0752a7": "#0752a7",
+    "display": "#0752ba",
+    "ff0867df": "#0867df",
+    "accent": "#087fe5",
+    "ff0b0d10": "#0b0d10",
+    "ff0b1320": "#0b1320",
+    "ff10141a": "#10141a",
+    "ff10151c": "#10151c",
+    "ff11151b": "#11151b",
+    "ff148de3": "#148de3",
+    "ff1695ee": "#1695ee",
+    "text": "#171b20",
+    "ff171e28": "#171e28",
+    "ff1a242e": "#1a242e",
+    "ff1c2a38": "#1c2a38",
+    "ff1c5048": "#1c5048",
+    "ff1d2025": "#1d2025",
+    "ff202a34": "#202a34",
+    "dark": "#24262a",
+    "ff243041": "#243041",
+    "ff25c3ff": "#25c3ff",
+    "ff26292d": "#26292d",
+    "ff26303b": "#26303b",
+    "ff27303b": "#27303b",
+    "ff292c32": "#292c32",
+    "ff303237": "#303237",
+    "ff343a43": "#343a43",
+    "ff344150": "#344150",
+    "ff434a54": "#434a54",
+    "ff438276": "#438276",
+    "ff4cb2ff": "#4cb2ff",
+    "ff5b6068": "#5b6068",
+    "ff657180": "#657180",
+    "ff666d78": "#666d78",
+    "ff6b7076": "#6b7076",
+    "ff737a82": "#737a82",
+    "ffaeb2b9": "#aeb2b9",
+    "ffb21718": "#b21718",
+    "border": "#bdc7cf",
+    "ffbec3cb": "#bec3cb",
+    "ffc4c7cc": "#c4c7cc",
+    "ffc5cdd6": "#c5cdd6",
+    "background": "#ced1d5",
+    "ffd5d8dc": "#d5d8dc",
+    "ffd9d4c6": "#d9d4c6",
+    "ffe0e5ea": "#e0e5ea",
+    "panelBottom": "#e4eaf0",
+    "ffe5e7ea": "#e5e7ea",
+    "ffe8ebef": "#e8ebef",
+    "ffeef0f2": "#eef0f2",
+    "panelTop": "#eef1f5",
+    "lightText": "#f1f4f7",
+    "fff4f5f7": "#f4f5f7",
+    "ffff5450": "#ff5450"
+  },
+  "font": {
+    "file": "",
+    "family": "",
+    "scale": 1.0
+  },
+  "images": {
+    "knobBody": "assets/knobBody.png",
+    "knobGrip": "assets/knobGrip.png",
+    "knobBase": "assets/knobBase.png",
+    "buttonOff": "assets/buttonOff.png",
+    "buttonOn": "assets/buttonOn.png",
+    "cyanV2_unipolar": "assets/cyan-v2-unipolar-128.png",
+    "cyanV2_bipolar": "assets/cyan-v2-bipolar-128.png",
+    "cyanV2_volume": "assets/cyan-v2-volume-128.png",
+    "cyanV2_bipolar_raw64": "assets/cyan-v2-bipolar-raw64-128.png",
+    "lcdPixelGridV4": "assets/lcd-pixel-grid-4x.png",
+    "blueGlassFaderThumb": "assets/faderThumb-blue-glass.png",
+    "aluminiumGrain1": "assets/aluminium-grain-01.png",
+    "aluminiumGrain2": "assets/aluminium-grain-02.png",
+    "aluminiumGrain3": "assets/aluminium-grain-03.png",
+    "aluminiumGrain4": "assets/aluminium-grain-04.png",
+    "aluminiumGrain5": "assets/aluminium-grain-05.png",
+    "aluminiumGrain6": "assets/aluminium-grain-06.png",
+    "aluminiumGrain7": "assets/aluminium-grain-07.png",
+    "aluminiumGrain8": "assets/aluminium-grain-08.png",
+    "aluminiumGrain9": "assets/aluminium-grain-09.png",
+    "performanceAluminium_header": "assets/performance-aluminium-header.png",
+    "performanceAluminium_part_1": "assets/performance-aluminium-part-1.png",
+    "performanceAluminium_part_2": "assets/performance-aluminium-part-2.png",
+    "performanceAluminium_part_3": "assets/performance-aluminium-part-3.png",
+    "performanceAluminium_part_4": "assets/performance-aluminium-part-4.png",
+    "waveClean0Off": "assets/wave-clean-0-off.png",
+    "waveClean0On": "assets/wave-clean-0-on.png",
+    "waveClean1Off": "assets/wave-clean-1-off.png",
+    "waveClean1On": "assets/wave-clean-1-on.png",
+    "waveClean2Off": "assets/wave-clean-2-off.png",
+    "waveClean2On": "assets/wave-clean-2-on.png",
+    "waveClean3Off": "assets/wave-clean-3-off.png",
+    "waveClean3On": "assets/wave-clean-3-on.png"
+  },
+  "components": {
+    "volume": {
+      "knobStrip": "cyanV2_volume"
+    },
+    "modulation": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "breath": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "voice_level": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "portamento_time": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "preglide": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "unison_detune": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "random_detune": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "osc1_semitone": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "osc1_fine": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "osc1_bend_depth": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "osc1_lfo1_pitch": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "osc1_env_pitch": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "osc1_pulse_width": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "osc1_lfo2_pwm": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "osc1_env_pwm": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "osc2_semitone": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "osc2_fine": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "osc2_bend_depth": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "osc2_lfo1_pitch": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "osc2_env_pitch": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "osc2_pulse_width": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "osc2_lfo2_pwm": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "osc2_env_pwm": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "osc3_semitone": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "osc3_fine": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "osc3_bend_depth": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "osc3_lfo1_pitch": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "osc3_env_pitch": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "osc3_pulse_width": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "osc3_lfo2_pwm": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "osc3_env_pwm": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "fm_level": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "fm_env_depth": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "fm_velocity": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "fm_attack": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "fm_decay": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "osc1_level": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "osc2_level": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "osc3_level": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "noise_level": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "ring_level": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "external_level": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "cutoff": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "resonance": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "filter_drive": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "filter_normalise": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "filter_lfo2": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "filter_env": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "filter_keytrack": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "amp_attack": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "amp_decay": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "amp_sustain": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "amp_release": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "amp_velocity": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "mod_attack": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "mod_decay": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "mod_sustain": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "mod_release": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "mod_velocity": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "lfo1_rate": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "lfo1_delay": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "lfo2_rate": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "lfo2_delay": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "delay_level": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "delay_time": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "delay_feedback": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "delay_width": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "delay_wheel": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "reverb_level": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "reverb_decay": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "reverb_wheel": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "chorus_level": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "chorus_rate": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "chorus_feedback": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "chorus_depth": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "chorus_centre": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "chorus_wheel": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "distortion_level": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "distortion_compensation": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "distortion_wheel": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "eq_level": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "eq_frequency": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "eq_rate": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "eq_depth": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "pan_position": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "pan_rate": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "pan_depth": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "vocoder_balance": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "vocoder_width": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "vocoder_sibilance": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "arp_rate": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "arp_gate": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "wheel_osc_pitch": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "wheel_osc_lfo1": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "wheel_filter_frequency": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "wheel_filter_lfo2": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "wheel_amplitude": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "aftertouch_osc_pitch": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "aftertouch_osc_lfo1": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "aftertouch_filter_frequency": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "aftertouch_filter_lfo2": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "aftertouch_amplitude": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "breath_osc_pitch": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "breath_osc_lfo1": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "breath_filter_frequency": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "breath_filter_lfo2": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "breath_amplitude": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "attack": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "decay": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "sustain": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "release": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "delay": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "reverb": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "chorus": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "filter_velocity": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "osc1_level_mod": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "osc2_level_mod": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "osc3_level_mod": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "noise_level_mod": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "ring_level_mod": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "osc1_lfo2_level": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "fm_lfo1": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "osc_key_phase": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "lfo1_start_phase": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "lfo1_velocity": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "lfo2_start_phase": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "lfo2_velocity": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "fixed_note": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "arp_rhythm": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "part_channel": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "part_low": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "part_high": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "part_transpose": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "part_fine": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "part_velocity": {
+      "knobStrip": "cyanV2_unipolar"
+    },
+    "performance:part1:part_transpose:slider": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "performance:part1:part_fine:slider": {
+      "knobStrip": "cyanV2_bipolar_raw64"
+    },
+    "performance:part2:part_transpose:slider": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "performance:part2:part_fine:slider": {
+      "knobStrip": "cyanV2_bipolar_raw64"
+    },
+    "performance:part3:part_transpose:slider": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "performance:part3:part_fine:slider": {
+      "knobStrip": "cyanV2_bipolar_raw64"
+    },
+    "performance:part4:part_transpose:slider": {
+      "knobStrip": "cyanV2_bipolar"
+    },
+    "performance:part4:part_fine:slider": {
+      "knobStrip": "cyanV2_bipolar_raw64"
+    },
+    "programDisplay": {
+      "palette": {
+        "display": "#00000000"
+      },
+      "lcd": {
+        "rows": 4,
+        "wrap": true,
+        "fitText": false,
+        "columns": 24,
+        "dotSize": 1.8
+      }
+    },
+    "mainPanel/control:mod_attack/mod_attack": {
+      "faderThumb": "blueGlassFaderThumb",
+      "faderThumbScale": 4
+    },
+    "mainPanel/control:mod_decay/mod_decay": {
+      "faderThumb": "blueGlassFaderThumb",
+      "faderThumbScale": 4
+    },
+    "mainPanel/control:mod_sustain/mod_sustain": {
+      "faderThumb": "blueGlassFaderThumb",
+      "faderThumbScale": 4
+    },
+    "mainPanel/control:mod_release/mod_release": {
+      "faderThumb": "blueGlassFaderThumb",
+      "faderThumbScale": 4
+    },
+    "mainPanel/control:attack/attack": {
+      "faderThumb": "blueGlassFaderThumb",
+      "faderThumbScale": 4
+    },
+    "mainPanel/control:decay/decay": {
+      "faderThumb": "blueGlassFaderThumb",
+      "faderThumbScale": 4
+    },
+    "mainPanel/control:sustain/sustain": {
+      "faderThumb": "blueGlassFaderThumb",
+      "faderThumbScale": 4
+    },
+    "mainPanel/control:release/release": {
+      "faderThumb": "blueGlassFaderThumb",
+      "faderThumbScale": 4
+    },
+    "mainPanel/control:amp_attack/amp_attack": {
+      "faderThumb": "blueGlassFaderThumb",
+      "faderThumbScale": 4
+    },
+    "mainPanel/control:amp_decay/amp_decay": {
+      "faderThumb": "blueGlassFaderThumb",
+      "faderThumbScale": 4
+    },
+    "mainPanel/control:amp_sustain/amp_sustain": {
+      "faderThumb": "blueGlassFaderThumb",
+      "faderThumbScale": 4
+    },
+    "mainPanel/control:amp_release/amp_release": {
+      "faderThumb": "blueGlassFaderThumb",
+      "faderThumbScale": 4
+    },
+    "performance:part1:volume:slider": {
+      "faderThumb": "blueGlassFaderThumb",
+      "faderThumbScale": 4
+    },
+    "performance:part2:volume:slider": {
+      "faderThumb": "blueGlassFaderThumb",
+      "faderThumbScale": 4
+    },
+    "performance:part3:volume:slider": {
+      "faderThumb": "blueGlassFaderThumb",
+      "faderThumbScale": 4
+    },
+    "performance:part4:volume:slider": {
+      "faderThumb": "blueGlassFaderThumb",
+      "faderThumbScale": 4
+    },
+    "surface": {
+      "palette": {
+        "panelTop": "#d3d7da",
+        "panelBottom": "#bec5ca"
+      }
+    },
+    "performanceCanvas": {
+      "palette": {
+        "panelTop": "#d3d7da",
+        "panelBottom": "#bec5ca"
+      }
+    },
+    "performance:part1:strip": {
+      "palette": {
+        "panelTop": "#d3d7da",
+        "panelBottom": "#bec5ca"
+      }
+    },
+    "performance:part2:strip": {
+      "palette": {
+        "panelTop": "#d3d7da",
+        "panelBottom": "#bec5ca"
+      }
+    },
+    "performance:part3:strip": {
+      "palette": {
+        "panelTop": "#d3d7da",
+        "panelBottom": "#bec5ca"
+      }
+    },
+    "performance:part4:strip": {
+      "palette": {
+        "panelTop": "#d3d7da",
+        "panelBottom": "#bec5ca"
+      }
+    },
+    "osc1_wave:0": {
+      "buttonOff": "waveClean0Off",
+      "buttonOn": "waveClean0On",
+      "waveformHoverOnly": true
+    },
+    "osc1_wave:1": {
+      "buttonOff": "waveClean1Off",
+      "buttonOn": "waveClean1On",
+      "waveformHoverOnly": true
+    },
+    "osc1_wave:2": {
+      "buttonOff": "waveClean2Off",
+      "buttonOn": "waveClean2On",
+      "waveformHoverOnly": true
+    },
+    "osc1_wave:3": {
+      "buttonOff": "waveClean3Off",
+      "buttonOn": "waveClean3On",
+      "waveformHoverOnly": true
+    },
+    "osc2_wave:0": {
+      "buttonOff": "waveClean0Off",
+      "buttonOn": "waveClean0On",
+      "waveformHoverOnly": true
+    },
+    "osc2_wave:1": {
+      "buttonOff": "waveClean1Off",
+      "buttonOn": "waveClean1On",
+      "waveformHoverOnly": true
+    },
+    "osc2_wave:2": {
+      "buttonOff": "waveClean2Off",
+      "buttonOn": "waveClean2On",
+      "waveformHoverOnly": true
+    },
+    "osc2_wave:3": {
+      "buttonOff": "waveClean3Off",
+      "buttonOn": "waveClean3On",
+      "waveformHoverOnly": true
+    },
+    "osc3_wave:0": {
+      "buttonOff": "waveClean0Off",
+      "buttonOn": "waveClean0On",
+      "waveformHoverOnly": true
+    },
+    "osc3_wave:1": {
+      "buttonOff": "waveClean1Off",
+      "buttonOn": "waveClean1On",
+      "waveformHoverOnly": true
+    },
+    "osc3_wave:2": {
+      "buttonOff": "waveClean2Off",
+      "buttonOn": "waveClean2On",
+      "waveformHoverOnly": true
+    },
+    "osc3_wave:3": {
+      "buttonOff": "waveClean3Off",
+      "buttonOn": "waveClean3On",
+      "waveformHoverOnly": true
+    },
+    "firmwareSelect": {
+      "comboBoxLcd": {
+        "enabled": true,
+        "topColour": "#112541",
+        "bottomColour": "#061326",
+        "gridColour": "#6aa3d9",
+        "borderColour": "#3c5878",
+        "gridAlpha": 0.07,
+        "gridPitch": 2,
+        "dotMatrixText": false,
+        "dotSize": 1.5,
+        "fitText": true,
+        "inactiveAlpha": 0.025,
+        "textColour": "#ffffff"
+      }
+    },
+    "performance:part1:preset": {
+      "lcd": {
+        "enabled": false
+      }
+    },
+    "performance:part2:preset": {
+      "lcd": {
+        "enabled": false
+      }
+    },
+    "performance:part3:preset": {
+      "lcd": {
+        "enabled": false
+      }
+    },
+    "performance:part4:preset": {
+      "lcd": {
+        "enabled": false
+      }
+    }
+  },
+  "juceColours": {
+    "menuBackground": "#08172b",
+    "menuText": "#ffffff",
+    "menuHighlight": "#204a76",
+    "menuHighlightText": "#ffffff",
+    "comboText": "#ffffff"
+  },
+  "knobStrip": {
+    "image": "cyanV2_unipolar",
+    "frames": 128,
+    "orientation": "vertical"
+  },
+  "renderStyle": "classic",
+  "lcd": {
+    "enabled": true,
+    "columns": 24,
+    "dotSize": 1.8,
+    "inactiveAlpha": 0.045,
+    "textColour": "#e9f5ff"
+  },
+  "comboBoxLcd": {
+    "enabled": true,
+    "topColour": "#112541",
+    "bottomColour": "#061326",
+    "gridColour": "#6aa3d9",
+    "borderColour": "#3c5878",
+    "gridAlpha": 0.07,
+    "gridPitch": 2,
+    "dotMatrixText": false,
+    "dotSize": 1.5,
+    "fitText": true,
+    "inactiveAlpha": 0.025,
+    "textColour": "#ffffff"
+  }
+}

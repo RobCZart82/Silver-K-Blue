@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "engine": "silver-k-juce",
+  "id": "silver-k-blue-standard",
+  "name": "Silver-K Blue Standard v1.0",
+  "author": "",
+  "layout": "layout.json",
+  "theme": "theme.json",
+  "version": "1.0"
+}

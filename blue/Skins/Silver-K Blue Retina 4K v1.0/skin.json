@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "engine": "silver-k-juce",
+  "id": "silver-k-blue-retina-4k",
+  "name": "Silver-K Blue Retina 4K v1.0",
+  "author": "",
+  "layout": "layout.json",
+  "theme": "theme.json",
+  "version": "1.0"
+}
