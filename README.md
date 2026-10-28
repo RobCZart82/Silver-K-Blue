@@ -36,4 +36,4 @@ Az első konfigurálás hálózatról tölti a rögzített függőségeket. A re
 
 A `blue/Documentation` lezáró csomagra hivatkozó leírásai a teljes helyi archívum szerkezetét követik. A 32 történeti csomag, a bináris és az ellenőrzési archívum helyben maradt; azok nem részei ennek a repositorynak. A forráskód licence [GPLv3](LICENSE.md); az eredeti szerzői megjelölések megmaradtak. A grafikai anyagok eredete külön dokumentált, publikus terjesztésük előtt áttekintendő.
 
-Az eredeti GitHub Actions munkafolyamatok a `blue/Upstream-Workflow-Examples/workflows` mappában megőrzött példák. Az első feltöltés nem indít automatikus felhőfordítást; a saját CI beállítása későbbi feladat.
+A kézzel indítható **Silver-K Blue Windows x64** GitHub Actions VST3-at és önálló Windows-alkalmazást készít a privát repositoryban. [Indítás és letöltés](blue/Documentation/07-Windows-GitHub-Actions.md). Az eredeti workflow-k a `blue/Upstream-Workflow-Examples/workflows` mappában mintaként maradnak meg.
