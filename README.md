@@ -40,4 +40,4 @@ A kézzel indítható **Silver-K Blue Windows x64** GitHub Actions VST3-at és �
 
 ## Upstream követés
 
-Naponta ellenőrizzük az eredeti Silver-K main ágát és stabil kiadását. Új változásból privát draft PR készül; ütközés esetén jelentés, automatikus main-merge nélkül. [Frissítési folyamat](blue/Documentation/08-Upstream-frissites.md).
+Naponta ellenőrizzük az eredeti Silver-K main ágát és stabil kiadását. Új változásból privát ellenőrzési ág készül; ütközés esetén jelentés, automatikus main-merge nélkül. Az összehasonlító linkről kézzel nyitható PR. [Frissítési folyamat](blue/Documentation/08-Upstream-frissites.md).

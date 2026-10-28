@@ -13,11 +13,11 @@ A GitHub ütemezése késhet. Kézi indítás: Actions → Check Silver-K upstre
 
 ## Új változás esetén
 
-A bot az **automation/upstream-sync** ágra készít frissítési javaslatot, és **draft PR-t** nyit a saját privát repositoryban. A privát main ágat nem egyesíti automatikusan, a repositoryt nem teszi publikussá, az eredeti projekthez nem ír.
+A bot az **automation/upstream-sync** ágra készít frissítési javaslatot, és összehasonlító linket ad a saját privát repositoryhoz. Erről **kézzel nyitható PR**. Nem kér PR-jóváhagyási jogosultságot, nem nyit PR-t automatikusan. A privát main ágat nem egyesíti automatikusan, a repositoryt nem teszi publikussá, az eredeti projekthez nem ír.
 
 Tiszta merge esetén a PR tartalmazza az upstream módosításokat, a Blue munka megőrzésével. Ütközésnél a merge visszaáll, és csak a `blue/UPSTREAM-UPDATE.md` jelentés kerül a PR-ba, az ütköző fájlok listájával. Ilyenkor a forrásfrissítés még nincs kész; kézzel kell rendezni.
 
-Az automatikus ág erre a célra fenntartott ág. Ha kézzel dolgozunk rajta, a bot felismeri a nem bot által írt legutolsó commitot és nem állítja vissza az ágat. A kézi rendezés és felülvizsgálat után a PR egyesíthető, a bot pedig a következő változáskor új javaslatot készíthet. Egy változatlan javaslat miatt nem küld naponta új PR-t vagy frissítést.
+Az automatikus ág erre a célra fenntartott ág. Ha kézzel dolgozunk rajta, a bot felismeri a nem bot által írt legutolsó commitot és nem állítja vissza az ágat. A kézi rendezés és felülvizsgálat után a PR egyesíthető, a bot pedig a következő változáskor új javaslatot készíthet. Egy változatlan javaslat miatt nem nyit PR-t; ugyanaz a frissítési ág használható tovább.
 
 ## Elfogadás előtti ellenőrzés
 
@@ -30,6 +30,6 @@ Az upstream új verziója új ütközéseket vagy teszthibákat hozhat. A folyam
 
 ## Jogosultság és ellenőrzés
 
-A frissítési job tartalmat írhat és PR-t nyithat a saját privát repositoryban. A GitHub ehhez a workflow-k PR-létrehozási beállítását is igényli. A bot nem hagy jóvá és nem merge-el PR-t. Nincs személyes token vagy firmware a workflow-ban.
+A frissítési job csak repository-tartalomírást kér a saját javaslati ágához. Az Actions alapjogosultsága olvasás marad. Az automatikus PR-nyitáshoz szükséges, PR-jóváhagyást is lehetővé tevő tágabb beállítás módosítását az automatikus jóváhagyási ellenőrzés elutasította; ezért ezt a jogosultságot nem engedélyeztük. A PR kézzel nyitható, a bot nem hagy jóvá és nem merge-el PR-t. Nincs személyes token vagy firmware a workflow-ban.
 
 A `tools/test_sync_blue_upstream.py` ideiglenes helyi repositorykkal, GitHub-írás nélkül ellenőrzi a frissítés nélküli, tiszta merge, ütközés és release-only eseteket. A workflow minden ellenőrzés előtt lefuttatja ezt.

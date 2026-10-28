@@ -62,8 +62,8 @@ class SyncTests(unittest.TestCase):
             if not change and not release_change:
                 self.assertEqual(prs,[])
             else:
-                self.assertEqual(len(prs),1)
-                self.assertTrue(any('--draft' in call for call in calls))
+                self.assertEqual(prs,[])
+                self.assertEqual(calls,[])
                 branch=module.BRANCH
                 self.assertEqual(git(checkout,'show',branch+':ours.txt'),'keep my skin')
                 report=git(checkout,'show',branch+':blue/UPSTREAM-UPDATE.md')
@@ -74,7 +74,7 @@ class SyncTests(unittest.TestCase):
                     self.assertEqual(git(checkout,'show',branch+':upstream-fix.txt'),'new upstream fix')
                 git(checkout,'checkout','main')
                 module.main()
-                self.assertEqual(len(prs),1)
+                self.assertEqual(prs,[])
     def test_no_update(self):self.scenario(change=False)
     def test_clean_update_preserves_blue_and_main(self):self.scenario()
     def test_conflict_does_not_overwrite_blue(self):self.scenario(conflict=True)

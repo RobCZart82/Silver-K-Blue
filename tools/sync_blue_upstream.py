@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Daily upstream main/release check; prepare a draft PR, never merge private main."""
+"""Daily upstream check; prepare a review branch, never merge private main."""
 import json
 import os
 from pathlib import Path
 import subprocess
-import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 UPSTREAM = 'temaniak/Silver-K'
 BRANCH = 'automation/upstream-sync'
@@ -89,22 +88,13 @@ def main():
     if not unchanged:
         run('git', 'push', '--force-with-lease=refs/heads/' + BRANCH + ':' + expected,
             'origin', 'HEAD:refs/heads/' + BRANCH)
-    prs = json.loads(run('gh', 'pr', 'list', '--repo', repo, '--head', BRANCH,
-                         '--base', base, '--state', 'open', '--json', 'number,url').stdout)
-    if unchanged and prs:
-        print('The same update proposal already exists; no repeated push or notification.')
-        return
-    title = 'Upstream Silver-K update' + (' — conflicts need resolution' if conflicts else ' — review and test')
-    with tempfile.TemporaryDirectory(prefix='upstream-pr-') as temporary:
-        body = Path(temporary) / 'body.md'
-        body.write_text('\n'.join(report) + '\n')
-        if prs:
-            run('gh', 'pr', 'edit', str(prs[0]['number']), '--repo', repo,
-                '--title', title, '--body-file', str(body))
-        else:
-            run('gh', 'pr', 'create', '--repo', repo, '--base', base, '--head', BRANCH,
-                '--draft', '--title', title, '--body-file', str(body))
+    compare = 'https://github.com/' + repo + '/compare/' + base + '...' + BRANCH
     print(status)
+    print('Review changes and open a PR manually:', compare)
+    summary = os.environ.get('GITHUB_STEP_SUMMARY')
+    if summary:
+        with open(summary, 'a', encoding='utf-8') as stream:
+            stream.write('## Upstream update proposal\n\n' + status + '\n\n[Review changes / create a PR](' + compare + ')\n')
 
 if __name__ == '__main__':
     main()
