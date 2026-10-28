@@ -37,3 +37,7 @@ Az első konfigurálás hálózatról tölti a rögzített függőségeket. A re
 A `blue/Documentation` lezáró csomagra hivatkozó leírásai a teljes helyi archívum szerkezetét követik. A 32 történeti csomag, a bináris és az ellenőrzési archívum helyben maradt; azok nem részei ennek a repositorynak. A forráskód licence [GPLv3](LICENSE.md); az eredeti szerzői megjelölések megmaradtak. A grafikai anyagok eredete külön dokumentált, publikus terjesztésük előtt áttekintendő.
 
 A kézzel indítható **Silver-K Blue Windows x64** GitHub Actions VST3-at és önálló Windows-alkalmazást készít a privát repositoryban. [Indítás és letöltés](blue/Documentation/07-Windows-GitHub-Actions.md). Az eredeti workflow-k a `blue/Upstream-Workflow-Examples/workflows` mappában mintaként maradnak meg.
+
+## Upstream követés
+
+Naponta ellenőrizzük az eredeti Silver-K main ágát és stabil kiadását. Új változásból privát draft PR készül; ütközés esetén jelentés, automatikus main-merge nélkül. [Frissítési folyamat](blue/Documentation/08-Upstream-frissites.md).

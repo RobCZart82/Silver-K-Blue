@@ -1,0 +1,10 @@
+{
+  "upstreamRepository": "temaniak/Silver-K",
+  "upstreamBranch": "main",
+  "upstreamCommit": "4baaead06e23e2358729cca32b6b511c72022318",
+  "latestRelease": {
+    "tag_name": "v0.4.4a",
+    "published_at": "2026-10-22T12:12:31Z",
+    "html_url": "https://github.com/temaniak/Silver-K/releases/tag/v0.4.4a"
+  }
+}
