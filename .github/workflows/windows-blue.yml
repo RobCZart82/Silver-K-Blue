@@ -1,6 +1,11 @@
 name: Silver-K Blue Windows x64
 on:
   workflow_dispatch:
+    inputs:
+      keep_release:
+        description: Save successful package as a durable private Release
+        type: boolean
+        default: true
 permissions:
   contents: read
 concurrency:
@@ -39,3 +44,25 @@ jobs:
             build/CMakeFiles/CMakeConfigureLog.yaml
           if-no-files-found: ignore
           retention-days: 14
+  keep-private-release:
+    needs: windows
+    if: ${{ inputs.keep_release }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: Silver-K-Blue-Windows-x64-${{ github.run_number }}
+          path: release-files
+      - name: Preserve build in a private repository Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          gh release create "windows-blue-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}" release-files/* \
+            --target "$GITHUB_SHA" \
+            --title "Silver-K Blue Windows x64 build ${GITHUB_RUN_NUMBER}" \
+            --notes "Private Windows x64 test build. Source commit: ${GITHUB_SHA}. Includes VST3, Standalone and both external Blue skins. No proprietary firmware. ROM-free checks passed; interactive Windows audio/DAW testing is separate."

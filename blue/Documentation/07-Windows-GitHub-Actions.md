@@ -6,14 +6,14 @@ A repository a fordítás receptjét is megőrzi. Újratelepítés után egy bö
 
 1. Nyisd meg a https://github.com/RobCZart82/Silver-K-Blue/actions oldalt.
 2. Válaszd a **Silver-K Blue Windows x64** munkafolyamatot.
-3. **Run workflow**, majd a kívánt ág (általában main), ismét **Run workflow**.
+3. **Run workflow**, majd a kívánt ág (általában main), ismét **Run workflow**. A **Save successful package as a durable private Release** kapcsoló alapból bekapcsolt; hagyd így a tartós GitHub-mentéshez.
 4. A sikeres futás oldalán az **Artifacts** részből töltsd le a **Silver-K-Blue-Windows-x64-…** csomagot. Ebben egy ZIP és annak SHA-256 ellenőrzőösszege van.
 
 A csomag Windows x64 VST3-at, önálló EXE-t, mindkét külső Blue skint, telepítési leírást és pontos forráscommitot tartalmaz. Firmware nincs feltöltve. A skinek binárisba építése külön következő feladat.
 
 ## Megőrzés és hozzáférés
 
-A forrás, a skinek és a workflow a repositoryban maradnak. A kész Actions-letöltés **30 nap után lejár**; a diagnosztika 14 napig marad. Egy bevált ZIP-et tölts le tartós mentéshez, vagy később külön privát Release mellékleteként őrizhetjük meg. Lejárat után ugyanabból a forráscommitból új build indítható, amíg a fordítók és a külső függőségek elérhetők.
+A forrás, a skinek és a workflow a repositoryban maradnak. A kész Actions-letöltés **30 nap után lejár**; a diagnosztika 14 napig marad. A bekapcsolt Release-mentés siker esetén külön privát Release mellékleteként is megőrzi a ZIP-et és az ellenőrzőösszegét; ezeket nem az Actions 30 napos lejárata kezeli. A repository **Releases** oldalán később is letölthetők, amíg a kiadást vagy a repositoryt nem törlöd. Kikapcsolt Release-mentésnél töltsd le saját tartós mentéshez. Lejárat után ugyanabból a forráscommitból új build indítható, amíg a fordítók és a külső függőségek elérhetők.
 
 A repository továbbra is privát. A letöltésekhez GitHub-bejelentkezés és repository-hozzáférés kell. A workflow kézi indítású: nem indul el minden szerkesztés/feltöltés után. Egy időben ugyanazon ágon egy build fut. A privát futások a fiók GitHub Actions keretét használják; nem változtattunk számlázási vagy költési beállítást.
 
