@@ -9,7 +9,7 @@ A repository a fordítás receptjét is megőrzi. Újratelepítés után egy bö
 3. **Run workflow**, majd a kívánt ág (általában main), ismét **Run workflow**. A **Save successful package as a durable private Release** kapcsoló alapból bekapcsolt; hagyd így a tartós GitHub-mentéshez.
 4. A sikeres futás oldalán az **Artifacts** részből töltsd le a **Silver-K-Blue-Windows-x64-…** csomagot. Ebben egy ZIP és annak SHA-256 ellenőrzőösszege van.
 
-A csomag Windows x64 VST3-at, önálló EXE-t, mindkét külső Blue skint, telepítési leírást és pontos forráscommitot tartalmaz. Firmware nincs feltöltve. A skinek binárisba építése külön következő feladat.
+A csomag Windows x64 VST3-at, önálló EXE-t, mindkét beépített Blue skint és az opcionális külső forrásokat, telepítési leírást és pontos forráscommitot tartalmaz. Firmware nincs feltöltve. A beépített skinekhez nem kell Skins mappát telepíteni.
 
 ## Megőrzés és hozzáférés
 

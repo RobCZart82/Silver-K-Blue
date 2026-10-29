@@ -43,7 +43,7 @@ void Processor::initializeDataFolder(){
  restoreKSDataFiles(settings["ksDataFiles"],sameAssetRoot);
  for(const auto& file:selectedKSDataFiles())if(isBundledInit(file)){flashFile=juce::File{};flashFiles.clear();break;}
  const double scale=double(settings.getProperty("editorScale",.75));editorScale.store(std::isfinite(scale)&&scale>=.5&&scale<=1.5?scale:.75);
- skinChoice=settings.getProperty("skinChoice","Auto").toString();customSkin=settings["customSkin"].toString();browserState=settings["browserState"].toString();
+ skinChoice=settings.getProperty("skinChoice","Silver-K Blue Retina 4K v1.0").toString();customSkin=settings["customSkin"].toString();browserState=settings["browserState"].toString();
  const int controller=int(settings.getProperty("ksControllerMode",ksControllerMode()));ksController.store(controller>=0 && controller<=2?ks::ControllerMode(controller):ks::ControllerMode::H8);
  twoCoreProcessing.store(bool(settings.getProperty("ksTwoCoreProcessing",ksTwoCoreProcessing())));
  buffering.store(juce::jlimit(0,3,int(settings.getProperty("bufferProfile",1))));controlChannel.store(uint8_t(int(settings["editorChannel"])&15));editorChannelPreference.store(controlChannel.load());

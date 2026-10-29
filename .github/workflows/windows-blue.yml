@@ -20,11 +20,11 @@ jobs:
       - name: Configure Windows x64 Release
         run: cmake -S . -B build -A x64
       - name: Build VST3, Standalone and ROM-free checks
-        run: cmake --build build --config Release --target silverK_VST3 silverK_Standalone silver_check silverClock_test silverLatency_test silverEditor_test silverPerformance_test --parallel 4
+        run: cmake --build build --config Release --target silverK_VST3 silverK_Standalone silver_check silverClock_test silverLatency_test silverEditor_test silverPerformance_test silverEmbeddedSkin_test --parallel 4
       - name: Run ROM-free checks
         env:
           SILVER_K_DATA: ${{ runner.temp }}/silver-blue-tests
-        run: ctest --test-dir build -C Release --output-on-failure --no-tests=error -R '^(silver_conversion|silver_host_clock|silver_latency_reentry|silver_native_editor|silver_performance_editor)$'
+        run: ctest --test-dir build -C Release --output-on-failure --no-tests=error -R '^(silver_conversion|silver_host_clock|silver_latency_reentry|silver_native_editor|silver_performance_editor|silver_embedded_blue)$'
       - name: Package Windows products and both Blue skins
         run: python tools/package_blue_windows.py --products build/source/novation/silverK/buildStandalone/silverPlugin/silverK_artefacts/Release --output blue-output
       - name: Upload private download package
@@ -65,4 +65,4 @@ jobs:
           gh release create "windows-blue-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}" release-files/* \
             --target "$GITHUB_SHA" \
             --title "Silver-K Blue Windows x64 build ${GITHUB_RUN_NUMBER}" \
-            --notes "Private Windows x64 test build. Source commit: ${GITHUB_SHA}. Includes VST3, Standalone and both external Blue skins. No proprietary firmware. ROM-free checks passed; interactive Windows audio/DAW testing is separate."
+            --notes "Private Windows x64 test build. Source commit: ${GITHUB_SHA}. Includes VST3, Standalone and both embedded Blue skins. No proprietary firmware. ROM-free checks passed; interactive Windows audio/DAW testing is separate."

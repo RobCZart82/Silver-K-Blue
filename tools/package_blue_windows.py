@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Package private Windows x64 builds, with external Blue skins and provenance."""
+"""Package private Windows or Universal 2 builds with embedded Blue skins and provenance."""
 import argparse
 import hashlib
 import json
@@ -32,44 +32,59 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--products', required=True, type=Path)
     parser.add_argument('--output', required=True, type=Path)
+    parser.add_argument('--platform', choices=['Windows-x64','macOS-Universal2'], default='Windows-x64')
     args = parser.parse_args()
     revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
-    exe = args.products / 'Standalone/Silver-K.exe'
-    vst = args.products / 'VST3/Silver-K.vst3'
-    check_x64(exe)
-    if not vst.is_dir():
-        raise ValueError('Missing VST3 bundle')
-    candidates = list(vst.glob('Contents/x86_64-win/*.vst3'))
-    if len(candidates) != 1:
-        raise ValueError('Expected one Windows x64 VST3 executable')
-    check_x64(candidates[0])
-    name = 'Silver-K-Blue-Windows-x64-' + revision[:12]
+    macos = args.platform == 'macOS-Universal2'
+    products = [('Standalone','Silver-K.app' if macos else 'Silver-K.exe','Standalone'),
+                ('VST3','Silver-K.vst3','Plugins/VST3')]
+    if macos:
+        products.append(('AU','Silver-K.component','Plugins/AU'))
+    for category, filename, destination in products:
+        product = args.products/category/filename
+        if macos:
+            import plistlib
+            with (product/'Contents/Info.plist').open('rb') as stream:
+                executable = plistlib.load(stream)['CFBundleExecutable']
+            arches = subprocess.check_output(['lipo','-archs',str(product/'Contents/MacOS'/executable)],text=True).split()
+            if not {'arm64','x86_64'}.issubset(arches):
+                raise ValueError('Universal 2 architecture missing')
+            subprocess.run(['codesign','--verify','--deep','--strict',str(product)],check=True)
+        elif category == 'Standalone':
+            check_x64(product)
+        else:
+            candidates=list(product.glob('Contents/x86_64-win/*.vst3'))
+            if len(candidates)!=1:raise ValueError('Expected one Windows x64 VST3 executable')
+            check_x64(candidates[0])
+    name = 'Silver-K-Blue-Embedded-' + args.platform + '-' + revision[:12]
     args.output.mkdir(parents=True, exist_ok=True)
     archive = args.output / (name + '.zip')
     if archive.exists():
         raise ValueError('Refusing to overwrite an existing package')
     with tempfile.TemporaryDirectory(prefix='silver-blue-') as temporary:
         stage = Path(temporary) / name
-        (stage / 'Plugins/VST3').mkdir(parents=True)
-        (stage / 'Standalone').mkdir()
-        shutil.copytree(vst, stage / 'Plugins/VST3/Silver-K.vst3')
-        shutil.copy2(exe, stage / 'Standalone/Silver-K.exe')
+        for category, filename, destination in products:
+            target=stage/destination/filename
+            target.parent.mkdir(parents=True,exist_ok=True)
+            built=args.products/category/filename
+            if built.is_dir():shutil.copytree(built,target)
+            else:shutil.copy2(built,target)
         shutil.copytree(ROOT / 'blue/Skins', stage / 'Skins')
         for f in ['LICENSE.md', 'THIRD_PARTY.md']:
             shutil.copy2(ROOT / f, stage / f)
-        (stage / 'README-HU.md').write_text('''# Silver-K Blue — Windows x64 tesztbuild
+        (stage / 'README-HU.md').write_text('''# Silver-K Blue — beépített skines tesztbuild
 
-A Plugins/VST3/Silver-K.vst3 teljes mappáját a host által használt VST3 mappába másold. A Standalone/Silver-K.exe önállóan indítható. A korábbi azonos Silver-K példányt előbb mentsd beolvasási útvonalon kívülre.
+A Plugins/VST3/Silver-K.vst3 teljes csomagját a host által használt VST3 mappába másold. macOS-on a Plugins/AU/Silver-K.component az AU mappába kerülhet. A Standalone mappában található alkalmazás önállóan indítható. A korábbi azonos Silver-K példányt előbb mentsd beolvasási útvonalon kívülre.
 
-A Skins két almappáját a Setup → Skins folder helyére másold, majd válaszd a Silver-K Blue Standard v1.0 vagy Silver-K Blue Retina 4K v1.0 nevet. A skinek jelenleg külső csomagok; még nincsenek beépítve a binárisba.
+A Silver-K Blue Standard v1.0 és Silver-K Blue Retina 4K v1.0 már be van építve mindegyik termékbe; a Setup skinválasztóban külön telepítés nélkül elérhetők. Új telepítésnél a Retina az alap. A Skins mappában a szerkeszthető külső változatokat is mellékeljük, de a beépített változatokhoz nem szükséges őket telepíteni.
 
-Saját firmware és szükség esetén Wave ROM/programadat kell; gyártói ROM nincs ebben a csomagban. A ROM nélküli automatizált tesztek nem helyettesítik a Windows DAW-ban végzett működési és hangpróbát. Az alkalmazás nincs gyártói tanúsítvánnyal aláírva.
+Saját firmware és szükség esetén Wave ROM/programadat kell; gyártói ROM nincs ebben a csomagban. A ROM nélküli automatizált tesztek nem helyettesítik a DAW-ban végzett működési és hangpróbát. A Windows bináris nincs gyártói tanúsítvánnyal aláírva; a macOS helyi ad hoc aláírást használ, nem notarizált.
 
 Forrás és licencek: a build-info.json fájlban rögzített privát repository és commit; LICENSE.md, THIRD_PARTY.md.
 ''', encoding='utf-8')
         info = {'repository': 'https://github.com/RobCZart82/Silver-K-Blue', 'commit': revision,
-                'platform': 'Windows-x64', 'configuration': 'Release',
-                'skinsEmbedded': False, 'firmwareIncluded': False,
+                'platform': args.platform, 'configuration': 'Release',
+                'skinsEmbedded': True, 'firmwareIncluded': False,
                 'source': 'https://github.com/RobCZart82/Silver-K-Blue/tree/' + revision}
         (stage / 'build-info.json').write_text(json.dumps(info, indent=2) + '\n', encoding='utf-8')
         files = sorted(p for p in stage.rglob('*') if p.is_file())

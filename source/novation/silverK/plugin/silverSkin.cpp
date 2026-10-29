@@ -1,6 +1,7 @@
 #include "silverSkin.h"
 #include "silverProcessor.h"
 #include "BinaryData.h"
+#include "BlueSkinData.h"
 #include <set>
 #include <cmath>
 
@@ -183,25 +184,42 @@ SkinPackage SkinPackage::builtin()
     for(const auto& a:assets){int size=0;const auto* data=BinaryData::getNamedResource(a.second,size);s.images[a.first]=juce::ImageFileFormat::loadFrom(data,size);}
     return s;
 }
-bool SkinPackage::load(const juce::File& file,SkinPackage& result,juce::String& error)
+static bool loadPackage(const juce::File& file,SkinPackage& result,juce::String& error,juce::ZipFile* archive=nullptr)
 {
-    auto candidate=builtin();juce::var manifest;
+    auto candidate=SkinPackage::builtin();juce::var manifest;
+    const auto readBytes=[&](const juce::String& relative,juce::int64 limit,juce::MemoryBlock& bytes)->bool{
+        if(archive){
+            if(juce::File::isAbsolutePath(relative)||relative.contains("..")||relative.containsChar('\\')){error="Invalid embedded resource path";return false;}
+            const int index=archive->getIndexOfFileName(relative);
+            if(index<0 || archive->getEntry(index)->uncompressedSize>limit){error="Missing or oversized embedded resource: "+relative;return false;}
+            std::unique_ptr<juce::InputStream> stream(archive->createStreamForEntry(index));
+            if(!stream || stream->readIntoMemoryBlock(bytes)!=archive->getEntry(index)->uncompressedSize){error="Incomplete embedded resource";return false;}
+            return true;
+        }
+        const auto root=file.isDirectory()?file:file.getParentDirectory();const auto resource=localFile(root,relative);
+        if(!resource.existsAsFile()||resource.getSize()>limit||!resource.loadFileAsData(bytes)){error="Missing or oversized resource: "+relative;return false;}
+        return true;
+    };
+    const auto readPart=[&](const juce::String& relative,juce::var& value)->bool{
+        juce::MemoryBlock bytes;if(!readBytes(relative,4*1024*1024,bytes))return false;
+        const auto status=juce::JSON::parse(juce::String::fromUTF8(static_cast<const char*>(bytes.getData()),int(bytes.getSize())),value);
+        if(status.failed()||!value.isObject()){error="Invalid skin JSON: "+relative;return false;}return true;
+    };
     const auto entry=file.isDirectory()?file.getChildFile("skin.json"):file;
-    if(!readJson(entry,manifest,error))return false;
-    candidate.manifest=entry;
+    if(archive?!readPart("skin.json",manifest):!readJson(entry,manifest,error))return false;
+    candidate.manifest=archive?juce::File{}:entry;
     if(manifest.hasProperty("schemaVersion")){
         if(!manifest["schemaVersion"].isInt() || int(manifest["schemaVersion"])!=1 || manifest["engine"].toString()!="silver-k-juce"){error="Unsupported skin schemaVersion or engine";return false;}
         candidate.id=manifest["id"].toString();candidate.name=manifest["name"].toString();
         if(candidate.id.isEmpty() || candidate.id.length()>128 || !candidate.id.containsOnly("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-") || candidate.name.isEmpty()){error="Skin needs a name and an ID using letters, digits, dots, underscores or hyphens";return false;}
-        const auto root=entry.getParentDirectory();juce::var layout,theme;
-        if(!readJson(localFile(root,manifest["layout"].toString()),layout,error) || !readJson(localFile(root,manifest["theme"].toString()),theme,error))return false;
+        juce::var layout,theme;
+        if(!readPart(manifest["layout"].toString(),layout)||!readPart(manifest["theme"].toString(),theme))return false;
         candidate.layout=merge(candidate.layout,layout);candidate.theme=merge(candidate.theme,theme);
         const auto images=candidate.theme["images"];
         if(!images.getDynamicObject()){error="Theme images must be an object";return false;}
         for(const auto& p:images.getDynamicObject()->getProperties()){
-            const auto resource=localFile(root,p.value.toString());
-            if(!resource.existsAsFile() || resource.getSize()>32*1024*1024){error="Missing or oversized image: "+p.value.toString();return false;}
-            auto image=juce::ImageFileFormat::loadFrom(resource);
+            juce::MemoryBlock bytes;if(!readBytes(p.value.toString(),32*1024*1024,bytes))return false;
+            auto image=juce::ImageFileFormat::loadFrom(bytes.getData(),bytes.getSize());
             // A 128-frame Retina strip is bounded to 256px per square frame.
             const int shortEdge=juce::jmin(image.getWidth(),image.getHeight());
             const int longEdge=juce::jmax(image.getWidth(),image.getHeight());
@@ -211,8 +229,8 @@ bool SkinPackage::load(const juce::File& file,SkinPackage& result,juce::String& 
         }
         const auto font=candidate.theme["font"]["file"].toString();
         if(font.isNotEmpty()){
-            juce::MemoryBlock bytes;const auto resource=localFile(root,font);
-            if(!resource.existsAsFile() || resource.getSize()>16*1024*1024 || !resource.loadFileAsData(bytes) || !(candidate.typeface=juce::Typeface::createSystemTypefaceFor(bytes.getData(),bytes.getSize()))){error="Invalid font: "+font;return false;}
+            juce::MemoryBlock bytes;
+            if(!readBytes(font,16*1024*1024,bytes) || !(candidate.typeface=juce::Typeface::createSystemTypefaceFor(bytes.getData(),bytes.getSize()))){error="Invalid font: "+font;return false;}
         }
     }else{
         // Existing standalone Silver-K layout JSONs remain readable.
@@ -271,6 +289,19 @@ bool SkinPackage::load(const juce::File& file,SkinPackage& result,juce::String& 
         if(!parents.contains(d["parent"].toString())){error="Unknown decoration parent: "+d["parent"].toString();return false;}
     }
     result=std::move(candidate);error.clear();return true;
+}
+bool SkinPackage::load(const juce::File& file,SkinPackage& result,juce::String& error)
+{ return loadPackage(file,result,error); }
+juce::StringArray SkinPackage::choices()
+{ return {"Auto","Silver-K","KS Grey","Classic","Silver-K Blue Standard v1.0","Silver-K Blue Retina 4K v1.0"}; }
+bool SkinPackage::loadEmbedded(const juce::String& choice,SkinPackage& result,juce::String& error)
+{
+    const auto index=choices().indexOf(choice);
+    if(index<4){error="Unknown embedded Blue skin";return false;}
+    int size=0;const auto* data=BlueSkinData::getNamedResource(index==4?"bluestandard_zip":"blueretina_zip",size);
+    if(!data||size<=0){error="Embedded Blue skin missing";return false;}
+    juce::MemoryInputStream stream(data,size,false);juce::ZipFile archive(stream);
+    return loadPackage(juce::File::getCurrentWorkingDirectory().getChildFile("skin.json"),result,error,&archive);
 }
 std::vector<std::pair<juce::String,juce::File>> SkinPackage::discover(const juce::File& folder)
 {

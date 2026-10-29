@@ -684,7 +684,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         refreshSkinList();
         skinSelect.onChange=[this]{
             const int index=skinSelect.getSelectedId();
-            if(index>=1 && index<=4){if(requestSkin)requestSkin({},juce::StringArray{"Auto","Silver-K","KS Grey","Classic"}[index-1]);}
+            if(index>=1 && index<=SkinPackage::choices().size()){if(requestSkin)requestSkin({},SkinPackage::choices()[index-1]);}
             else if(index>=100 && index-100<int(skinEntries.size())){if(requestSkin)requestSkin(skinEntries[size_t(index-100)].second,{});}
         };
         customSkin.onClick=[this]{chooseAsset(3);};
@@ -833,7 +833,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
     void refreshSkinList()
     {
         skinSelect.clear(juce::dontSendNotification);
-        const juce::StringArray builtins{"Auto","Silver-K","KS Grey","Classic"};
+        const auto builtins=SkinPackage::choices();
         for(int i=0;i<builtins.size();++i)skinSelect.addItem(builtins[i],i+1);
         skinEntries=SkinPackage::discover(processor.skinsFolder());
         int selected=builtins.indexOf(processor.skinChoice)+1;
@@ -1257,6 +1257,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
 Editor::Editor(Processor& p):AudioProcessorEditor(p),m_processor(p)
 {
     auto package=SkinPackage::builtin();juce::String error;
+    if(SkinPackage::choices().indexOf(p.skinChoice)>=4)SkinPackage::loadEmbedded(p.skinChoice,package,error);
     if(p.skinChoice=="Custom" || p.skinChoice.startsWith("Package:")){
         bool loaded=SkinPackage::load(juce::File(p.customSkin),package,error);
         if(!loaded && p.skinChoice.startsWith("Package:"))for(const auto& entry:SkinPackage::discover(p.skinsFolder())){
@@ -1289,6 +1290,7 @@ bool Editor::selectSkin(const juce::File& file,const juce::String& builtinChoice
 {
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
     auto candidate=SkinPackage::builtin();
+    if(SkinPackage::choices().indexOf(builtinChoice)>=4 && !SkinPackage::loadEmbedded(builtinChoice,candidate,error))return false;
     if(builtinChoice.isEmpty() && !SkinPackage::load(file,candidate,error))return false;
     if(m_processor.isFirmwareLoading()){error="Wait for firmware loading to finish";return false;}
     m_surface->browser.saveViewState();

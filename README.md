@@ -9,12 +9,12 @@ Upstream: [temaniak/Silver-K](https://github.com/temaniak/Silver-K), v0.4.4a, co
 - Silver-K Blue Standard v1.0: gyári v0.4.4a-val is használható 64 px / 128 kockás skin.
 - Silver-K Blue Retina 4K v1.0: helyi javított buildet igénylő 256 px / 128 kockás skin.
 - A produkciós forrás tartalmazza a legutóbbi elfogadott helyi felületi javításokat: Retina képbetöltés, faderskála, négysoros fő pontmátrix-LCD, natív lenyílóbetűk és navy hátterek, waveform-hover, inaktív Performance képek halványítása, kerekített gyorstippek.
-- A skinek jelenleg a `blue/Skins` mappában, külső csomagként vannak. **A VST3-ba építés még következő fejlesztés**, ebben az első feltöltésben nincs megvalósítva.
+- A két skin a közös felületi kódba van csomagolva, ezért Windows VST3/Standalone és macOS Universal 2 AU/VST3/Standalone alatt külön skintelepítés nélkül választható. Új beállításoknál a Retina az alapértelmezett; mentett választások és külső skinek továbbra is támogatottak. A grafikai forráscsomagok a `blue/Skins` mappában megmaradtak.
 - Ez a helyi 2026-10-25-i végleges csomag forrásellenőrzési alapja; újabb upstream fejlesztési ágakat nem emel be.
 
 ## Használat és fordítás
 
-A `blue/Skins` két almappája a plugin Setup → Skins folder helyére másolható. A skinválasztóban a fenti végleges nevek jelennek meg.
+A beépített skinek a Setup választójában közvetlenül elérhetők. A `blue/Skins` két almappája opcionálisan külső, szerkeszthető skinnek is használható.
 
 Fordítás: [doc/BUILD.md](doc/BUILD.md). Példa macOS Universal 2 buildhez:
 
@@ -41,3 +41,7 @@ A kézzel indítható **Silver-K Blue Windows x64** GitHub Actions VST3-at és �
 ## Upstream követés
 
 Naponta ellenőrizzük az eredeti Silver-K main ágát és stabil kiadását. Új változásból privát ellenőrzési ág készül; ütközés esetén jelentés, automatikus main-merge nélkül. Az összehasonlító linkről kézzel nyitható PR. [Frissítési folyamat](blue/Documentation/08-Upstream-frissites.md).
+
+## Beépített skinek és desktop build
+
+[Integráció, tesztelés és mind az öt célváltozat](blue/Documentation/09-Beepitett-skinek.md). A Windows és macOS Actions munkafolyamat kézzel indítható; sikeres buildből külön privát Release készülhet.
