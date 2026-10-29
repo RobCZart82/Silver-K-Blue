@@ -298,9 +298,16 @@ bool SkinPackage::loadEmbedded(const juce::String& choice,SkinPackage& result,ju
 {
     const auto index=choices().indexOf(choice);
     if(index<4){error="Unknown embedded Blue skin";return false;}
-    int size=0;const auto* data=BlueSkinData::getNamedResource(index==4?"bluestandard_zip":"blueretina_zip",size);
-    if(!data||size<=0){error="Embedded Blue skin missing";return false;}
-    juce::MemoryInputStream stream(data,size,false);juce::ZipFile archive(stream);
+    juce::MemoryOutputStream data(64*1024*1024);
+    const juce::String prefix=index==4?"bluestandard":"blueretina";
+    for(int chunk=0;;++chunk){
+        int size=0;const auto* bytes=BlueSkinData::getNamedResource((prefix+juce::String(chunk)+"_bin").toRawUTF8(),size);
+        if(!bytes)break;
+        if(size<=0 || size>4*1024*1024 || data.getDataSize()+size>96*1024*1024){error="Invalid embedded skin chunk";return false;}
+        data.write(bytes,size);
+    }
+    if(data.getDataSize()==0){error="Embedded Blue skin missing";return false;}
+    juce::MemoryInputStream stream(data.getData(),data.getDataSize(),false);juce::ZipFile archive(stream);
     return loadPackage(juce::File::getCurrentWorkingDirectory().getChildFile("skin.json"),result,error,&archive);
 }
 std::vector<std::pair<juce::String,juce::File>> SkinPackage::discover(const juce::File& folder)

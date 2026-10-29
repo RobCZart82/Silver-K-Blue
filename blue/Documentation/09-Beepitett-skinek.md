@@ -9,7 +9,7 @@ Az első teljes célmátrix:
 
 ## Működés
 
-A Standard v1.0 és Retina 4K v1.0 képei és JSON-beállításai a közös programkönyvtárba fordított erőforrások. A build determinisztikus ZIP-eket állít elő, amelyeket JUCE BinaryData tárol. A futó program ezeket memóriából olvassa; nem bontja ki őket és nem telepít másolatot a Skins mappába.
+A Standard v1.0 és Retina 4K v1.0 képei és JSON-beállításai a közös programkönyvtárba fordított erőforrások. A build determinisztikus ZIP-eket állít elő, amelyeket legfeljebb 4 MiB-os fordítási egységekben JUCE BinaryData tárol. Ez korlátozza egy-egy generált C++ adatforrás méretét a Windows-fordító számára. A rejtett rendszerfájlok kimaradnak. A futó program ezeket memóriából olvassa; nem bontja ki őket és nem telepít másolatot a Skins mappába.
 
 Mindkét név megjelenik a Setup skinválasztójában. Új beállításoknál a Retina az alapértelmezett. Korábban mentett Auto, Classic, külső Package/Custom és más választások megmaradnak; régi, skinválasztás nélküli hostállapot továbbra is Auto módra áll vissza. A beépített választás hostprojektben visszatölthető és F5/Reload útján újratölthető fájlútvonal nélkül. A külső skinbetöltés és a régi beépített kinézetek továbbra is elérhetők.
 

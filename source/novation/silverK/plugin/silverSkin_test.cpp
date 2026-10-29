@@ -211,8 +211,9 @@ public:
                 root=base.getChildFile("skin-ui-"+juce::Uuid().toString());juce::String error;
                 processor=std::make_unique<Processor>();check(processor->setDataFolder(root,error),error);processor->skinChoice="Auto";
                 editor=std::make_unique<Editor>(*processor);processor->uiParameter("cutoff")->setValueNotifyingHost(.3f);
+                auto* beforeSelector=dynamic_cast<juce::ComboBox*>(find(*editor,"skinSelect"));check(beforeSelector!=nullptr,"Skin selector missing");const int beforeCount=beforeSelector->getNumItems();
                 click(*editor,"exportSkin");check(SkinPackage::discover(processor->skinsFolder()).size()==1,"Export button did not publish a package");
-                auto* selector=dynamic_cast<juce::ComboBox*>(find(*editor,"skinSelect"));check(selector&&selector->getNumItems()==5,"Export did not refresh the package list");
+                auto* selector=dynamic_cast<juce::ComboBox*>(find(*editor,"skinSelect"));check(selector&&selector->getNumItems()==beforeCount+1,"Export did not refresh the package list");
                 selector->setSelectedId(100,juce::dontSendNotification);check(selector->getSelectedId()==100,"ComboBox lost the selected package ID");selector->onChange();
                 check(juce::MessageManager::callAsync([this]{queueProbe=true;}),"Cannot post to the message queue");
                 // Yield to the real application loop: skin changes must happen

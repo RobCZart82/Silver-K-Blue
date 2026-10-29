@@ -12,11 +12,15 @@ int main(){try{
   if(!name.startsWith("Silver-K Blue"))continue;
   SkinPackage embedded;check(SkinPackage::loadEmbedded(name,embedded,error),error);check(embedded.name==name,"Name mismatch");check(embedded.manifest==juce::File{},"Embedded skin depends on an external manifest");
   const auto& strip=embedded.images.at("cyanV2_unipolar");
-  check(strip.isValid(),"Embedded strip missing");
+  check(strip.isValid(),"Embedded strip missing");check(strip.getWidth()==(name.contains("Retina")?256:64)&&strip.getHeight()==128*strip.getWidth(),"Embedded filmstrip geometry mismatch");
   Processor p;check(p.setDataFolder(root.getChildFile(name.contains("Retina")?"retina":"standard"),error),error);p.skinChoice=name;p.customSkin.clear();
   const auto before=p.parameters.copyState();
   {Editor editor(p);auto* combo=dynamic_cast<juce::ComboBox*>(find(editor,"skinSelect"));check(combo&&combo->getText()==name,"Embedded selection not shown");
-   for(const auto* page:{"pageMain","pagePerf","pagePatches","pageSetup"}){auto* button=dynamic_cast<juce::TextButton*>(find(editor,page));check(button&&bool(button->onClick),"Missing navigation");button->onClick();check(editor.createComponentSnapshot(editor.getLocalBounds(),true,1.f).isValid(),"Page rendering failed");}
+   for(const auto* page:{"pageMain","pagePerf","pagePatches","pageSetup"}){auto* button=dynamic_cast<juce::TextButton*>(find(editor,page));check(button&&bool(button->onClick),"Missing navigation");button->onClick();check(editor.createComponentSnapshot(editor.getLocalBounds(),true,1.f).isValid(),"Page rendering failed");
+    const auto previewRoot=juce::SystemStats::getEnvironmentVariable("SILVER_K_PREVIEWS",{});
+    if(previewRoot.isNotEmpty() && juce::String(page)=="pageMain"){
+     auto folder=juce::File(previewRoot);folder.createDirectory();auto file=folder.getChildFile(name.contains("Retina")?"Retina-embedded-Main-2x.png":"Standard-embedded-Main-2x.png");file.deleteFile();auto stream=file.createOutputStream();check(stream&&juce::PNGImageFormat().writeImageToStream(editor.createComponentSnapshot(editor.getLocalBounds(),true,2.f),*stream),"Preview export failed");
+    }}
    check(editor.reloadSkin(error),error);check(p.customSkin.isEmpty(),"Reload wrote an external skin path");
   }
   check(p.parameters.copyState().isEquivalentTo(before),"Skin rendering changed sound parameters");
