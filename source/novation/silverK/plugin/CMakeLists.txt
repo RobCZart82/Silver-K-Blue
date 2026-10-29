@@ -191,6 +191,11 @@ add_executable(ksProductionController_test "${ROOT}/source/novation/ks/ksLib/ksP
 target_link_libraries(ksProductionController_test PRIVATE ksLib)
 add_test(NAME ks_production_controller COMMAND ksProductionController_test)
 
+add_executable(silverEmbeddedSkin_test silverEmbeddedSkin_test.cpp)
+target_link_libraries(silverEmbeddedSkin_test PRIVATE silverK jucePluginLib ksLib kstationLib juce::juce_audio_utils)
+add_test(NAME silver_embedded_blue COMMAND silverEmbeddedSkin_test)
+set_tests_properties(silver_embedded_blue PROPERTIES TIMEOUT 180)
+
 # The original KS H8 exists only in test executables. Linking this object (not
 # a static archive) ensures its explicit pre-main registration is retained.
 add_library(ksH8Reference OBJECT EXCLUDE_FROM_ALL "${ROOT}/source/novation/ks/ksLib/ksH8Reference_test.cpp")
@@ -214,8 +219,3 @@ target_link_libraries(ksResetVector_test PRIVATE ksLib)
 target_include_directories(ksResetVector_test PRIVATE "${ROOT}/source/cpu")
 add_test(NAME ks_reset_vector COMMAND ksResetVector_test)
 set_tests_properties(ks_reset_vector PROPERTIES TIMEOUT 90)
-
-add_executable(silverEmbeddedSkin_test silverEmbeddedSkin_test.cpp)
-target_link_libraries(silverEmbeddedSkin_test PRIVATE silverK jucePluginLib ksLib kstationLib juce::juce_audio_utils)
-add_test(NAME silver_embedded_blue COMMAND silverEmbeddedSkin_test)
-set_tests_properties(silver_embedded_blue PROPERTIES TIMEOUT 180)
