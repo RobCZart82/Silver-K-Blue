@@ -1,0 +1,58 @@
+{
+  "name": "Silver-K Blue embedded skins",
+  "date": "2026-10-29",
+  "sourceCommit": "40b68eeebd8e2c7d4a92229aa25fcb1217a652cc",
+  "skinsEmbedded": true,
+  "skins": [
+    "Silver-K Blue Standard v1.0",
+    "Silver-K Blue Retina 4K v1.0"
+  ],
+  "defaultForNewSettings": "Retina",
+  "platforms": {
+    "Windows-x64": {
+      "formats": [
+        "VST3",
+        "Standalone"
+      ],
+      "build": "success",
+      "ciRun": 40900906956,
+      "release": "https://github.com/RobCZart82/Silver-K-Blue/releases/tag/windows-blue-3-1"
+    },
+    "macOS-Universal2": {
+      "formats": [
+        "AU",
+        "VST3",
+        "Standalone"
+      ],
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "build": "success",
+      "ciRun": 40900911467,
+      "release": "https://github.com/RobCZart82/Silver-K-Blue/releases/tag/macos-blue-2-1"
+    }
+  },
+  "ciTestsPerPlatform": {
+    "passed": 5,
+    "failed": 0,
+    "skipped": [
+      "silver_latency_reentry (private firmware required)"
+    ]
+  },
+  "localChecks": {
+    "desktopUiAndExternalSkinTests": "4/4 passed",
+    "embeddedNative": "passed",
+    "embeddedRosetta": "passed",
+    "resourceBytes": "exact",
+    "mainPreviewPixelRegression": "exact at equal GUI scale",
+    "zipAndSha256": "verified"
+  },
+  "privateReleaseUpload": "completed separately after Actions follow-up jobs could not start",
+  "billingSettingsChanged": false,
+  "notValidated": [
+    "physical Intel Mac",
+    "interactive Windows and macOS DAW/audio acceptance with private firmware"
+  ],
+  "firmwareIncluded": false
+}

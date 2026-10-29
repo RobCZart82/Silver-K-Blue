@@ -4,6 +4,12 @@ Privát, önálló fejlesztési repository a Silver-K Blue Standard és Retina s
 
 Upstream: [temaniak/Silver-K](https://github.com/temaniak/Silver-K), v0.4.4a, commit `4baaead06e23e2358729cca32b6b511c72022318`. Az eredeti projekt és szerzőinek munkájára épül; nem hivatalos kiadás. Eredeti ismertető: [UPSTREAM-README](doc/UPSTREAM-README.md). A Gearmulator eredet és a függőségek megjelölései a [THIRD_PARTY.md](THIRD_PARTY.md) fájlban maradtak meg.
 
+## Első beépített skines tesztkiadás
+
+**[Windows x64: VST3 + Standalone](https://github.com/RobCZart82/Silver-K-Blue/releases/tag/windows-blue-3-1)** · **[macOS Universal 2: AU + VST3 + Standalone](https://github.com/RobCZart82/Silver-K-Blue/releases/tag/macos-blue-2-1)**
+
+Mind az öt termék elkészült, mindkét Blue skin külön telepítés nélkül benne van. [Ellenőrzések, használat és a GitHub Actions fiókkorlátja](blue/Documentation/10-Elso-beepitett-kiadas.md). A csomagok forrása a `40b68eeebd8e` commit; a későbbi dokumentációs commitok nem változtatják a kiadott binárisokat.
+
 ## Aktuális állapot
 
 - Silver-K Blue Standard v1.0: gyári v0.4.4a-val is használható 64 px / 128 kockás skin.

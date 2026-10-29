@@ -28,3 +28,7 @@ A repository továbbra is privát. A letöltésekhez GitHub-bejelentkezés és r
 A Windows DAW-ban végzett hang- és működési próba a sikeres build után is szükséges. A fordítás sikere nem jelenti, hogy minden hangszín/host ellenőrzött. Az EXE és a VST3 nem kapott gyártói kódaláírást.
 
 GitHub útmutatók: https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow és https://docs.github.com/en/actions/how-tos/manage-workflow-runs/download-workflow-artifacts .
+
+## Első beépített kiadás
+
+Az elkészült csomagok és a tényleges teszt-/SKIP státuszok: [10-Elso-beepitett-kiadas.md](10-Elso-beepitett-kiadas.md). A számlázási/keretkorlátozás miatt a Release-utófeladat megállt; a csomagokat külön privát Release-be mentettük.
