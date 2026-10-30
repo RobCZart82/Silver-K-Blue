@@ -1,5 +1,15 @@
 # Silver-K Blue — változásjegyzék
 
+## Fejlesztés alatt — 2026-10-30
+
+- Bináris olvasás és alfolyamok határellenőrzése; javított FourCC sablon.
+- Csonkolt és hibás WAV-fájlok biztonságos elutasítása; nullával osztás megszüntetése.
+- MIDI realtime üzenetek és running status helyes feldolgozása; szabályos End of Track és trackhossz az exportban.
+- Opaque FXB-bankok és VST3 preseteltolások javított beolvasása.
+- Több munkaszálas feladatsor leállítása a függő feladatok befejezésével.
+- A forráscsomag tartalmazza a fordításhoz szükséges Blue skineket és ikont.
+- Új natív regressziós teszt és forráscsomag-teszt; Windows/macOS ellenőrzések pull requesteknél is.
+
 ## v1.0 — 2026-10-25
 
 - Végleges skinnevek: Silver-K Blue Standard v1.0; Silver-K Blue Retina 4K v1.0.
@@ -10,3 +20,4 @@
 - 32 régi kimeneti csomag visszaállítható archívuma; aktuális kiadási ellenőrzés és ellenőrzőösszegek.
 
 Ez a skin első végleges néven kiadott változata. A VST3 termékazonosítója és alapverziója továbbra is Silver-K / 0.4.4; a v1.0 a Blue skinek kiadási száma. A névátvezetés nem változtatta meg a legutóbbi bináris programkódját.
+

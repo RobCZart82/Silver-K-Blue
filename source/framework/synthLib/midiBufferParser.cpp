@@ -17,8 +17,16 @@ namespace synthLib
 
 	void MidiBufferParser::write(uint8_t d)
 	{
+		// Realtime bytes may occur between any two bytes of another message.
+		if (d >= 0xf8)
+		{
+			m_midiEvents.emplace_back(m_pendingEvent.source,d);
+			return;
+		}
 		if(d == synthLib::M_STARTOFSYSEX)
 		{
+			m_pendingEventLen = 0;
+			m_pendingEvent.a = 0;
 			flushSysex();
 			m_sysex = true;
 			m_sysexBuffer.push_back(d);
@@ -37,16 +45,17 @@ namespace synthLib
 				m_sysexBuffer.push_back(d);
 				return;
 			}
-			if(d >= 0xf0)
-			{
-				// system realtime intercepting sysex
-				m_midiEvents.emplace_back(m_pendingEvent.source, d);
-				return;
-			}
-
 			flushSysex();	// aborted sysex
 		}
+		if (d == M_ENDOFSYSEX) { m_pendingEventLen = 0; m_pendingEvent.a = 0; return; }
 
+		if (d & 0x80) m_pendingEventLen = 0;
+		else if (m_pendingEventLen == 0)
+		{
+			// Channel running status remains valid until a system-common status.
+			if (m_pendingEvent.a < 0x80 || m_pendingEvent.a >= 0xf0) return;
+			m_pendingEventLen = 1;
+		}
 		if(m_pendingEventLen == 0)
 			m_pendingEvent.a = d;
 		else if(m_pendingEventLen == 1)
@@ -92,7 +101,10 @@ namespace synthLib
 
 	void MidiBufferParser::flushEvent()
 	{
+		if (m_pendingEventLen < 3) m_pendingEvent.c = 0;
+		if (m_pendingEventLen < 2) m_pendingEvent.b = 0;
 		m_midiEvents.push_back(m_pendingEvent);
 		m_pendingEventLen = 0;
+		if (m_pendingEvent.a >= 0xf0) m_pendingEvent.a = 0;
 	}
 }

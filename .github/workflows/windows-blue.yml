@@ -1,5 +1,9 @@
 name: Silver-K Blue Windows x64
 on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       keep_release:
@@ -17,14 +21,18 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+      - name: Verify release source selection and upstream tooling
+        run: python -m unittest discover -s tools -p "test_*sources.py"
+      - name: Verify upstream update safety
+        run: python tools/test_sync_blue_upstream.py
       - name: Configure Windows x64 Release
         run: cmake -S . -B build -A x64
       - name: Build VST3, Standalone and ROM-free checks
-        run: cmake --build build --config Release --target silverK_VST3 silverK_Standalone silver_check silverClock_test silverLatency_test silverEditor_test silverPerformance_test silverEmbeddedSkin_test --parallel 4
+        run: cmake --build build --config Release --target silverK_VST3 silverK_Standalone silver_check silverClock_test silverLatency_test silverEditor_test silverPerformance_test silverEmbeddedSkin_test silverFramework_test --parallel 4
       - name: Run ROM-free checks
         env:
           SILVER_K_DATA: ${{ runner.temp }}/silver-blue-tests
-        run: ctest --test-dir build -C Release --output-on-failure --no-tests=error -R '^(silver_conversion|silver_host_clock|silver_latency_reentry|silver_native_editor|silver_performance_editor|silver_embedded_blue)$'
+        run: ctest --test-dir build -C Release --output-on-failure --no-tests=error -R '^(silver_conversion|silver_host_clock|silver_latency_reentry|silver_native_editor|silver_performance_editor|silver_embedded_blue|silver_framework_safety)$'
       - name: Package Windows products and both Blue skins
         run: python tools/package_blue_windows.py --products build/source/novation/silverK/buildStandalone/silverPlugin/silverK_artefacts/Release --output blue-output
       - name: Upload private download package
@@ -46,7 +54,7 @@ jobs:
           retention-days: 14
   keep-private-release:
     needs: windows
-    if: ${{ inputs.keep_release }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.keep_release }}
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -66,3 +74,4 @@ jobs:
             --target "$GITHUB_SHA" \
             --title "Silver-K Blue Windows x64 build ${GITHUB_RUN_NUMBER}" \
             --notes "Private Windows x64 test build. Source commit: ${GITHUB_SHA}. Includes VST3, Standalone and both embedded Blue skins. No proprietary firmware. ROM-free checks passed; interactive Windows audio/DAW testing is separate."
+

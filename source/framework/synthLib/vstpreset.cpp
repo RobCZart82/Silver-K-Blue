@@ -124,7 +124,8 @@ namespace synthLib
 				_binaryStream.read(future, sizeof(future));
 			}
 
-			for(uint32_t i=0; i<numPrograms; ++i)
+			// FBCh stores one bank-wide opaque chunk, regardless of program count.
+			for(uint32_t i=0; i<(isOpaqueBank ? 1u : numPrograms); ++i)
 			{
 				if(isOpaqueBank)
 				{
@@ -133,6 +134,7 @@ namespace synthLib
 						continue;
 
 					Chunk c;
+					if (chunkSize > _binaryStream.getRemainingReadBytes()) return {};
 					c.data.resize(chunkSize);
 					_binaryStream.read(c.data.data(), chunkSize);
 					chunkList.push_back(c);
@@ -172,6 +174,7 @@ namespace synthLib
 					return {};
 
 				Chunk c;
+				if (chunkSize > _binaryStream.getRemainingReadBytes()) return {};
 				c.data.resize(chunkSize);
 				_binaryStream.read(c.data.data(), chunkSize);
 				chunkList.push_back(c);
@@ -199,7 +202,9 @@ namespace synthLib
 		std::array<char, 32> classId;
 		_binaryStream.read(classId);
 
-		const auto chunkListOffset = readUint32Vst3(_binaryStream);
+		const auto chunkListOffset = readUint64Vst3(_binaryStream);
+		const uint64_t streamEnd = uint64_t(_binaryStream.getReadPos()) + _binaryStream.getRemainingReadBytes();
+		if (chunkListOffset > streamEnd || chunkListOffset > UINT32_MAX) return {};
 
 //		auto posChunkDataBegin = _binaryStream.getReadPos();
 
@@ -223,7 +228,8 @@ namespace synthLib
 			if(!chunkSize)
 				continue;
 
-			c.data.resize(chunkSize);
+			if (chunkOffset > streamEnd || chunkOffset > UINT32_MAX || chunkSize > streamEnd - chunkOffset) return {};
+			c.data.resize(size_t(chunkSize));
 
 			const auto readPos = _binaryStream.getReadPos();
 			_binaryStream.setReadPos(static_cast<uint32_t>(chunkOffset));
@@ -235,6 +241,7 @@ namespace synthLib
 
 			// VST3 can embed a VST2 fxb/fxp, unpack it
 			baseLib::BinaryStream bs(c.data);
+			if (c.data.size() < 4) { chunkList.push_back(std::move(c)); continue; }
 			FourCC fourCC;
 			bs.read4CC(fourCC);
 
@@ -269,3 +276,4 @@ namespace synthLib
 		return chunkList;
 	}
 }
+
