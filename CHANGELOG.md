@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Audit follow-up (pending merge): reject invalid substream writes, make rejected grouped jobs exception-safe, repair container callback types/lifetimes, and validate image dimensions before decoding with a total skin pixel budget.
+
+
 - Prepare English and Hungarian entry points and current installation documentation.
 - Support the intended repository's public or private visibility in upstream update automation, while retaining manual review and preserving main.
 - Include English installation and operation documentation in future download packages.

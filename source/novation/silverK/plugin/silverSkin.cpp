@@ -1,4 +1,5 @@
 #include "silverSkin.h"
+#include "silverImageBounds.h"
 #include "silverProcessor.h"
 #include "BinaryData.h"
 #include "BlueSkinData.h"
@@ -217,8 +218,12 @@ static bool loadPackage(const juce::File& file,SkinPackage& result,juce::String&
         candidate.layout=merge(candidate.layout,layout);candidate.theme=merge(candidate.theme,theme);
         const auto images=candidate.theme["images"];
         if(!images.getDynamicObject()){error="Theme images must be an object";return false;}
+        uint64_t totalImagePixels=0;
         for(const auto& p:images.getDynamicObject()->getProperties()){
             juce::MemoryBlock bytes;if(!readBytes(p.value.toString(),32*1024*1024,bytes))return false;
+            uint64_t pixels=0;
+            if(!boundedImage(bytes.getData(),bytes.getSize(),pixels) || pixels>128ull*1024*1024-totalImagePixels){error="Image dimensions or total skin image memory exceed limits: "+p.value.toString();return false;}
+            totalImagePixels+=pixels;
             auto image=juce::ImageFileFormat::loadFrom(bytes.getData(),bytes.getSize());
             // A 128-frame Retina strip is bounded to 256px per square frame.
             const int shortEdge=juce::jmin(image.getWidth(),image.getHeight());

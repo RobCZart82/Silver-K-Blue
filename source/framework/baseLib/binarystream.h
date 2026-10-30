@@ -85,7 +85,7 @@ namespace baseLib
 		}
 		bool write(const uint8_t* _src, size_t _size)
 		{
-			if (_size > std::numeric_limits<size_t>::max() - tellp()) { m_fail = true; return false; }
+			if (m_fail || (_size && (!_src || (m_fixedSize && !m_buffer))) || _size > std::numeric_limits<size_t>::max() - tellp()) { m_fail = true; return false; }
 			if(tellp() > size() || size() - tellp() < _size)
 			{
 				if(m_fixedSize)

@@ -143,7 +143,12 @@ namespace pluginLib::patchDB
 			onFuncCompleted();
 		};
 
-		m_queue.add(func);
+		try { m_queue.add(std::move(func)); }
+        catch (...) {
+            { std::unique_lock lockCounts(m_mutexCounts); --m_countEnqueued; }
+            m_completedCv.notify_all();
+            throw;
+        }
 	}
 
 	void JobGroup::wait()
