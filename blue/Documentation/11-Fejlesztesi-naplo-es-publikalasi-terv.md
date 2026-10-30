@@ -212,3 +212,7 @@ A régi kiadási workflow a GITHUB_RUN_ATTEMPT értékét is a tagbe tette; újr
 ### A01–A04 helyi ellenőrzés lezárása
 
 2026-10-30: a módosított `silverFramework_test` natív fordítása és CTest futása sikeres. A `silverSkin_test` csomag-, betöltés-, megjelenítés-, visszaállítás- és DPI-próbája grafikus asztali hozzáféréssel sikeres; az első korlátozott futtatás csak az asztali menühozzáférés hiánya miatt nem zárult sikerrel. 13 Python unittest sikeres. Az eredeti alfolyam-írási összeomláspróba ASan/UBSan mellett többé nem omlik össze; az új regresszió az elutasítást is ellenőrzi. Új teljes Windows/macOS termékbuild még a PR ellenőrzésére vár; a kiadott binárisok e javításokat még nem tartalmazzák.
+
+### CI-környezet frissítése — 2026-10-30
+
+A PR #5 macOS-futása a macos-14 gépkép kivezetése miatti GitHub brownout alatt, fordítás előtt megszakadt (run 41131868233). Átállítva macos-15-re a GitHub hivatalos migrációs ajánlása szerint: https://github.com/actions/runner-images/issues/13518 . A Universal 2 architektúrák és a 12.0 deployment target változatlan; az új környezeten a CI-t ismét ellenőrizni kell.
