@@ -73,7 +73,7 @@ namespace synthLib
 
 	void SysexToMidi::writeUInt32(std::ostream& _dst, const uint32_t& _data)
 	{
-		writeBuf(_dst, 
+		writeBuf(_dst,
 		{
 			static_cast<unsigned char>((_data >> 24) & 0xff),
 			static_cast<unsigned char>((_data >> 16) & 0xff),
@@ -116,4 +116,3 @@ namespace synthLib
 		}
 	}
 }
-

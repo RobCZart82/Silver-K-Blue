@@ -187,4 +187,3 @@ No original firmware or factory sounds are included in this binary archive.
 
 if __name__ == '__main__':
     main()
-

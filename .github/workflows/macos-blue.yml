@@ -76,4 +76,3 @@ jobs:
             --target "$GITHUB_SHA" \
             --title "Silver-K Blue macOS Universal 2 build ${GITHUB_RUN_NUMBER}" \
             --notes "Private macOS Universal 2 test build. Source commit: ${GITHUB_SHA}. Includes AU, VST3, Standalone and both embedded Blue skins. No proprietary firmware. ROM-free checks passed; interactive macOS audio/DAW testing is separate."
-

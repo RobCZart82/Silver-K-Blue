@@ -196,7 +196,7 @@ namespace baseLib
 		bool checkString(const std::string& _str)
 		{
 			const auto pos = tellg();
-			
+
 			const auto size = read<SizeType>();
 			if (size != _str.size())
 			{
@@ -218,7 +218,7 @@ namespace baseLib
 
 		void setWritePos(const uint32_t _pos)	{ seekp(_pos); }
 		void setReadPos(const uint32_t _pos)	{ seekg(_pos); }
-		
+
 		using StreamBuffer::getVector;
 
 		// ___________________________________
@@ -520,4 +520,3 @@ namespace baseLib
 		uint32_t m_numChunks = 0;
 	};
 }
-

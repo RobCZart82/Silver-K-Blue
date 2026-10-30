@@ -20,4 +20,3 @@
 - 32 régi kimeneti csomag visszaállítható archívuma; aktuális kiadási ellenőrzés és ellenőrzőösszegek.
 
 Ez a skin első végleges néven kiadott változata. A VST3 termékazonosítója és alapverziója továbbra is Silver-K / 0.4.4; a v1.0 a Blue skinek kiadási száma. A névátvezetés nem változtatta meg a legutóbbi bináris programkódját.
-

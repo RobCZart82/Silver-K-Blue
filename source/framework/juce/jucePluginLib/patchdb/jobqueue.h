@@ -100,4 +100,3 @@ namespace pluginLib::patchDB
 		std::condition_variable m_completedCv;
 	};
 }
-

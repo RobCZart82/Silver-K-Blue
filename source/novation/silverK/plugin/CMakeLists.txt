@@ -225,4 +225,3 @@ target_link_libraries(ksResetVector_test PRIVATE ksLib)
 target_include_directories(ksResetVector_test PRIVATE "${ROOT}/source/cpu")
 add_test(NAME ks_reset_vector COMMAND ksResetVector_test)
 set_tests_properties(ks_reset_vector PROPERTIES TIMEOUT 90)
-
