@@ -1,29 +1,35 @@
-# Telepítés és használat
+# Silver-K Blue — telepítés és használat
 
-## Skin
+Ez a jelenlegi Windows és macOS beépített skines csomagok útmutatója. A korábbi helyi archívumok mappanevei nem telepítési követelmények.
 
-Az **01-Skins** két közvetlen almappáját másold a plugin által a Setup → Skins folder gombbal megnyitott mappába. A szokásos hely ezen a gépen: `/Users/robert/Documents/Silver-K/Skins/`, más gépen a plugin által megnyitott hely az irányadó.
+## Frissítés előtt
 
-A skin.json fájl `name` mezője adja a lista nevét; nem pusztán a mappanév. A kiadás mindkettőt egységesíti. A `schemaVersion: 1` a fájlformátum verziója, ezt ne emeld a skin kiadási verziójával együtt. A `version: "1.0"` kiadási metaadat, a megjelenítéshez a teljes név is tartalmazza a verziót.
+Zárd be a DAW-ot. A Blue és az eredeti Silver-K pluginazonosítója azonos: a korábbi teljes példányt mentsd a host keresési útvonalain kívülre, majd a teljes bundle-t cseréld. Ne maradjon több azonos példány beolvasott mappákban. Az automatikus telepítés nem része a ZIP-nek.
 
-Korábbi skinek maradhatnak külön biztonsági másolatban, de a két véglegesből egyszerre egy-egy példányt tarts az aktív Skins mappában. A plugin beépített skinjei továbbra is láthatók lehetnek; ez a csomag két külső skint ad hozzá. Ha egy régi projekt korábbi csomagra mutat, válaszd ki a végleges nevet és mentsd újra a projektet/beállítást.
+## Platformok
 
-## VST3 macOS-on
+| Platform | Csomagbeli termék | Hely |
+| --- | --- | --- |
+| Windows x64 | Plugins/VST3/Silver-K.vst3 | C:\\Program Files\\Common Files\\VST3\\ |
+| Windows x64 | Standalone/Silver-K.exe | Állandó mappából indítható |
+| macOS | Plugins/VST3/Silver-K.vst3 | ~/Library/Audio/Plug-Ins/VST3/ |
+| macOS | Plugins/AU/Silver-K.component | ~/Library/Audio/Plug-Ins/Components/ |
+| macOS | Standalone/Silver-K.app | Applications vagy más állandó hely |
 
-A mellékelt helyi build Apple Silicon és Intel kódot tartalmaz, minimumcélja macOS 12.0. Ad hoc aláírású helyi build, nem közjegyzett gyártói telepítő. A csomag nem tartalmaz Windows-, Linux- vagy AU-binárist.
+64 bites host kell. A macOS Universal 2 arm64 és x86_64 kódot tartalmaz, minimumcélja macOS 12.0; ez nem minden fizikai Intel gépen végzett próba. A macOS build ad hoc aláírt és nem notarizált; a Windows build nincs tanúsítvánnyal aláírva. Hiányzó Windows Visual C++ futtatókörnyezet külön telepítendő.
 
-1. Ments és zárj be minden Silver-K-t használó hostot.
-2. A jelenlegi Silver-K.vst3 példányt mentsd el a VST3 keresési útvonalakon kívülre.
-3. A **02-Plugin/macOS-Universal2/Silver-K.vst3** teljes bundle-t másold a használt VST3 helyre. A felhasználói hely általában `~/Library/Audio/Plug-Ins/VST3/`, a közös hely `/Library/Audio/Plug-Ins/VST3/`. Azt használd, amelyikből a hostod eddig is töltötte; ne hagyd a régi azonosítójú példányt egy másik beolvasott helyen.
-4. Indítsd el a hostot, szükség esetén frissítsd a pluginlistát, majd a Setup oldalon válaszd ki a végleges skint.
+Indítsd újra a hostot, és frissítsd a pluginlistát.
 
-A plugin neve és azonosítója továbbra is Silver-K. A két új név a skinválasztó neve, nem két külön hangszer.
+## Beépített és külső skinek
 
-## Mire számíts?
+A Standard v1.0 és Retina 4K v1.0 a Setup listában külön telepítés nélkül választható. Új beállításnál a Retina az alapértelmezett, mentett projektek választása megmarad.
 
-- Standard: a korábban elfogadott klasszikus mezőket és natív LCD-szöveget őrzi; kompatibilis az eredeti v0.4.4a-val.
-- Retina: nagyobb forgatógomb- és faderképek; sötét R2 LCD-hátterű mezők eredeti betűvel; 4×24 karakteres fő pontmátrixos LCD, sortöréssel. Performance presetnevek és a mezők betűi is natívak a legutóbbi döntés szerint.
-- A forgatógomb kék közepe és értékjelző nyelve együtt fordul. A 21 LED pozíciója rögzített, a felgyulladás értékfüggő. A középen hófehér jelölést kapó LED-verzió maradt meg; nincs új fényudvar-változat hozzáadva.
-- A K-Station firmware nem támogat négyrészes KS Performance működést. A helyi build az ott nem használható képes vezérlőket is halványítja. Ez kijelzésjavítás, nem új négyrészes hangképesség.
+A mellékelt Skins mappa szerkeszthető külső másolatokat tartalmaz. Ezek opcionálisak; telepítésük után külön bejegyzésként jelenhetnek meg. Külső csomagonként külön almappát használj a Setup által megnyitott Skins könyvtárban, majd Reload. A Standard upstream v0.4.4a-val is használható; a Retina 256 px képeihez kompatibilis Blue bináris kell.
 
-A firmware-t és a saját bankokat a meglévő Silver-K adatkönyvtárból használd. Visszaállításhoz tedd vissza a mentett VST3-at és válaszd a Standard skint; a Retina magas stripjeit a gyári v0.4.4a nem tudja betölteni.
+## Első indítás
+
+A Setup oldalon saját kompatibilis firmware-t válassz. K-Station saját firmware-t használ; KS módban program/performance MIDI-adat és Wave ROM is kell. Az automatikusan létrehozott nulla Wave ROM a generált oszcillátorhullámokhoz használható; mintahullámot igénylő hangszínek hiányosak vagy némák lehetnek. Gyártói firmware és gyári hangadat nincs a csomagban.
+
+Standalone esetén válassz hangkimenetet és MIDI-bemenetet; DAW-ban engedélyezd a sávmonitorozást. Bővebben: [User guide](../../doc/USER_GUIDE.md).
+
+A jelenlegi kiadások és ellenőrzési korlátok a [főoldalon](../../README.hu.md) és a [kiadási jelentésben](10-Elso-beepitett-kiadas.md) találhatók. A ROM nélküli teszt nem helyettesíti a saját firmware-rel végzett DAW-os hangpróbát.

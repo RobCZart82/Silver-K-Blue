@@ -1,6 +1,7 @@
 #include "jobqueue.h"
 
 #include <shared_mutex>
+#include <stdexcept>
 
 #include "dsp56kBase/threadtools.h"
 
@@ -25,7 +26,7 @@ namespace pluginLib::patchDB
 		if (!m_threads.empty())
 			return;
 
-		m_destroy = false;
+		{ std::unique_lock lock(m_mutexFuncs); m_destroy = false; m_stopping = false; }
 
 		m_threads.reserve(m_threadCount);
 
@@ -49,10 +50,7 @@ namespace pluginLib::patchDB
 
 		{
 			std::unique_lock lock(m_mutexFuncs);
-			m_funcs.emplace_back([this]
-			{
-				m_destroy = true;
-			});
+			m_stopping = true;
 		}
 
 		m_cv.notify_all();
@@ -61,10 +59,11 @@ namespace pluginLib::patchDB
 			thread->join();
 		m_threads.clear();
 
-		// a queue that was never started has no worker to run the job above
-		m_destroy = true;
-
-		m_funcs.clear();
+		{
+			std::unique_lock lock(m_mutexFuncs);
+			m_destroy = true;
+			m_funcs.clear();
+		}
 		m_emptyCv.notify_all();
 	}
 
@@ -72,6 +71,7 @@ namespace pluginLib::patchDB
 	{
 		{
 			std::unique_lock lock(m_mutexFuncs);
+			if (m_destroy) throw std::runtime_error("Cannot add work to a stopped JobQueue");
 			m_funcs.emplace_back(std::move(_func));
 		}
 		m_cv.notify_one();
@@ -98,16 +98,14 @@ namespace pluginLib::patchDB
 
 	void JobQueue::threadFunc()
 	{
-		while (!m_destroy)
+		for (;;)
 		{
 			std::unique_lock lock(m_mutexFuncs);
 
-			m_cv.wait(lock, [this] {return !m_funcs.empty();});
-
-			const auto func = m_funcs.front();
-
-			if (m_destroy)
+			m_cv.wait(lock, [this] {return m_stopping || !m_funcs.empty();});
+			if (m_funcs.empty())
 				return;
+			const auto func = std::move(m_funcs.front());
 
 			++m_numRunning;
 			m_funcs.pop_front();

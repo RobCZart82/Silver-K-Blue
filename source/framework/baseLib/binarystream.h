@@ -7,6 +7,7 @@
 #include <sstream>
 #include <vector>
 #include <cstring>
+#include <limits>
 
 namespace baseLib
 {
@@ -24,15 +25,15 @@ namespace baseLib
 		StreamBuffer(uint8_t* _buffer, const size_t _size) : m_buffer(_buffer), m_size(_size), m_fixedSize(true)
 		{
 		}
-		StreamBuffer(StreamBuffer& _parent, const size_t _childSize) : m_buffer(&_parent.buffer()[_parent.tellg()]), m_size(_childSize), m_fixedSize(true)
+		StreamBuffer(StreamBuffer& _parent, const size_t _childSize) : m_size(_childSize), m_fixedSize(true)
 		{
-			// force eof if range is not valid
-			if(_parent.tellg() + _childSize > _parent.size())
+			if(_parent.tellg() > _parent.size() || _childSize > _parent.size() - _parent.tellg())
 			{
-				assert(false && "invalid range");
 				m_readPos = _childSize;
+				m_fail = _parent.m_fail = true;
+				return;
 			}
-
+			if (_parent.buffer()) m_buffer = _parent.buffer() + _parent.tellg();
 			// seek parent forward
 			_parent.seekg(_parent.tellg() + _childSize);
 		}
@@ -56,6 +57,7 @@ namespace baseLib
 			m_readPos = _source.m_readPos;
 			m_writePos = _source.m_writePos;
 			m_vector = std::move(_source.m_vector);
+			m_fail = _source.m_fail;
 
 			_source.destroy();
 
@@ -68,23 +70,23 @@ namespace baseLib
 		size_t tellp() const				{ return m_writePos; }
 		bool eof() const					{ return tellg() >= size(); }
 		bool fail() const					{ return m_fail; }
+		size_t remainingReadBytes() const { return tellg() <= size() ? size() - tellg() : 0; }
 
 		bool read(uint8_t* _dst, size_t _size)
 		{
-			const auto remaining = size() - tellg();
-			if(remaining < _size)
+			if(tellg() > size() || remainingReadBytes() < _size)
 			{
 				m_fail = true;
 				return false;
 			}
-			::memcpy(_dst, &buffer()[m_readPos], _size);
+			if (_size) ::memcpy(_dst, buffer() + m_readPos, _size);
 			m_readPos += _size;
 			return true;
 		}
 		bool write(const uint8_t* _src, size_t _size)
 		{
-			const auto remaining = size() - tellp();
-			if(remaining < _size)
+			if (_size > std::numeric_limits<size_t>::max() - tellp()) { m_fail = true; return false; }
+			if(tellp() > size() || size() - tellp() < _size)
 			{
 				if(m_fixedSize)
 				{
@@ -93,7 +95,7 @@ namespace baseLib
 				}
 				m_vector.resize(tellp() + _size);
 			}
-			::memcpy(&buffer()[m_writePos], _src, _size);
+			if (_size) ::memcpy(buffer() + m_writePos, _src, _size);
 			m_writePos += _size;
 			return true;
 		}
@@ -194,7 +196,7 @@ namespace baseLib
 		bool checkString(const std::string& _str)
 		{
 			const auto pos = tellg();
-			
+
 			const auto size = read<SizeType>();
 			if (size != _str.size())
 			{
@@ -212,10 +214,11 @@ namespace baseLib
 		uint32_t getWritePos() const			{ return static_cast<uint32_t>(tellp()); }
 		uint32_t getReadPos() const				{ return static_cast<uint32_t>(tellg()); }
 		bool endOfStream() const				{ return eof(); }
+		size_t getRemainingReadBytes() const { return remainingReadBytes(); }
 
 		void setWritePos(const uint32_t _pos)	{ seekp(_pos); }
 		void setReadPos(const uint32_t _pos)	{ seekg(_pos); }
-		
+
 		using StreamBuffer::getVector;
 
 		// ___________________________________
@@ -285,8 +288,10 @@ namespace baseLib
 
 		template<typename T, typename = std::enable_if_t<std::is_trivially_copyable_v<T>>> void read(T* _out, const size_t _size)
 		{
+			if (_size > remainingReadBytes() / sizeof(T)) throw std::range_error("end-of-stream");
 			if(_size)
 				Base::read(reinterpret_cast<uint8_t*>(_out), sizeof(T) * _size);
+			checkFail();
 		}
 
 		template<typename T, typename Alloc, typename = std::enable_if_t<std::is_trivially_copyable_v<T>>> void read(std::vector<T, Alloc>& _vector)
@@ -298,6 +303,7 @@ namespace baseLib
 				_vector.clear();
 				return;
 			}
+			if (size > remainingReadBytes() / sizeof(T)) throw std::range_error("end-of-stream");
 			_vector.resize(size);
 			Base::read(reinterpret_cast<uint8_t*>(_vector.data()), sizeof(T) * size);
 			checkFail();
@@ -307,6 +313,7 @@ namespace baseLib
 		{
 			const auto size = read<SizeType>();
 			std::string s;
+			if (size > remainingReadBytes()) throw std::range_error("end-of-stream");
 			s.resize(size);
 			Base::read(reinterpret_cast<uint8_t*>(s.data()), size);
 			checkFail();
@@ -314,7 +321,7 @@ namespace baseLib
 		}
 
 		template<size_t N, std::enable_if_t<N == 5, void*> = nullptr>
-		void read4CC(char const(&_str)[N])
+		bool read4CC(char const(&_str)[N])
 		{
 			char res[5];
 			read4CC(res);

@@ -1,53 +1,62 @@
 # Silver-K Blue
 
-Privát, önálló fejlesztési repository a Silver-K Blue Standard és Retina skinekhez, illetve a hozzájuk készített helyi felületi javításokhoz.
+An unofficial [Silver-K](https://github.com/temaniak/Silver-K) variant with integrated **Blue Standard** and **Blue Retina 4K** skins and additional interface changes.
 
-Upstream: [temaniak/Silver-K](https://github.com/temaniak/Silver-K), v0.4.4a, commit `4baaead06e23e2358729cca32b6b511c72022318`. Az eredeti projekt és szerzőinek munkájára épül; nem hivatalos kiadás. Eredeti ismertető: [UPSTREAM-README](doc/UPSTREAM-README.md). A Gearmulator eredet és a függőségek megjelölései a [THIRD_PARTY.md](THIRD_PARTY.md) fájlban maradtak meg.
+Built on the work of the Silver-K, ungeermoolator and Gearmulator authors. This is an independently maintained variant, not an official upstream release. The documented upstream base is **v0.4.4a**, commit `4baaead06e23e2358729cca32b6b511c72022318`.
 
-## Első beépített skines tesztkiadás
+[Magyar útmutató](README.hu.md) · [Installation](doc/INSTALL.md) · [User guide](doc/USER_GUIDE.md) · [Build](doc/BUILD.md) · [Changes](CHANGELOG.md)
 
-**[Windows x64: VST3 + Standalone](https://github.com/RobCZart82/Silver-K-Blue/releases/tag/windows-blue-3-1)** · **[macOS Universal 2: AU + VST3 + Standalone](https://github.com/RobCZart82/Silver-K-Blue/releases/tag/macos-blue-2-1)**
+## Downloads
 
-Mind az öt termék elkészült, mindkét Blue skin külön telepítés nélkül benne van. [Ellenőrzések, használat és a GitHub Actions fiókkorlátja](blue/Documentation/10-Elso-beepitett-kiadas.md). A csomagok forrása a `40b68eeebd8e` commit; a későbbi dokumentációs commitok nem változtatják a kiadott binárisokat.
+| Platform | Formats | Current download |
+| --- | --- | --- |
+| Windows x64 | VST3, Standalone | [Windows build 3](https://github.com/RobCZart82/Silver-K-Blue/releases/tag/windows-blue-3-1) |
+| macOS Universal 2 | AU, VST3, Standalone; Apple Silicon + Intel | [macOS build 2](https://github.com/RobCZart82/Silver-K-Blue/releases/tag/macos-blue-2-1) |
 
-## Aktuális állapot
+Both packages were built from `40b68eeebd8e2c7d4a92229aa25fcb1217a652cc`. They are test builds. The framework fixes proposed in [PR #1](https://github.com/RobCZart82/Silver-K-Blue/pull/1) are **not included** in these downloads. See each release for its exact validation and use the supplied SHA-256 file to verify the download.
 
-- Silver-K Blue Standard v1.0: gyári v0.4.4a-val is használható 64 px / 128 kockás skin.
-- Silver-K Blue Retina 4K v1.0: helyi javított buildet igénylő 256 px / 128 kockás skin.
-- A produkciós forrás tartalmazza a legutóbbi elfogadott helyi felületi javításokat: Retina képbetöltés, faderskála, négysoros fő pontmátrix-LCD, natív lenyílóbetűk és navy hátterek, waveform-hover, inaktív Performance képek halványítása, kerekített gyorstippek.
-- A két skin a közös felületi kódba van csomagolva, ezért Windows VST3/Standalone és macOS Universal 2 AU/VST3/Standalone alatt külön skintelepítés nélkül választható. Új beállításoknál a Retina az alapértelmezett; mentett választások és külső skinek továbbra is támogatottak. A grafikai forráscsomagok a `blue/Skins` mappában megmaradtak.
-- Ez a helyi 2026-10-25-i végleges csomag forrásellenőrzési alapja; újabb upstream fejlesztési ágakat nem emel be.
+macOS builds target 12.0 or later and are ad hoc signed, not notarized. Windows builds are unsigned. Build success does not establish interactive DAW/audio acceptance on every platform or physical Intel Mac.
 
-## Használat és fordítás
+## The Blue interface
 
-A beépített skinek a Setup választójában közvetlenül elérhetők. A `blue/Skins` két almappája opcionálisan külső, szerkeszthető skinnek is használható.
+- **Standard v1.0:** 64 px rotary frames; the external skin is compatible with upstream v0.4.4a.
+- **Retina 4K v1.0:** 256 px rotary frames and high-resolution faders, with Blue-specific image loading support.
+- Blue LED arcs, aluminium panels, navy LCD backgrounds and a four-line main dot-matrix display.
+- Both skins are embedded in all current Blue products; no separate skin installation is required.
+- New settings default to Retina. Previously saved choices and external skins remain supported.
 
-Fordítás: [doc/BUILD.md](doc/BUILD.md). Példa macOS Universal 2 buildhez:
+Actual plugin renders from the integration source (`9004549`), captured at 2× scale without firmware; unavailable controls are therefore dimmed. These are UI previews, not audio acceptance tests.
 
-```sh
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release '-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64' -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0
-cmake --build build --target silverK_VST3 -j 6
-```
+**Standard**
 
-Az első konfigurálás hálózatról tölti a rögzített függőségeket. A repository nem tartalmaz kész VST3-at, nagy ZIP-archívumot, letöltött függőséget, személyes beállítást, Novation firmware-t vagy hangbankot. Az upstream `assets/ks-init-flash.bin` generált szintetikus teszt/indító adat, nem gyártói ROM; az eredeti asset-README és manifest írja le az eredetét.
+![Blue Standard actual plugin render](blue/Artwork/Previews/Standard-embedded-Main-2x.png)
 
-## Fejlesztési anyagok
+**Retina 4K**
 
-- [Aktuális fejlesztési terv](blue/Documentation/02-Aktualis-fejlesztesi-terv.md)
-- [Későbbi upstream együttműködés](blue/Documentation/03-GitHub-egyuttmukodes.md)
-- [Verziózás és eredet](blue/Documentation/04-Verziozas-es-eredet.md)
-- `blue/Design/Masters`: grafikai mesterek és generálási leírások.
-- `blue/Tests`: megőrzött felületi regressziótesztek.
-- `blue/upstream-v0.4.4a.patch`: az eredeti tiszta alaphoz tartozó teljes helyi produkciós javítás.
+![Blue Retina actual plugin render](blue/Artwork/Previews/Retina-embedded-Main-2x.png)
 
-A `blue/Documentation` lezáró csomagra hivatkozó leírásai a teljes helyi archívum szerkezetét követik. A 32 történeti csomag, a bináris és az ellenőrzési archívum helyben maradt; azok nem részei ennek a repositorynak. A forráskód licence [GPLv3](LICENSE.md); az eredeti szerzői megjelölések megmaradtak. A grafikai anyagok eredete külön dokumentált, publikus terjesztésük előtt áttekintendő.
+The source skin packages are in [blue/Skins](blue/Skins). Retina requires a compatible Blue binary; it cannot be used as an unchanged external skin with upstream v0.4.4a.
 
-A kézzel indítható **Silver-K Blue Windows x64** GitHub Actions VST3-at és önálló Windows-alkalmazást készít a privát repositoryban. [Indítás és letöltés](blue/Documentation/07-Windows-GitHub-Actions.md). Az eredeti workflow-k a `blue/Upstream-Workflow-Examples/workflows` mappában mintaként maradnak meg.
+## Installation and first startup
 
-## Upstream követés
+**Blue uses the same plugin identity as Silver-K.** Close the host, back up the previous complete plugin outside all host scan folders, then replace the whole bundle. Avoid duplicate copies in scanned folders. Follow the [installation guide](doc/INSTALL.md).
 
-Naponta ellenőrizzük az eredeti Silver-K main ágát és stabil kiadását. Új változásból privát ellenőrzési ág készül; ütközés esetén jelentés, automatikus main-merge nélkül. Az összehasonlító linkről kézzel nyitható PR. [Frissítési folyamat](blue/Documentation/08-Upstream-frissites.md).
+**Supply your own compatible firmware.** K-Station uses its own firmware. KS additionally requires compatible program/performance MIDI data and Wave ROM. The automatically created zero Wave ROM supports generated oscillator waves; sampled-wave sounds may be incomplete or silent. Proprietary firmware and factory sound data are not included.
 
-## Beépített skinek és desktop build
+In Standalone select your audio device and MIDI input. In a DAW enable instrument-track monitoring. See [first startup](doc/USER_GUIDE.md#first-startup).
 
-[Integráció, tesztelés és mind az öt célváltozat](blue/Documentation/09-Beepitett-skinek.md). A Windows és macOS Actions munkafolyamat kézzel indítható; sikeres buildből külön privát Release készülhet.
+## Development
+
+Build instructions cover Windows x64 and macOS Universal 2. Dependencies are fetched from pinned revisions at the first configuration. Tests without ROM data and firmware-dependent acceptance checks have different scopes; record skipped tests explicitly.
+
+The daily [upstream check](blue/Documentation/08-Upstream-frissites.md) prepares a separate review branch when changes are available. A maintainer opens and reviews a PR; the automation never merges main or publishes a release. It supports both private and public visibility for this repository.
+
+[Development plan and log (Hungarian)](blue/Documentation/11-Fejlesztesi-naplo-es-publikalasi-terv.md) · [Public release preparation](doc/PUBLICATION.md)
+
+For bug reports include the build commit, OS, host/version, format, engine mode, reproduction steps and whether the issue occurs with Standard or Retina. Do not attach proprietary firmware, factory data or private session files.
+
+## Source and credits
+
+Source code: [GPLv3](LICENSE.md). Original notices are preserved. [THIRD_PARTY.md](THIRD_PARTY.md) describes source and dependency provenance; [Blue artwork provenance](blue/Artwork/PROVENANCE.md) records the remaining artwork review.
+
+The generated [ks-init-flash asset](assets/README.md) is synthetic initialization/test data, not a manufacturer ROM. Historical design and archive notes are retained as history, not current installation instructions.

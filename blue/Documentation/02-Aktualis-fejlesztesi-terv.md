@@ -1,3 +1,5 @@
+> **Történeti pillanatfelvétel — 2026-10-25.** A lentebbi helyi archívumútvonalak, készültségi állítások és régi binárisleírások a korabeli csomagra vonatkoznak. A jelenlegi sorrend és állapot a [fejlesztési naplóban](11-Fejlesztesi-naplo-es-publikalasi-terv.md), a telepítés a [friss útmutatóban](01-Telepites-es-hasznalat.md) található. A grafikai eredet nyitott pontjai: [PROVENANCE](../Artwork/PROVENANCE.md).
+
 # Aktuális fejlesztési terv és megvalósítási állapot
 
 Állapot: Silver-K Blue v1.0, 2026-10-25. Ez váltja fel a történeti tervek aktuális státuszát. Alap: upstream v0.4.4a, commit `4baaead06e23e2358729cca32b6b511c72022318`. A „kész” itt helyben megvalósított és célzottan ellenőrzött fejlesztést jelent; nem eredeti repositoryba beolvasztott változtatást.
@@ -30,7 +32,7 @@
 3. A fő LCD megjelenítése 4 sorra korlátozott. A több szöveg a kereten túl nem jelenhet meg; a teljes szöveg a natív felirat adataiban megmarad. A jelenlegi 5×7 karakterkészlet nem teljes nemzetközi Unicode font.
 4. A hajszálvékony skin-dekorációs listakeret a rögzített layoutot követi. Dinamikus átrendezéshez célszerűbb natív listakeret API-t egyeztetni.
 5. macOS Universal 2 célzott felületi tesztek vannak. Más operációs rendszer, DAW, minden skálázási mód és teljes hangmotor-regresszió nincs ezzel a kiadással igazolva. A korábbi KS felületi próbák zero wave tesztállapotot is használtak, nem igazolják a hiányzó mintahullámok hangját.
-6. Upstream merge, hivatalos terjesztés, Windows/Linux build, aláírt/notarizált telepítő és automatikus frissítés nincs kész.
+6. A Windows x64 VST3/Standalone és macOS Universal 2 AU/VST3/Standalone tesztbuild 2026-10-29 óta elérhető (forrás: `40b68eee`). A későbbi keretrendszer-javítások és alkalmazásikon még nem szerepelnek ezekben. Upstream-beolvasztás, Linux build, notarizált/aláírt telepítő és automatikus alkalmazásfrissítés nincs igazolva.
 
 ## Javasolt következő kiadás
 

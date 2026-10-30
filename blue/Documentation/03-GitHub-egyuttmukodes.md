@@ -1,3 +1,5 @@
+> **Történeti pillanatfelvétel — 2026-10-25.** A lentebbi helyi archívumútvonalak, készültségi állítások és régi binárisleírások a korabeli csomagra vonatkoznak. A jelenlegi sorrend és állapot a [fejlesztési naplóban](11-Fejlesztesi-naplo-es-publikalasi-terv.md), a telepítés a [friss útmutatóban](01-Telepites-es-hasznalat.md) található. A grafikai eredet nyitott pontjai: [PROVENANCE](../Artwork/PROVENANCE.md).
+
 # Későbbi együttműködés az eredeti fejlesztéssel
 
 Eredeti projekt: https://github.com/temaniak/Silver-K . A csomag rögzített alapja v0.4.4a; nem állítjuk, hogy a 2026-10-25 utáni upstream változásokat tartalmazza. A munka helyben készült, nem küldtünk issue-t, PR-t vagy üzenetet.

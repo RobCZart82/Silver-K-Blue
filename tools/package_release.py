@@ -19,6 +19,24 @@ PLUGIN_VERSION = '0.4.4'
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def source_snapshot_files(root, source_files):
+    """Include the runtime Blue resources required by the native CMake build."""
+    roots = ('source/', 'cmake/', 'assets/', 'tools/', 'doc/', '.github/',
+             'blue/Skins/', 'blue/Artwork/')
+    top = {'CMakeLists.txt', 'README.md', 'LICENSE.md', 'THIRD_PARTY.md', '.gitignore', '.gitattributes'}
+    public_docs = {'doc/BUILD.md', 'doc/INSTALL.md', 'doc/USER_GUIDE.md',
+                   'doc/SKINS.md', 'doc/WAVE_ROM_BUILDER.md',
+                   'doc/releases/0.4a.md', f'doc/releases/{VERSION}.md'}
+    for relative in sorted(set(source_files)):
+        if relative.startswith('doc/') and relative not in public_docs:
+            continue
+        path = root / relative
+        if (relative.startswith(roots) or relative in top) and path.is_file():
+            if path.suffix.lower() in {'.bin', '.syx', '.mid', '.midi', '.os', '.fxb', '.fxp', '.wav', '.skwave'} and relative != 'assets/ks-init-flash.bin':
+                raise RuntimeError(f'Private/binary asset in source snapshot: {relative}')
+            yield relative
+
+
 def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
@@ -116,20 +134,9 @@ def main():
         # Original user assets and unrelated editor work are outside these roots.
         source_files = subprocess.check_output(['git','ls-files','--cached','--others','--exclude-standard'],cwd=ROOT,text=True).splitlines()
         source_archive = stage / 'Silver-K-source.zip'
-        roots = ('source/','cmake/','assets/','tools/','doc/','.github/')
-        top = {'CMakeLists.txt','README.md','LICENSE.md','THIRD_PARTY.md','.gitignore'}
-        public_docs = {'doc/BUILD.md', 'doc/INSTALL.md', 'doc/USER_GUIDE.md',
-                       'doc/SKINS.md', 'doc/WAVE_ROM_BUILDER.md',
-                       'doc/releases/0.4a.md', f'doc/releases/{VERSION}.md'}
         with zipfile.ZipFile(source_archive,'w',zipfile.ZIP_DEFLATED) as source_zip:
-            for relative in sorted(set(source_files)):
-                if relative.startswith('doc/') and relative not in public_docs:
-                    continue
-                path = ROOT / relative
-                if (relative.startswith(roots) or relative in top) and path.is_file():
-                    if path.suffix.lower() in {'.bin','.syx','.mid','.midi','.os','.fxb','.fxp','.wav','.skwave'} and relative!='assets/ks-init-flash.bin':
-                        raise RuntimeError(f'Private/binary asset in source snapshot: {relative}')
-                    source_zip.write(path,relative)
+            for relative in source_snapshot_files(ROOT, source_files):
+                source_zip.write(ROOT / relative,relative)
         dirty = bool(subprocess.check_output(['git','status','--porcelain'],cwd=ROOT,text=True).strip())
         sources = f'''Silver-K corresponding source is included in Silver-K-source.zip.
 Snapshot SHA-256: {digest(source_archive)}

@@ -14,7 +14,7 @@ def git(folder, *args):
     return subprocess.check_output(['git', '-C', str(folder), *args], text=True, stderr=subprocess.DEVNULL).strip()
 
 class SyncTests(unittest.TestCase):
-    def scenario(self, conflict=False, change=True, release_change=False):
+    def scenario(self, conflict=False, change=True, release_change=False, is_private=True):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             source, private, upstream = root/'source', root/'private.git', root/'upstream.git'
@@ -54,8 +54,10 @@ class SyncTests(unittest.TestCase):
             module.run=fake_run
             latest=dict(release)
             if release_change:latest['tag_name']='v2'
-            module.api=lambda endpoint: {'private':True,'default_branch':'main'} if endpoint=='repos/RobCZart82/Silver-K-Blue' else latest
+            module.api=lambda endpoint: {'private':is_private,'default_branch':'main'} if endpoint=='repos/RobCZart82/Silver-K-Blue' else latest
+            previous_repo = os.environ.get('GH_REPO')
             os.environ['GH_REPO']='RobCZart82/Silver-K-Blue'
+            self.addCleanup(lambda: os.environ.pop('GH_REPO', None) if previous_repo is None else os.environ.__setitem__('GH_REPO', previous_repo))
             module.main()
             self.assertEqual(git(checkout,'rev-parse','main'),original)
             self.assertEqual(git(checkout,'show','main:ours.txt'),'keep my skin')
@@ -79,5 +81,17 @@ class SyncTests(unittest.TestCase):
     def test_clean_update_preserves_blue_and_main(self):self.scenario()
     def test_conflict_does_not_overwrite_blue(self):self.scenario(conflict=True)
     def test_release_only_update(self):self.scenario(change=False,release_change=True)
+    def test_public_no_update(self):self.scenario(change=False,is_private=False)
+    def test_public_clean_update(self):self.scenario(is_private=False)
+    def test_public_conflict(self):self.scenario(conflict=True,is_private=False)
+    def test_public_release_only(self):self.scenario(change=False,release_change=True,is_private=False)
+    def test_wrong_repository_rejected_before_api_or_git(self):
+        from unittest.mock import patch
+        module = importlib.util.module_from_spec(SPEC);SPEC.loader.exec_module(module)
+        with patch.dict(os.environ, {'GH_REPO':'someone/another-repository'}), patch.object(module,'api') as api, patch.object(module,'run') as run:
+            with self.assertRaisesRegex(RuntimeError,'intended Blue repository'):
+                module.main()
+            api.assert_not_called()
+            run.assert_not_called()
 
 if __name__=='__main__':unittest.main()
