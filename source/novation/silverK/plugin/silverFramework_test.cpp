@@ -1,4 +1,5 @@
 #include "baseLib/binarystream.h"
+#include "silverImageBounds.h"
 #include "synthLib/wavReader.h"
 #include "synthLib/midiBufferParser.h"
 #include "synthLib/sysexToMidi.h"
@@ -18,6 +19,12 @@ void put32(std::vector<uint8_t>& b,size_t at,uint32_t v,bool big=false) { for (i
 void four(std::vector<uint8_t>& b,size_t at,const char* s) { std::memcpy(b.data()+at,s,4); }
 void streams()
 {
+    uint64_t pixels=0;std::vector<uint8_t> png(24);const uint8_t signature[]={137,80,78,71,13,10,26,10};
+    std::memcpy(png.data(),signature,8);put32(png,8,13,true);four(png,12,"IHDR");
+    put32(png,16,256,true);put32(png,20,32768,true);
+    require(silverK::boundedImage(png.data(),png.size(),pixels) && pixels==8388608,"Retina header rejected");
+    put32(png,16,100000,true);require(!silverK::boundedImage(png.data(),png.size(),pixels),"Oversized header accepted");
+    require(!silverK::boundedImage(png.data(),12,pixels),"Truncated header accepted");
     baseLib::BinaryStream s(std::vector<uint8_t>{'A','B','C','D'});
     require(s.read4CC("ABCD"),"FourCC comparison failed");s.setReadPos(0);
     require(!s.read4CC("EFGH"),"FourCC mismatch accepted");
@@ -29,6 +36,9 @@ void streams()
     baseLib::BinaryStream goodParent(std::vector<uint8_t>{1,2,3,4});baseLib::BinaryStream goodChild(goodParent,2);
     require(goodChild.read<uint8_t>()==1 && goodParent.getReadPos()==2,"Valid substream broken");
     baseLib::BinaryStream huge(std::vector<uint8_t>{255,255,255,255});rejects([&]{huge.readString();});
+    uint8_t byte=1; child.write(&byte,1); rejects([&]{child.read<uint8_t>();});
+    baseLib::StreamBuffer rawParent(std::vector<uint8_t>{1,2});rawParent.seekg(100);baseLib::StreamBuffer rawChild(rawParent,2);
+    require(!rawChild.write(&byte,1),"Invalid child write accepted");
     uint8_t fixed[4]{};baseLib::StreamBuffer bounded(fixed,4);bounded.seekp(100);
     require(!bounded.write(fixed,1),"Fixed write outside buffer accepted");
     baseLib::StreamBuffer overflow;overflow.seekp(std::numeric_limits<size_t>::max());
@@ -107,6 +117,16 @@ void presets()
 void queues()
 {
     using pluginLib::patchDB::JobQueue;
+    {
+        JobQueue stopped; stopped.destroy(); pluginLib::patchDB::JobGroup group(stopped);
+        bool rejected=false;try {group.add([]{});}catch(const std::runtime_error&){rejected=true;}
+        require(rejected,"Stopped queue accepted work");group.wait();
+    }
+    {
+        JobQueue queue("",false);pluginLib::patchDB::JobGroup group(queue);std::atomic<int> total{0};
+        {std::vector<int> values{1,2,3};group.forEach(values,[&](int n){total+=n;},false);}
+        queue.start();group.wait();require(total==6,"forEach lost callback or element lifetime");
+    }
     for(int run=0;run<8;++run)
     {
         JobQueue idle("",true,dsp56k::ThreadPriority::Normal,4);idle.waitEmpty();idle.destroy();require(idle.destroyed(),"Queue did not stop");

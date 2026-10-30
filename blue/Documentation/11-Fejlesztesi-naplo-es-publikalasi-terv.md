@@ -2,6 +2,31 @@
 
 Utolsó frissítés: **2026-10-30**
 
+## Aktuális összefoglaló — 2026-10-30
+
+Ez a szakasz felülírja az alábbi történeti „PR-ben/privát/függőben” státuszokat. A repository nyilvános; PR #1–#4 beolvadt. A main `9ea8fbf` Windows/macOS CI-je sikeres. A korábbi kiadások törlését Robert kézzel tervezte; közös Windows/macOS/forrás Release még nincs lezárva.
+
+| Tétel | Aktuális állapot |
+|---|---|
+| H01–H09 eredeti javítások, M1–M3 | Main-be beolvasztva, Windows/macOS ellenőrzések sikeresek |
+| M4 upstream-frissítés | Nyilvános működés javítva; fő ági ellenőrzés sikeres |
+| M5 dokumentáció és előnézet | Angol/magyar útmutatók és valódi Standard/Retina képek a main-en |
+| M6 eredet és tartalomellenőrzés | Részleges; FinaleOnOff forrásmegjelölés rögzítve, teljes történeti leltár nincs lezárva |
+| M7 nyilvánossá tétel és védelem | Megtörtént; kötelező Windows/macOS ellenőrzések aktívak |
+| M8 közös kiadás | Hátravan: azonos commitú Windows/macOS/forrás és ellenőrzőösszegek |
+| A01–A04 új auditjavítás | Ezen javítási ágon megvalósítva; új platform-CI és beolvasztás még szükséges |
+
+### A01–A04 javítások
+
+- A01: hibás/nem létező tárolóba írás elutasítása a StreamBufferben; hibás alfolyam-írás regresszió.
+- A02: sikertelen JobGroup enqueue visszaállítja a számlálót és értesíti a várakozókat; leállított munkasor utáni wait regresszió.
+- A03: forEach általános callbackkel működik, az elemet és callbacket érték szerint őrzi; késleltetett végrehajtás a helyi konténer megszűnése után is tesztelve. A callback saját referenciafogásainak élettartama továbbra is a hívó felelőssége.
+- A04 / SK-002: PNG/JPEG/GIF fejlécméret ellenőrzése dekódolás előtt, legfeljebb 64 Mi pixel/kép és összesen 128 Mi pixel/skin (RGBA névleg 256/512 MiB, dekóder és cache többlet nélkül). A 256×32768 Retina strip támogatott. Ismeretlen/hibás képfejléc elutasítva.
+- Helyi ellenőrzés: 13 Python-teszt sikeres; natív framework regresszió sikeres. A platformellenőrzések és a skin-integráció eredményét a lezáró bejegyzés rögzíti.
+
+A lentebbi korábbi eseményeket megőrizzük történeti feljegyzésként; a „nincs main-en” kijelentések nem a mai összefoglaló állapotát jelentik.
+
+
 > **Publikálási előkészítés folyamatban:** a dokumentációs ág angol/magyar főoldalt, friss telepítési útmutatókat, nyilvános működésre alkalmas upstream-frissítőt és angol csomagútmutatót tartalmaz. Ez még nem main-állapot és nem új bináris kiadás. Részletes nyitott tételek: [PUBLICATION](../../doc/PUBLICATION.md).
 Repository: [RobCZart82/Silver-K-Blue](https://github.com/RobCZart82/Silver-K-Blue)
 Dokumentumállapot: tervezési és követési alap; nem kiadási megfelelőségi igazolás.
@@ -183,3 +208,7 @@ Ne írjuk át utólag a történeti bejegyzést úgy, mintha egy későbbi javí
 ## Release-ismétlések — 2026-10-30
 
 A régi kiadási workflow a GITHUB_RUN_ATTEMPT értékét is a tagbe tette; újrafuttatáskor azonos csomagból új Release keletkezett. Windows build 3 (-1/-4) és macOS build 2 (-1/-2) ZIP-je platformonként azonos GitHub SHA-256 digestű. Javítás: futásonként állandó -1 tag, a már létező kiadás forráscommitjának ellenőrzése és megtartása. Eltérő commitnál hiba, automatikus törlés/felülírás nincs. A történeti duplikátumok eltávolítása külön jóváhagyásra vár.
+
+### A01–A04 helyi ellenőrzés lezárása
+
+2026-10-30: a módosított `silverFramework_test` natív fordítása és CTest futása sikeres. A `silverSkin_test` csomag-, betöltés-, megjelenítés-, visszaállítás- és DPI-próbája grafikus asztali hozzáféréssel sikeres; az első korlátozott futtatás csak az asztali menühozzáférés hiánya miatt nem zárult sikerrel. 13 Python unittest sikeres. Az eredeti alfolyam-írási összeomláspróba ASan/UBSan mellett többé nem omlik össze; az új regresszió az elutasítást is ellenőrzi. Új teljes Windows/macOS termékbuild még a PR ellenőrzésére vár; a kiadott binárisok e javításokat még nem tartalmazzák.

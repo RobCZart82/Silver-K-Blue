@@ -71,12 +71,12 @@ namespace pluginLib::patchDB
 
 		void add(std::function<void()>&&);
 
-		template<typename T>
-		void forEach(const T& _container, const std::function<void(const T&)>& _func, bool _wait = true)
+		template<typename T, typename F>
+		void forEach(const T& _container, F _func, bool _wait = true)
 		{
 			for (const auto& e : _container)
 			{
-				add([&e, &_func]
+				add([e, _func]
 				{
 					_func(e);
 				});
