@@ -1,0 +1,41 @@
+name: Publish unified Silver-K Blue release
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: New Blue release version (for example 1.0.1)
+        required: true
+        type: string
+      windows_run:
+        description: Successful main Windows run ID
+        required: true
+        type: string
+      macos_run:
+        description: Successful main macOS run ID (same source commit)
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: blue-release-publication
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify release assembly helpers
+        run: python3 tools/test_publish_blue_release.py
+      - name: Assemble and publish one verified release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BLUE_VERSION: ${{ inputs.version }}
+          WINDOWS_RUN: ${{ inputs.windows_run }}
+          MACOS_RUN: ${{ inputs.macos_run }}
+        run: python3 tools/publish_blue_release.py --version "$BLUE_VERSION" --windows-run "$WINDOWS_RUN" --macos-run "$MACOS_RUN"
