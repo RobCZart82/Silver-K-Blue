@@ -25,6 +25,16 @@ macOS builds target 12.0 or later and are ad hoc signed, not notarized. Windows 
 - Both skins are embedded in all current Blue products; no separate skin installation is required.
 - New settings default to Retina. Previously saved choices and external skins remain supported.
 
+Actual plugin renders from the integration source (`9004549`), captured at 2× scale without firmware; unavailable controls are therefore dimmed. These are UI previews, not audio acceptance tests.
+
+**Standard**
+
+![Blue Standard actual plugin render](blue/Artwork/Previews/Standard-embedded-Main-2x.png)
+
+**Retina 4K**
+
+![Blue Retina actual plugin render](blue/Artwork/Previews/Retina-embedded-Main-2x.png)
+
 The source skin packages are in [blue/Skins](blue/Skins). Retina requires a compatible Blue binary; it cannot be used as an unchanged external skin with upstream v0.4.4a.
 
 ## Installation and first startup

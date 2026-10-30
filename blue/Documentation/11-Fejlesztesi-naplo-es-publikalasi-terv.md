@@ -171,3 +171,11 @@ Ne írjuk át utólag a történeti bejegyzést úgy, mintha egy későbbi javí
 - Integrációs helyi ellenőrzés: 13 Python unittest sikeres; beépített skin erőforrás-egyezés sikeres; CMake konfigurálás és `silverFramework_test` natív fordítás sikeres; CTest `silver_framework_safety` 1/1 sikeres; repository-fájlellenőrzés 755 fájlon sikeres. Teljes platformtermék-fordítás és új kiadás nem történt.
 
 - 2026-10-30, P07: Robert közvetlen forrásmegjelölése szerint a FinaleOnOff az eredeti Silver-K repository gombgrafikáiból újrarenderelt anyag. Az eredetleltárban rögzítve, a megőrzött upstream on/off képek és generálási szövegek hivatkozásával. A konkrét végleges fájlok pontos leszármazási lánca még nem bizonyított; ez nem minden grafika eredetének lezárása.
+
+## Helyi Universal 2 integráció — 2026-10-30
+
+- Forráscommit: `9004549`; helyi AU, VST3 és Standalone Release fordítás sikeres. A csomagoló mindhárom termék arm64/x86_64 architektúráját és ad hoc aláírását ellenőrizte; a ZIP és SHA-256 elkészült. Ez helyi tesztcsomag, nem új GitHub Release.
+- A Standalone CFBundleIconFile értéke Icon.icns, az erőforrás jelen van.
+- CTest: framework safety, conversion, native editor, performance editor, embedded Blue és host clock sikeres (6 teszt). A firmware-függő `silver_latency_reentry` teszt kihagyva (saját firmware nincs a tesztadatkönyvtárban); nem sikeresként számolva.
+- Valódi 2× Standard/Retina render készült a beépített skinek tesztjével; firmware nélkül, ezért az inaktív elemek halványak. README-ben megjelenítve, grafikai áttervezés nélkül.
+- Összefogó draft PR: #3. Windows platformellenőrzés nem indult: a GitHub számlázási/keretkorlátot jelzett (run 41074962800). Teljes helyi Windows/DAW/hangteszt nem történt; a main és a korábbi kiadások változatlanok.
