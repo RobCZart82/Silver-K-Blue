@@ -7,6 +7,7 @@
 #include <thread>
 #include <vector>
 #include <memory>
+#include <atomic>
 
 #include "dsp56kBase/threadtools.h"
 
@@ -49,7 +50,8 @@ namespace pluginLib::patchDB
 
 		std::condition_variable m_emptyCv;
 
-		bool m_destroy = false;
+		std::atomic<bool> m_destroy{false};
+		bool m_stopping = false; // protected by m_mutexFuncs
 		uint32_t m_numRunning = 0;
 
 		std::vector<std::unique_ptr<std::thread>> m_threads;
@@ -98,3 +100,4 @@ namespace pluginLib::patchDB
 		std::condition_variable m_completedCv;
 	};
 }
+

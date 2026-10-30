@@ -52,12 +52,10 @@ namespace synthLib
 				_dst.write(reinterpret_cast<const char*>(&m[1]), static_cast<std::streamsize>(m.size() - 1));
 			}
 		}
-		const auto newPos = _dst.tellp();
-		const auto trackChunkLength = newPos - trackChunkBegin - 4;	// exclude the chunk length
-
-		writeBuf(_dst, {0xff,0x2f,0x00});	// end of track
+		writeBuf(_dst, {0x00,0xff,0x2f,0x00});	// zero delta, end of track
 
 		const auto end = _dst.tellp();
+		const auto trackChunkLength = end - trackChunkBegin - 4;
 		_dst.seekp(trackChunkBegin);
 		writeUInt32(_dst, static_cast<uint32_t>(trackChunkLength));
 		_dst.seekp(end);
@@ -118,3 +116,4 @@ namespace synthLib
 		}
 	}
 }
+
