@@ -3,8 +3,8 @@
 macOS requirements: Xcode command-line tools with both arm64 and x86_64 SDK support, CMake 3.22+, Python 3, and internet access for the first configuration. Dependencies are fetched from pinned source revisions and compiled locally; prebuilt libraries are not required.
 
 ```sh
-git clone https://github.com/temaniak/Silver-K.git
-cd Silver-K
+git clone https://github.com/RobCZart82/Silver-K-Blue.git
+cd Silver-K-Blue
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release '-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64' -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0
 cmake --build build --target silverK_Standalone silverK_VST3 silverK_AU silver_check silverClock_test silverResamplerRealtime_test silverWorkflow_test -j 6
 SILVER_K_DATA=/tmp/silver-k-tests ctest --test-dir build --output-on-failure -R '^silver_'

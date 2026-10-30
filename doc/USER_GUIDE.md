@@ -23,6 +23,8 @@ Required files are copied into ROMs when selected from another location. Their o
 | Patches | Additional patch banks and individual presets |
 | Skins | Custom skin files |
 
+Blue Standard and Blue Retina 4K are built in and selectable in Setup without installing external files. New settings default to Retina; saved choices are preserved. External copies are optional and may appear separately in the list.
+
 Put each skin package in its own subfolder of Skins, then click Setup → Reload and select it in the skin list. Load skin also opens a package's skin.json or an older Silver-K layout JSON directly. Export template creates an editable copy of the built-in skin. Reload (F5) applies file changes; an invalid reload keeps the working interface. See [Skin packages](SKINS.md) for the authoring format.
 
 ## Patch library

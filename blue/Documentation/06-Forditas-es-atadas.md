@@ -1,11 +1,11 @@
-# Fordítás és átadás
+# Fordítás és forrásátadás
 
-A 03-Source/Plugin mappa tartalmazza az upstream v0.4.4a forrásarchívumát, a négy módosított produkciós fájlt, a teljes helyi patch-et és a korábbi minimális tooltip-patch-et. A 03-Source/Tests tesztjei a fejlesztés ellenőrzését őrzik; a kiadási extra tesztág nem változtat produkciós működést.
+A teljes repository az aktuális build kiindulópontja. Nem kell rá újból alkalmazni a blue/upstream-v0.4.4a.patch történeti pillanatfelvételt vagy régi helyi tooltip-patcheket.
 
-A teljes újraépítéshez a **full-v0.4.4a-to-tooltip-fix.patch** alkalmazandó a tiszta, mellékelt alapforrásra. A **tooltip-only-over-native-fonts.patch** csak a korábbi Native Fonts helyi alapra való, és nem alkalmazandó a teljes patch után még egyszer. Részletes parancsok: 03-Source/Plugin/BUILD.md; platformfüggőségek: 03-Source/Upstream-BUILD.md.
+A pontos Windows x64 és macOS Universal 2 parancsokat a [doc/BUILD.md](../../doc/BUILD.md) tartalmazza. Az első konfigurálás hálózatról tölti a rögzített függőségek forrásait; ez nem teljes offline környezet.
 
-Az első CMake-konfigurálás függőségeket tölt le, ezért a forrásátadás nem teljes offline fejlesztőkörnyezet. A kiadási csomag, a kész plugin és a skinek telepítéséhez nincs újrafordítás vagy hálózati függőségletöltés.
+Mindkét Blue skin és az alkalmazásikon a build erőforrásai közé tartozik. A kész csomag forráscommitját a build-info.json rögzíti, nem a skin v1.0 verziója. A képek módosítása nélkül készült új kód is új forráscommitot és új binárist jelent.
 
-A macOS bináris Release, arm64 + x86_64, macOS 12.0 minimumcéllal készült. A kiadási ellenőrzés a meglévő legutolsó bináris változatlanságát ellenőrzi. A v1.0 névátvezetés csak JSON metaadat, nem hoz létre új hangmotor-buildet.
+Teszteléshez külön SILVER_K_DATA könyvtárat használj. A ROM nélküli regressziók és a saját firmware-t igénylő tesztek eredményét külön rögzítsd; a kihagyott teszt nem sikeres firmware-es teszt.
 
-A fordítást és a teszteket elkülönített adatkönyvtárral végezd; a SILVER_K_DATA változó erre szolgál. A firmware-t igénylő régebbi tesztek saját, jogszerűen rendelkezésre álló ROM-útvonalakat várnak, ezek nincsenek a csomagban. A végleges név- és tooltipellenőrzések firmware nélkül is futtathatók.
+A main-beolvasztás feltételeit, a PR #1 nyitott ellenőrzéseit és a publikálási sorrendet a [fejlesztési napló](11-Fejlesztesi-naplo-es-publikalasi-terv.md) rögzíti. A letölthető csomagok tartalmazzák a forrásra mutató commitlinket és licenceket; a generikus forráscsomag Blue-erőforrásainak javítása a PR #1 része.

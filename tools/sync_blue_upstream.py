@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Daily upstream check; prepare a review branch, never merge private main."""
+"""Daily upstream check; prepare a review branch, never merge main."""
 import json
 import os
 from pathlib import Path
@@ -19,10 +19,8 @@ def api(endpoint):
 def main():
     repo = os.environ.get('GH_REPO', '')
     if repo != 'RobCZart82/Silver-K-Blue':
-        raise RuntimeError('Run only against the intended private Blue repository')
+        raise RuntimeError('Run only against the intended Blue repository')
     metadata = api('repos/' + repo)
-    if not metadata['private']:
-        raise RuntimeError('Refusing to update a repository that is no longer private')
     base = metadata['default_branch']
     state = json.loads(STATE.read_text())
     run('git', 'config', 'user.name', 'github-actions[bot]')
@@ -35,7 +33,7 @@ def main():
     # Ancestry is authoritative, rather than just a previously observed hash.
     integrated = run('git', 'merge-base', '--is-ancestor', upstream, 'HEAD', check=False).returncode == 0
     if integrated and state['latestRelease'] == release:
-        print('No new upstream main commit or stable release. Private main unchanged.')
+        print('No new upstream main commit or stable release. Main unchanged.')
         summary = os.environ.get('GITHUB_STEP_SUMMARY')
         if summary:
             with open(summary, 'a', encoding='utf-8') as stream:
@@ -63,9 +61,9 @@ def main():
     report = ['# Upstream update proposal', '', status, '',
               'Upstream main: `' + upstream + '`',
               'Latest stable release: [' + release['tag_name'] + '](' + release['html_url'] + ')', '',
-              'This automation never merges the private main branch and never publishes public releases.',
+              'This automation never merges the main branch and never publishes releases.',
               'Keep the Blue skins and local UI changes. Review changes, run the Windows workflow on this branch',
-              '(disable private Release saving during testing), and test macOS before approving this update.', '']
+              '(disable Release saving during testing), and test macOS before approving this update.', '']
     if conflicts:
         report += ['## Conflicting files', ''] + ['- `' + path + '`' for path in conflicts]
         report += ['', 'Only this report is proposed; conflicting upstream source changes have not been imported.',

@@ -1,3 +1,5 @@
+> **Történeti kiadási jelentés — 2026-10-29.** A privát feltöltésre és az akkori Actions-korlátra utaló részek az eredeti eseményeket rögzítik. Aktuális fejlesztési állapot: [napló](11-Fejlesztesi-naplo-es-publikalasi-terv.md). A PR #1 későbbi javításai nem részei e binárisoknak.
+
 # Első beépített skines kiadás — 2026-10-29
 
 A közös, ellenőrzött forráscommit: `40b68eeebd8e2c7d4a92229aa25fcb1217a652cc`.
