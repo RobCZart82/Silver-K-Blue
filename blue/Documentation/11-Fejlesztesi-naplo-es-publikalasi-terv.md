@@ -179,3 +179,7 @@ Ne írjuk át utólag a történeti bejegyzést úgy, mintha egy későbbi javí
 - CTest: framework safety, conversion, native editor, performance editor, embedded Blue és host clock sikeres (6 teszt). A firmware-függő `silver_latency_reentry` teszt kihagyva (saját firmware nincs a tesztadatkönyvtárban); nem sikeresként számolva.
 - Valódi 2× Standard/Retina render készült a beépített skinek tesztjével; firmware nélkül, ezért az inaktív elemek halványak. README-ben megjelenítve, grafikai áttervezés nélkül.
 - Összefogó draft PR: #3. Windows platformellenőrzés nem indult: a GitHub számlázási/keretkorlátot jelzett (run 41074962800). Teljes helyi Windows/DAW/hangteszt nem történt; a main és a korábbi kiadások változatlanok.
+
+## Release-ismétlések — 2026-10-30
+
+A régi kiadási workflow a GITHUB_RUN_ATTEMPT értékét is a tagbe tette; újrafuttatáskor azonos csomagból új Release keletkezett. Windows build 3 (-1/-4) és macOS build 2 (-1/-2) ZIP-je platformonként azonos GitHub SHA-256 digestű. Javítás: futásonként állandó -1 tag, a már létező kiadás forráscommitjának ellenőrzése és megtartása. Eltérő commitnál hiba, automatikus törlés/felülírás nincs. A történeti duplikátumok eltávolítása külön jóváhagyásra vár.

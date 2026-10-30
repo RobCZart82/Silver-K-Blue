@@ -72,7 +72,18 @@ jobs:
           GH_REPO: ${{ github.repository }}
         shell: bash
         run: |
-          gh release create "windows-blue-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}" release-files/* \
+          # A rerun publishes the same build, not a new release.
+          release_tag="windows-blue-${GITHUB_RUN_NUMBER}-1"
+          if gh release view "$release_tag" --json targetCommitish > existing-release.json 2>/dev/null; then
+            existing_commit=$(python3 -c 'import json; print(json.load(open("existing-release.json"))["targetCommitish"])')
+            if [ "$existing_commit" != "$GITHUB_SHA" ]; then
+              echo "Existing release points at a different source commit; refusing to reuse it."
+              exit 1
+            fi
+            echo "Release $release_tag already preserves this source commit; no duplicate created."
+            exit 0
+          fi
+          gh release create "$release_tag" release-files/* \
             --target "$GITHUB_SHA" \
             --title "Silver-K Blue Windows x64 build ${GITHUB_RUN_NUMBER}" \
             --notes "Private Windows x64 test build. Source commit: ${GITHUB_SHA}. Includes VST3, Standalone and both embedded Blue skins. No proprietary firmware. ROM-free checks passed; interactive Windows audio/DAW testing is separate."
