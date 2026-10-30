@@ -72,7 +72,18 @@ jobs:
           GH_REPO: ${{ github.repository }}
         shell: bash
         run: |
-          gh release create "macos-blue-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}" release-files/* \
+          # A rerun publishes the same build, not a new release.
+          release_tag="macos-blue-${GITHUB_RUN_NUMBER}-1"
+          if gh release view "$release_tag" --json targetCommitish > existing-release.json 2>/dev/null; then
+            existing_commit=$(python3 -c 'import json; print(json.load(open("existing-release.json"))["targetCommitish"])')
+            if [ "$existing_commit" != "$GITHUB_SHA" ]; then
+              echo "Existing release points at a different source commit; refusing to reuse it."
+              exit 1
+            fi
+            echo "Release $release_tag already preserves this source commit; no duplicate created."
+            exit 0
+          fi
+          gh release create "$release_tag" release-files/* \
             --target "$GITHUB_SHA" \
             --title "Silver-K Blue macOS Universal 2 build ${GITHUB_RUN_NUMBER}" \
             --notes "Private macOS Universal 2 test build. Source commit: ${GITHUB_SHA}. Includes AU, VST3, Standalone and both embedded Blue skins. No proprietary firmware. ROM-free checks passed; interactive macOS audio/DAW testing is separate."
