@@ -1,3 +1,5 @@
+> **Történeti pillanatfelvétel — 2026-10-25.** A lentebbi helyi archívumútvonalak, készültségi állítások és régi binárisleírások a korabeli csomagra vonatkoznak. A jelenlegi sorrend és állapot a [fejlesztési naplóban](11-Fejlesztesi-naplo-es-publikalasi-terv.md), a telepítés a [friss útmutatóban](01-Telepites-es-hasznalat.md) található. A grafikai eredet nyitott pontjai: [PROVENANCE](../Artwork/PROVENANCE.md).
+
 # Aktuális fejlesztési terv és megvalósítási állapot
 
 Állapot: Silver-K Blue v1.0, 2026-10-25. Ez váltja fel a történeti tervek aktuális státuszát. Alap: upstream v0.4.4a, commit `4baaead06e23e2358729cca32b6b511c72022318`. A „kész” itt helyben megvalósított és célzottan ellenőrzött fejlesztést jelent; nem eredeti repositoryba beolvasztott változtatást.

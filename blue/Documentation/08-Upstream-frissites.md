@@ -13,7 +13,7 @@ A GitHub ütemezése késhet. Kézi indítás: Actions → Check Silver-K upstre
 
 ## Új változás esetén
 
-A bot az **automation/upstream-sync** ágra készít frissítési javaslatot, és összehasonlító linket ad a saját privát repositoryhoz. Erről **kézzel nyitható PR**. Nem kér PR-jóváhagyási jogosultságot, nem nyit PR-t automatikusan. A privát main ágat nem egyesíti automatikusan, a repositoryt nem teszi publikussá, az eredeti projekthez nem ír.
+A bot az **automation/upstream-sync** ágra készít frissítési javaslatot, és összehasonlító linket ad a saját repositoryhoz. Erről **kézzel nyitható PR**. Nem kér PR-jóváhagyási jogosultságot, nem nyit PR-t automatikusan. A main ágat nem egyesíti automatikusan, a repositoryt nem teszi publikussá, az eredeti projekthez nem ír.
 
 Tiszta merge esetén a PR tartalmazza az upstream módosításokat, a Blue munka megőrzésével. Ütközésnél a merge visszaáll, és csak a `blue/UPSTREAM-UPDATE.md` jelentés kerül a PR-ba, az ütköző fájlok listájával. Ilyenkor a forrásfrissítés még nincs kész; kézzel kell rendezni.
 
@@ -24,12 +24,12 @@ Az automatikus ág erre a célra fenntartott ág. Ha kézzel dolgozunk rajta, a 
 1. Nézzük át a PR különbségeit, főleg a felület, a buildbeállítások és a GitHub-workflow-k módosításait.
 2. A Windows buildet kézzel futtassuk a javaslati ágra, teszteléskor kikapcsolt Release-mentéssel. A bot PR-ja nem jelent automatikus tesztjóváhagyást.
 3. Fordítsuk és ellenőrizzük a macOS-változatot is; próbáljuk a két skint, a K/KS módot, a projekt-visszatöltést és a fontos hangfunkciókat.
-4. Csak a megfelelő eredmény után egyesítsük a saját main ágba; utána készülhet az új végleges privát kiadás.
+4. Csak a megfelelő eredmény után egyesítsük a saját main ágba; utána készülhet az új ellenőrzött kiadás.
 
 Az upstream új verziója új ütközéseket vagy teszthibákat hozhat. A folyamat megkönnyíti az átvételt, de nem ígér minden jövőbeli verzióval automatikus kompatibilitást. A `blue/upstream-state.json` a saját main által elfogadott állapotot és az utolsó feldolgozott stabil kiadást rögzíti.
 
 ## Jogosultság és ellenőrzés
 
-A frissítési job csak repository-tartalomírást kér a saját javaslati ágához. Az Actions alapjogosultsága olvasás marad. Az automatikus PR-nyitáshoz szükséges, PR-jóváhagyást is lehetővé tevő tágabb beállítás módosítását az automatikus jóváhagyási ellenőrzés elutasította; ezért ezt a jogosultságot nem engedélyeztük. A PR kézzel nyitható, a bot nem hagy jóvá és nem merge-el PR-t. Nincs személyes token vagy firmware a workflow-ban.
+A frissítési job csak repository-tartalomírást kér a saját javaslati ágához. A repository azonosítása megmarad, de privát és nyilvános láthatósággal is működik. A bot nem nyit, hagy jóvá vagy merge-el PR-t, és nem publikál kiadást. Nincs személyes token vagy firmware a workflow-ban.
 
-A `tools/test_sync_blue_upstream.py` ideiglenes helyi repositorykkal, GitHub-írás nélkül ellenőrzi a frissítés nélküli, tiszta merge, ütközés és release-only eseteket. A workflow minden ellenőrzés előtt lefuttatja ezt.
+A `tools/test_sync_blue_upstream.py` ideiglenes helyi repositorykkal, GitHub-írás nélkül ellenőrzi a frissítés nélküli, tiszta merge, ütközés és release-only eseteket privát és nyilvános repositoryval, valamint az idegen repository elutasítását. A workflow minden ellenőrzés előtt lefuttatja ezt.

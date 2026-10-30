@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Package private Windows or Universal 2 builds with embedded Blue skins and provenance."""
+"""Package Windows or Universal 2 builds with embedded Blue skins and provenance."""
 import argparse
 import hashlib
 import json
@@ -72,6 +72,9 @@ def main():
         shutil.copytree(ROOT / 'blue/Skins', stage / 'Skins')
         for f in ['LICENSE.md', 'THIRD_PARTY.md']:
             shutil.copy2(ROOT / f, stage / f)
+        shutil.copy2(ROOT / 'doc/BLUE_PACKAGE_README.md', stage / 'README.md')
+        for f in ['INSTALL.md', 'USER_GUIDE.md', 'SKINS.md']:
+            shutil.copy2(ROOT / 'doc' / f, stage / f)
         (stage / 'README-HU.md').write_text('''# Silver-K Blue — beépített skines tesztbuild
 
 A Plugins/VST3/Silver-K.vst3 teljes csomagját a host által használt VST3 mappába másold. macOS-on a Plugins/AU/Silver-K.component az AU mappába kerülhet. A Standalone mappában található alkalmazás önállóan indítható. A korábbi azonos Silver-K példányt előbb mentsd beolvasási útvonalon kívülre.
@@ -80,7 +83,7 @@ A Silver-K Blue Standard v1.0 és Silver-K Blue Retina 4K v1.0 már be van épí
 
 Saját firmware és szükség esetén Wave ROM/programadat kell; gyártói ROM nincs ebben a csomagban. A ROM nélküli automatizált tesztek nem helyettesítik a DAW-ban végzett működési és hangpróbát. A Windows bináris nincs gyártói tanúsítvánnyal aláírva; a macOS helyi ad hoc aláírást használ, nem notarizált.
 
-Forrás és licencek: a build-info.json fájlban rögzített privát repository és commit; LICENSE.md, THIRD_PARTY.md.
+Forrás és licencek: a build-info.json fájlban rögzített repository és commit; LICENSE.md, THIRD_PARTY.md. Angol telepítési útmutató: README.md, INSTALL.md, USER_GUIDE.md.
 ''', encoding='utf-8')
         info = {'repository': 'https://github.com/RobCZart82/Silver-K-Blue', 'commit': revision,
                 'platform': args.platform, 'configuration': 'Release',

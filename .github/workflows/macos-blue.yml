@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       keep_release:
-        description: Save successful package as a durable private Release
+        description: Save successful package as a durable Release
         type: boolean
         default: true
 permissions:
@@ -17,6 +17,8 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+      - name: Test Blue download packaging
+        run: python tools/test_blue_package.py
       - name: Configure macOS Universal 2 Release
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release '-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64' -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0
       - name: Build VST3, Standalone and ROM-free checks
@@ -25,9 +27,9 @@ jobs:
         env:
           SILVER_K_DATA: ${{ runner.temp }}/silver-blue-tests
         run: ctest --test-dir build -C Release --output-on-failure --no-tests=error -R '^(silver_conversion|silver_host_clock|silver_latency_reentry|silver_native_editor|silver_performance_editor|silver_embedded_blue)$'
-      - name: Package Windows products and both Blue skins
+      - name: Package platform products and both Blue skins
         run: python tools/package_blue_windows.py --products build/source/novation/silverK/buildStandalone/silverPlugin/silverK_artefacts/Release --output blue-output --platform macOS-Universal2
-      - name: Upload private download package
+      - name: Upload download package
         uses: actions/upload-artifact@v4
         with:
           name: Silver-K-Blue-macOS-Universal2-${{ github.run_number }}
@@ -46,7 +48,7 @@ jobs:
           retention-days: 14
   keep-private-release:
     needs: macos
-    if: ${{ inputs.keep_release }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.keep_release }}
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -56,7 +58,7 @@ jobs:
         with:
           name: Silver-K-Blue-macOS-Universal2-${{ github.run_number }}
           path: release-files
-      - name: Preserve build in a private repository Release
+      - name: Publish the selected build as a repository Release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -65,4 +67,4 @@ jobs:
           gh release create "macos-blue-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}" release-files/* \
             --target "$GITHUB_SHA" \
             --title "Silver-K Blue macOS Universal 2 build ${GITHUB_RUN_NUMBER}" \
-            --notes "Private macOS Universal 2 test build. Source commit: ${GITHUB_SHA}. Includes AU, VST3, Standalone and both embedded Blue skins. No proprietary firmware. ROM-free checks passed; interactive macOS audio/DAW testing is separate."
+            --notes "macOS Universal 2 test build. Source commit: ${GITHUB_SHA}. Includes AU, VST3, Standalone and both embedded Blue skins. No proprietary firmware. ROM-free checks passed; interactive macOS audio/DAW testing is separate."

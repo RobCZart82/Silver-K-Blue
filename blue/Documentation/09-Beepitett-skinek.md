@@ -13,7 +13,7 @@ A Standard v1.0 és Retina 4K v1.0 képei és JSON-beállításai a közös prog
 
 Mindkét név megjelenik a Setup skinválasztójában. Új beállításoknál a Retina az alapértelmezett. Korábban mentett Auto, Classic, külső Package/Custom és más választások megmaradnak; régi, skinválasztás nélküli hostállapot továbbra is Auto módra áll vissza. A beépített választás hostprojektben visszatölthető és F5/Reload útján újratölthető fájlútvonal nélkül. A külső skinbetöltés és a régi beépített kinézetek továbbra is elérhetők.
 
-A grafikai skinverziók v1.0-k maradtak, mert a végleges képi anyag nem változott. A build pontos forrását a csomag build-info.json fájlja és a privát Release commitja rögzíti. A plugin azonosítója továbbra is az eredeti Silver-K-é; a csomag nem telepít automatikusan a meglévő példányra.
+A grafikai skinverziók v1.0-k maradtak, mert a végleges képi anyag nem változott. A build pontos forrását a csomag build-info.json fájlja és a Release commitja rögzíti. A plugin azonosítója továbbra is az eredeti Silver-K-é; a csomag nem telepít automatikusan a meglévő példányra.
 
 ## Tesztelés
 
@@ -23,7 +23,7 @@ A sikeres fordítás és a ROM nélküli felületi teszt nem egyenértékű telj
 
 ## Fordítás
 
-Windows: a Silver-K Blue Windows x64 Actions-workflow VST3-at és Standalone-t épít. macOS: a Silver-K Blue macOS Universal 2 workflow AU-t, VST3-at és Standalone-t épít. Mindkettő kézi indítású, és sikeres futás után opcionális privát Release-mentést kínál.
+Windows: a Silver-K Blue Windows x64 Actions-workflow VST3-at és Standalone-t épít. macOS: a Silver-K Blue macOS Universal 2 workflow AU-t, VST3-at és Standalone-t épít. Mindkettő kézi indítású, és sikeres futás után opcionális Release-mentést kínál.
 
 Helyi macOS:
 
