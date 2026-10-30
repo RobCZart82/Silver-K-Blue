@@ -5,11 +5,6 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
-    inputs:
-      keep_release:
-        description: Save successful package as a durable Release
-        type: boolean
-        default: true
 permissions:
   contents: read
 concurrency:
@@ -27,6 +22,8 @@ jobs:
         run: python tools/test_sync_blue_upstream.py
       - name: Test Blue download packaging
         run: python tools/test_blue_package.py
+      - name: Verify unified release validation
+        run: python tools/test_publish_blue_release.py
       - name: Configure macOS Universal 2 Release
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release '-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64' -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0
       - name: Build VST3, Standalone and ROM-free checks
@@ -54,36 +51,3 @@ jobs:
             build/CMakeFiles/CMakeConfigureLog.yaml
           if-no-files-found: ignore
           retention-days: 14
-  keep-private-release:
-    needs: macos
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.keep_release }}
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: write
-      actions: read
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: Silver-K-Blue-macOS-Universal2-${{ github.run_number }}
-          path: release-files
-      - name: Publish the selected build as a repository Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-        shell: bash
-        run: |
-          # A rerun publishes the same build, not a new release.
-          release_tag="macos-blue-${GITHUB_RUN_NUMBER}-1"
-          if gh release view "$release_tag" --json targetCommitish > existing-release.json 2>/dev/null; then
-            existing_commit=$(python3 -c 'import json; print(json.load(open("existing-release.json"))["targetCommitish"])')
-            if [ "$existing_commit" != "$GITHUB_SHA" ]; then
-              echo "Existing release points at a different source commit; refusing to reuse it."
-              exit 1
-            fi
-            echo "Release $release_tag already preserves this source commit; no duplicate created."
-            exit 0
-          fi
-          gh release create "$release_tag" release-files/* \
-            --target "$GITHUB_SHA" \
-            --title "Silver-K Blue macOS Universal 2 build ${GITHUB_RUN_NUMBER}" \
-            --notes "Private macOS Universal 2 test build. Source commit: ${GITHUB_SHA}. Includes AU, VST3, Standalone and both embedded Blue skins. No proprietary firmware. ROM-free checks passed; interactive macOS audio/DAW testing is separate."
