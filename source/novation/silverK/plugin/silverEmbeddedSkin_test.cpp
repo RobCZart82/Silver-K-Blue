@@ -22,6 +22,17 @@ int main(){try{
      auto folder=juce::File(previewRoot);folder.createDirectory();auto file=folder.getChildFile((name.contains("Retina")?juce::String("Retina"):juce::String("Standard"))+"-embedded-"+(juce::String(page)=="pageMain"?"Main":"Setup")+"-2x.png");file.deleteFile();auto stream=file.createOutputStream();check(stream&&juce::PNGImageFormat().writeImageToStream(editor.createComponentSnapshot(editor.getLocalBounds(),true,2.f),*stream),"Preview export failed");
     }}
    auto* setup=dynamic_cast<juce::TextButton*>(find(editor,"pageSetup"));setup->onClick();
+   auto* advanced=dynamic_cast<juce::TextButton*>(find(editor,"setupAdvancedKS"));
+   check(advanced&&advanced->isVisible(),"Missing advanced KS disclosure");
+   for(const auto* id:{"ksController","ksTwoCoreProcessing","demoSong"})check(!find(editor,id)->isVisible(),"Advanced control visible while collapsed");
+   const auto advancedBefore=p.parameters.copyState();
+   advanced->setToggleState(true,juce::dontSendNotification);advanced->onClick();
+   for(const auto* id:{"ksController","ksTwoCoreProcessing","demoSong"})check(find(editor,id)->isVisible(),"Advanced control inaccessible when expanded");
+   auto* mainPage=dynamic_cast<juce::TextButton*>(find(editor,"pageMain"));mainPage->onClick();
+   check(!find(editor,"ksController")->isVisible(),"Advanced controls leaked onto Main");setup->onClick();
+   check(find(editor,"ksController")->isVisible(),"Disclosure state lost on page switch");
+   advanced->setToggleState(false,juce::dontSendNotification);advanced->onClick();
+   check(p.parameters.copyState().isEquivalentTo(advancedBefore),"Disclosure changed sound parameters");
    for(const auto* folder:{"Patches","ROMs","Skins"}){
     auto* path=dynamic_cast<juce::TextEditor*>(find(editor,"setupPath"+juce::String(folder)));
     check(path&&path->isReadOnly()&&path->isVisible(),"Missing read-only folder path");

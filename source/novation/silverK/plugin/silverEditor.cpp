@@ -615,6 +615,8 @@ struct Editor::Surface final : juce::Component, private juce::Timer
     juce::TextButton rescanRoms{"Rescan ROMs"};
     juce::TextButton diagnostics{"Performance diagnostics"};
     juce::TextButton demoSong{"Demo Song"};
+    juce::TextButton advancedKS{"Show advanced KS settings"};
+    bool advancedKSExpanded=false;
     juce::TextButton waveRom{"Wave ROM"},factory{"KS factory data"},customSkin{"Load skin..."};
     juce::TextButton reloadSkin{"Reload"},exportSkin{"Export template"},openSkins{"Skins folder"};
     std::vector<std::pair<juce::String,juce::File>> skinEntries;
@@ -728,6 +730,10 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         addAndMakeVisible(demoSong);demoSong.setBounds(510,449,270,34);demoSong.setComponentID("demoSong");
         demoSong.setTooltip("Play / stop the original KS demo embedded in full KS Flash data. Factory MIDI banks do not contain the song.");
         demoSong.onClick=[this]{juce::String error;if(!processor.setDemoSong(!processor.demoSongActive(),error))juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::InfoIcon,"KS Demo Song",error);};
+        addAndMakeVisible(advancedKS);advancedKS.setComponentID("setupAdvancedKS");
+        advancedKS.setBounds(800,401,392,34);advancedKS.setClickingTogglesState(true);
+        advancedKS.setTooltip("Show or hide the KS controller, experimental two-core processing and embedded KS demo. Does not change their settings.");
+        advancedKS.onClick=[this]{advancedKSExpanded=advancedKS.getToggleState();refreshAdvancedKSVisibility();};
         addAndMakeVisible(controllerSelect);controllerSelect.setBounds(52,449,436,34);controllerSelect.setComponentID("ksController");
         if(ks::controllerReferenceAvailable()){
             controllerSelect.addItem("KS controller: H8 (original)",1);controllerSelect.addItem("KS controller: C++ (experimental)",2);
@@ -1146,6 +1152,15 @@ struct Editor::Surface final : juce::Component, private juce::Timer
             if(folderPaths[i].getText()!=path)folderPaths[i].setText(path,false);
         }
     }
+    void refreshAdvancedKSVisibility()
+    {
+        const bool visible=page==4 && advancedKSExpanded;
+        advancedKS.setVisible(page==4);
+        advancedKS.setButtonText(advancedKSExpanded?"Hide advanced KS settings":"Show advanced KS settings");
+        controllerSelect.setVisible(visible);
+        twoCoreProcessing.setVisible(visible);twoCoreNotice.setVisible(visible);
+        demoSong.setVisible(visible);
+    }
     void showPage(int selected)
     {
         showProgram();
@@ -1161,7 +1176,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         rescanRoms.setVisible(isSetup);bufferSelect.setVisible(isSetup);waveRom.setVisible(isSetup);factory.setVisible(isSetup);skinSelect.setVisible(isSetup);customSkin.setVisible(isSetup);reloadSkin.setVisible(isSetup);exportSkin.setVisible(isSetup);openSkins.setVisible(isSetup);
         diagnostics.setVisible(isSetup);controllerSelect.setVisible(isSetup);refreshControllerSelection();
         twoCoreProcessing.setVisible(isSetup);twoCoreNotice.setVisible(isSetup);
-        demoSong.setVisible(isSetup && !processor.isKStation());
+        refreshAdvancedKSVisibility();
         loadRom.setBounds(52,245,200,38);folder.setBounds(266,245,170,38);
         if(page==1)rebuildSections();if(page==2)performancePanel->refresh();
         if(studioSkin())updateExtraVisibility();applyLayout();repaint();
