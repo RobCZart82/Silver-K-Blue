@@ -301,3 +301,7 @@ A #11 mappaútvonal-PR mindkét kötelező platformon sikeres és beolvadt. A KS
 ### PR #12 platformellenőrzés javítása
 
 Az első Windows/macOS körben a natív editor teszt még az összecsukható rész előtti láthatóságot várta (Demo visible in wrong model). A teszt most előbb ellenőrzi az alapértelmezett csukott állapotot, majd megnyitja a részt és külön ellenőrzi a Demo firmware szerinti használhatóságát. A hiba ugyanabban a PR-ben javítva; új fejlesztési lépcső nem indult.
+
+## 2026-10-31 — README képernyőképek frissítése
+
+A felhasználó új, REAPER-ben készített K-Station és KS Main képernyőképei váltják a korábbi firmware nélküli Standard/Retina renderpárt az angol README-ben. Mindkét új kép Retina 4K, 256 px-es forgógomb-kockákat használ; a képfeliratok és helyettesítő szövegek ezt és a firmware-verziót jelölik. A teljes Blue logó megmarad, az ismétlődő cím elhagyva. A képek az eredeti PNG-k változatlan másolatai. A meglévő #13 PR bővítése, új PR nélkül.
