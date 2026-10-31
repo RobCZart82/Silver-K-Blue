@@ -4,7 +4,7 @@ Utolsó frissítés: **2026-10-31**
 
 ## Aktuális összefoglaló — 2026-10-31
 
-Ez a szakasz az aktuális állapot; a lentebbi dátumozott bejegyzések történeti bizonyítékok. A repository nyilvános, PR #1–#8 beolvadt. Ellenőrzött main: `dd76cfad632d2b5a433e3e3e9711049f49bb35ad`; Windows és macOS fő ági ellenőrzése sikeres. A GitHub Release-lista a frissítéskor üres; új közös kiadás még nincs publikálva. A sikeres CI nem teljes körű hibamentességi vagy hanghűségi igazolás.
+Ez a szakasz az aktuális állapot; a lentebbi dátumozott bejegyzések történeti bizonyítékok. A repository nyilvános, PR #1–#15 beolvadt. Legutóbb ellenőrzött PR #15: `476792528e5cb2e1438237e2fb93de7b30b8d06e`, Windows és macOS ellenőrzése sikeres; main: `f0b5ccc`. A GitHub Release-lista a frissítéskor üres; új közös kiadás még nincs publikálva. A sikeres CI nem teljes körű hibamentességi vagy hanghűségi igazolás.
 
 | Tétel | Aktuális állapot |
 |---|---|
@@ -13,14 +13,14 @@ Ez a szakasz az aktuális állapot; a lentebbi dátumozott bejegyzések történ
 | Közös Release-folyamat | PR #6 beolvadt: Windows/macOS/forrás és SHA256SUMS egy kiadásban; publikálás hátravan |
 | Mappadokumentáció | PR #7 beolvadt; ROMs/Patches/Skins tényleges keresési szabályai dokumentálva |
 | Auto Blue és Legacy | PR #8 beolvadt; Auto → Blue Retina, külön Standard/Retina/Legacy választás; régi projektek migrációja tesztelve |
-| Setup új elrendezése | Felhasználó által elfogadott koncepció, még nincs beépítve |
+| Setup új elrendezése | PR #11/#12/#14/#15 mainben: útvonalak, Haladó KS-rész, három panel, közvetlen méretmenü; firmware szerinti adatválasztó-állapot finomítása folyamatban |
 | Automatikus Patches-figyelés | Javasolt/tervezett; jelenleg kézi Rescan, nem új automatikus működés |
 | Grafikai eredet és teljes történeti leltár | Részleges; FinaleOnOff upstream forrásmegjelölése rögzítve |
 | Felhasználói elfogadás | Korábbi macOS REAPER AU/VST3 beszámoló megvan; az új kiadás külön használati tesztet igényel |
 
 ### Következő logikus feladatok
 
-1. Az elfogadott Setup-elrendezés megvalósítása és regressziós ellenőrzése, minden jelenlegi funkció megtartásával.
+1. Setup firmware szerinti inaktív állapotainak lezárása és használati ellenőrzése; a háromszekciós elrendezés már mainben van.
 2. Az új állapotból sikeres, azonos commitú Windows/macOS csomagok közös kiadása forrás-ZIP-pel és ellenőrzőösszegekkel; letöltési linkek és release-manifeszt aktualizálása.
 3. Az új csomagok DAW/Standalone használati próbái, külön Windows és macOS eredményekkel.
 4. Eredetleltár és történeti tartalomellenőrzés lezárása. Patches-változásfigyelés csak külön célzott fejlesztésként.
@@ -313,3 +313,7 @@ A #12 és #13 PR sikeres Windows/macOS ellenőrzés után beolvadt. A Blue Setup
 ## 2026-10-31 — Setup felületméret-gomb
 
 A #14 háromszekciós Setup PR mindkét kötelező platformon sikeres és beolvadt. A Blue Megjelenés részben közvetlen Interface size gomb nyitja a meglévő méretválasztó menüt: 50/75/100% és egyéni 50–150%. A jobb egérgombos menü, méretmentés és aránytartás változatlan; a gomb nem vezet be második méretezési logikát. Az átfedés-ellenőrzés a gombra is kiterjed.
+
+## 2026-10-31 — Setup KS-adatválasztók állapota
+
+A Wave ROM és KS factory data választók K-Station módban most inaktívak; a gyorstipp elmagyarázza, hogy ezek KS-adatok, a K-Station presetbankok a Patches alá tartoznak. KS módban a betöltésen kívül használhatók, a meglévő választási funkció változatlan. Az állapot oldalváltáskor és firmware-váltáskor frissül. A natív editor teszt mindkét modellnél ellenőrzi az elérhetőséget, amikor ROM-paraméterekkel fut; firmware nélkül a KS alapállapotot ellenőrzi.

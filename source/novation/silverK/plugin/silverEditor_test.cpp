@@ -70,6 +70,11 @@ static void verify(Processor& p){
  check(demo->isEnabled()==(!p.isKStation()&&p.firmwareReady()&&!p.isFirmwareLoading()),"Demo availability does not match firmware");check(!demo->getBounds().intersects(controller->getBounds()),"Demo/controller overlap");
  check(controller->isVisible()&&controller->getParentComponent()->getLocalBounds().contains(controller->getBounds()),"Controller missing/outside Setup");
  check(controller->isEnabled()==!p.isKStation() && controller->getSelectedId()==p.ksControllerMode()+1,"Controller model/selection mismatch");
+ for(const auto* id:{"waveRom","factoryData"}){
+  auto* asset=dynamic_cast<juce::TextButton*>(find(*e,id));
+  check(asset&&asset->isEnabled()==(!p.isKStation()&&!p.isFirmwareLoading()),"KS asset availability mismatch");
+  check(asset->getTooltip().isNotEmpty(),"KS asset missing explanation");
+ }
  auto* channel=find(*e,"controlChannel");auto* buffer=find(*e,"audioBuffer");check(channel&&buffer&&!channel->getBounds().intersects(buffer->getBounds())&&!controller->getBounds().intersects(buffer->getBounds()),"Setup controls overlap");
  auto report=juce::JSON::parse(p.performanceReport());check(report["schema"].toString()=="silver-k.performance.v1"&&report["metrics"].isObject(),"Invalid diagnostics JSON");
  check(p.performanceDiagnosticsMode()==0,"Diagnostics enabled by default");
