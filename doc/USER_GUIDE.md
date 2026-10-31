@@ -5,7 +5,7 @@ This guide covers file loading, the editor and the patch library.
 ## First startup
 
 1. Open Silver-K in Standalone or on an instrument track in your DAW.
-2. In Setup, choose Silver-K folder. Use a permanent location. The default is Documents/Silver-K.
+2. In Setup, choose Change data folder.... Use a permanent location. The default is Documents/Silver-K.
 3. For KS, use KS factory data to select one MIDI file containing the complete program and performance data, or select several compatible MIDI files together. Conflicting records are rejected.
 4. KS also requires Wave ROM. A zero bank is created and selected automatically. It supports generated oscillator waves; sounds that need sampled waves may be silent or incomplete. Use Wave ROM to select a compatible bank if needed.
 5. Use Load firmware to select a compatible firmware BIN. The top selector switches between available firmware images. Wait for loading to finish.
@@ -16,6 +16,8 @@ KS cannot start without firmware, Wave ROM and program data. K-Station uses its 
 Required files are copied into ROMs when selected from another location. Their originals remain unchanged. Keep the selected assets available when reopening projects. Rescan ROMs updates the firmware list after files change.
 
 ## Main folder
+
+Setup shows the full Patches, ROMs and Skins paths in read-only fields. Select and copy a path, or use its Open button to reveal the folder. Change data folder changes their shared parent; it does not relocate the three subfolders independently.
 
 | Folder | Purpose |
 | --- | --- |

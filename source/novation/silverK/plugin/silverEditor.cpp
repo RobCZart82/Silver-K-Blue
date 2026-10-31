@@ -604,6 +604,9 @@ struct Editor::Surface final : juce::Component, private juce::Timer
     juce::Component main, content;
     juce::Viewport viewport;
     juce::Label lcd,status,latency,help;
+    std::array<juce::Label,3> folderNames;
+    std::array<juce::TextEditor,3> folderPaths;
+    std::array<juce::TextButton,3> openFolders;
     juce::TextButton loadRom{"Load firmware"},folder{"Silver-K folder"},loadProgram{"Load program"},panic{"Panic"};
     juce::ComboBox mode,group,section,channel;
     std::array<juce::TextButton,5> pages;
@@ -694,6 +697,23 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         reloadSkin.onClick=[this]{refreshSkinList();if(requestSkin)requestSkin(package.manifest!=juce::File{}?package.manifest:juce::File(processor.customSkin),package.manifest==juce::File{}&&!processor.skinChoice.startsWith("Package:")&&processor.skinChoice!="Custom"?processor.skinChoice:juce::String{});};
         exportSkin.onClick=[this]{juce::File exported;juce::String error;if(SkinPackage::exportTemplate(processor.skinsFolder(),exported,error)){refreshSkinList();status.setText("Template exported: "+exported.getParentDirectory().getFullPathName(),juce::dontSendNotification);}else status.setText(error,juce::dontSendNotification);};
         openSkins.onClick=[this]{processor.skinsFolder().createDirectory();processor.skinsFolder().revealToUser();};
+        folder.setButtonText("Change data folder...");
+        folder.setTooltip("Choose the parent data folder. Patches, ROMs and Skins remain its subfolders.");
+        for(size_t i=0;i<folderPaths.size();++i)
+        {
+            const auto name=juce::StringArray{"Patches","ROMs","Skins"}[int(i)];
+            auto& label=folderNames[i];auto& path=folderPaths[i];auto& button=openFolders[i];
+            addAndMakeVisible(label);addAndMakeVisible(path);addAndMakeVisible(button);
+            const int y=668+int(i)*32;
+            label.setText(name,juce::dontSendNotification);label.setBounds(52,y,90,26);
+            setSkinColour(label,juce::Label::textColourId,juce::Colour(0xff171b20));
+            path.setComponentID("setupPath"+name);path.setBounds(146,y,870,26);
+            path.setReadOnly(true);path.setMultiLine(false);path.setSelectAllWhenFocused(true);
+            path.setTooltip("Read-only folder path. Select and copy; use Open to reveal it.");
+            button.setComponentID("setupOpen"+name);button.setButtonText("Open");button.setBounds(1028,y,144,26);
+            button.onClick=[this,i]{const auto file=setupFolders()[i];file.revealToUser();};
+        }
+        refreshFolderPaths();
         rescanRoms.setBounds(450,245,150,38);rescanRoms.onClick=[this]{juce::String error;const bool ok=processor.setRomFolder(processor.dataFolder.getChildFile("ROMs"),error);refreshFirmwares();status.setText(ok?"ROM list updated":error,juce::dontSendNotification);};rescanRoms.setComponentID("rescanRoms");
         bufferSelect.setBounds(52,401,436,34);bufferSelect.setComponentID("audioBuffer");for(const auto& name:juce::StringArray{"Audio buffer: Low latency","Audio buffer: Balanced (recommended)","Audio buffer: Safe","Audio buffer: Maximum reserve"})bufferSelect.addItem(name,bufferSelect.getNumItems()+1);bufferSelect.setSelectedId(processor.bufferProfile()+1,juce::dontSendNotification);bufferSelect.onChange=[this]{processor.setBufferProfile(bufferSelect.getSelectedId()-1);};bufferSelect.setTooltip("Internal audio buffering. The audio interface buffer is set in your DAW.");
         addAndMakeVisible(diagnostics);diagnostics.setBounds(510,401,270,34);diagnostics.setComponentID("performanceDiagnostics");
@@ -1112,6 +1132,20 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         applyLayout();
         if(studioSkin()){extraButtons.back().setVisible(!extraSpecs("fx").empty());if(localExtra.isVisible()&&extraDomain=="fx")openExtra("fx");updateExtraVisibility();}
     }
+    std::array<juce::File,3> setupFolders()const
+    {
+        return {processor.patchesFolder(),processor.romFolder,processor.skinsFolder()};
+    }
+    void refreshFolderPaths()
+    {
+        const auto folders=setupFolders();
+        for(size_t i=0;i<folders.size();++i)
+        {
+            const auto path=folders[i].getFullPathName();
+            // Preserve the user's selection while the periodic refresh is running.
+            if(folderPaths[i].getText()!=path)folderPaths[i].setText(path,false);
+        }
+    }
     void showPage(int selected)
     {
         showProgram();
@@ -1122,6 +1156,8 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         viewport.setVisible(isAdvanced);mode.setVisible(isAdvanced);group.setVisible(page==1);section.setVisible(page==1&&mode.getSelectedId()==2);mode.setVisible(page==1);browser.setVisible(page==3);performanceMode.setVisible(false);partActive.setVisible(false);performancePanel->setVisible(page==2);if(page!=2)performancePanel->closeNoteEditor();
         viewport.setBounds(page==2?juce::Rectangle<int>(24,146,int(skin["width"])-48,int(skin["height"])-170):rect(skin["advanced"]["viewport"]));
         for(juce::Component* c:std::array<juce::Component*,6>{&status,&latency,&loadRom,&folder,&channel,&help})c->setVisible(isSetup);
+        refreshFolderPaths();
+        for(size_t i=0;i<folderPaths.size();++i){folderNames[i].setVisible(isSetup);folderPaths[i].setVisible(isSetup);openFolders[i].setVisible(isSetup);}
         rescanRoms.setVisible(isSetup);bufferSelect.setVisible(isSetup);waveRom.setVisible(isSetup);factory.setVisible(isSetup);skinSelect.setVisible(isSetup);customSkin.setVisible(isSetup);reloadSkin.setVisible(isSetup);exportSkin.setVisible(isSetup);openSkins.setVisible(isSetup);
         diagnostics.setVisible(isSetup);controllerSelect.setVisible(isSetup);refreshControllerSelection();
         twoCoreProcessing.setVisible(isSetup);twoCoreNotice.setVisible(isSetup);
@@ -1209,6 +1245,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
     }
     void timerCallback() override
     {
+        refreshFolderPaths();
         refreshControllerSelection();
         twoCoreProcessing.setToggleState(processor.ksTwoCoreProcessing(),juce::dontSendNotification);twoCoreProcessing.setEnabled(!processor.isKStation()&&!processor.isFirmwareLoading());
         diagnostics.setButtonText(processor.performanceDiagnosticsMode()?"Diagnostics: recording":"Performance diagnostics");
