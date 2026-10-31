@@ -1,20 +1,29 @@
 # Silver-K Blue — fejlesztési terv és munkanapló
 
-Utolsó frissítés: **2026-10-30**
+Utolsó frissítés: **2026-10-31**
 
-## Aktuális összefoglaló — 2026-10-30
+## Aktuális összefoglaló — 2026-10-31
 
-Ez a szakasz felülírja az alábbi történeti „PR-ben/privát/függőben” státuszokat. A repository nyilvános; PR #1–#4 beolvadt. A main `9ea8fbf` Windows/macOS CI-je sikeres. A korábbi kiadások törlését Robert kézzel tervezte; közös Windows/macOS/forrás Release még nincs lezárva.
+Ez a szakasz az aktuális állapot; a lentebbi dátumozott bejegyzések történeti bizonyítékok. A repository nyilvános, PR #1–#8 beolvadt. Ellenőrzött main: `dd76cfad632d2b5a433e3e3e9711049f49bb35ad`; Windows és macOS fő ági ellenőrzése sikeres. A GitHub Release-lista a frissítéskor üres; új közös kiadás még nincs publikálva. A sikeres CI nem teljes körű hibamentességi vagy hanghűségi igazolás.
 
 | Tétel | Aktuális állapot |
 |---|---|
-| H01–H09 eredeti javítások, M1–M3 | Main-be beolvasztva, Windows/macOS ellenőrzések sikeresek |
-| M4 upstream-frissítés | Nyilvános működés javítva; fő ági ellenőrzés sikeres |
-| M5 dokumentáció és előnézet | Angol/magyar útmutatók és valódi Standard/Retina képek a main-en |
-| M6 eredet és tartalomellenőrzés | Részleges; FinaleOnOff forrásmegjelölés rögzítve, teljes történeti leltár nincs lezárva |
-| M7 nyilvánossá tétel és védelem | Megtörtént; kötelező Windows/macOS ellenőrzések aktívak |
-| M8 közös kiadás | Hátravan: azonos commitú Windows/macOS/forrás és ellenőrzőösszegek |
-| A01–A04 új auditjavítás | Ezen javítási ágon megvalósítva; új platform-CI és beolvasztás még szükséges |
+| H01–H09 és A01–A04 javítások | Main-ben, kötelező platformellenőrzések sikeresek; PR #1/#3/#5 |
+| Upstream-frissítés | Nyilvános repository-val működik; nincs automatikus main-merge |
+| Közös Release-folyamat | PR #6 beolvadt: Windows/macOS/forrás és SHA256SUMS egy kiadásban; publikálás hátravan |
+| Mappadokumentáció | PR #7 beolvadt; ROMs/Patches/Skins tényleges keresési szabályai dokumentálva |
+| Auto Blue és Legacy | PR #8 beolvadt; Auto → Blue Retina, külön Standard/Retina/Legacy választás; régi projektek migrációja tesztelve |
+| Setup új elrendezése | Felhasználó által elfogadott koncepció, még nincs beépítve |
+| Automatikus Patches-figyelés | Javasolt/tervezett; jelenleg kézi Rescan, nem új automatikus működés |
+| Grafikai eredet és teljes történeti leltár | Részleges; FinaleOnOff upstream forrásmegjelölése rögzítve |
+| Felhasználói elfogadás | Korábbi macOS REAPER AU/VST3 beszámoló megvan; az új kiadás külön használati tesztet igényel |
+
+### Következő logikus feladatok
+
+1. Az elfogadott Setup-elrendezés megvalósítása és regressziós ellenőrzése, minden jelenlegi funkció megtartásával.
+2. Az új állapotból sikeres, azonos commitú Windows/macOS csomagok közös kiadása forrás-ZIP-pel és ellenőrzőösszegekkel; letöltési linkek és release-manifeszt aktualizálása.
+3. Az új csomagok DAW/Standalone használati próbái, külön Windows és macOS eredményekkel.
+4. Eredetleltár és történeti tartalomellenőrzés lezárása. Patches-változásfigyelés csak külön célzott fejlesztésként.
 
 ### A01–A04 javítások
 
@@ -236,3 +245,43 @@ A `doc/DATA_FOLDERS.hu.md` rögzíti a ROMs/Patches/Skins tartalmát és tényle
 Helyi ellenőrzés: az átfordított `silverEmbeddedSkin_test` sikeres; mindkét Blue skin négy oldala, állapotmegőrzés, Auto → Retina feloldás és régi Auto → Legacy migráció ellenőrizve. Diffellenőrzés sikeres. Új kiadási bináris nem készült.
 
 2026-10-31: az Auto Blue PR platformtesztjei a régi, álló knob-grip megjelenést ellenőrző Legacy regresszión álltak meg. A silverEditor_test immár kifejezetten Silver-K Legacy-t választ; a Blue/Auto viselkedését a silverEmbeddedSkin_test ellenőrzi. A termék forgási viselkedése nem változott, tesztet nem távolítottunk el. Új platformfutás szükséges.
+
+## Elfogadott Setup-koncepció — 2026-10-31
+
+A felhasználó elfogadta a három szekciós, ezüst–kék elrendezési tervet. A képi koncepció nem működő felület és nem implementációs bizonyíték. A meglévő fő fejléc és Blue tipográfia megtartandó; a generált kép eltérő díszítése nem követelmény.
+
+### 1. Fájlok és mappák
+
+- Három másolható, csak olvasható útvonalsor: Patches, ROMs, Skins, mindegyik mellett Megnyitás. Külön „Silver-K main” útvonalsor nem kell.
+- Adatmappa módosítása… külön kisebb gombként megmarad; a három almappa követi a kiválasztott főmappát. Önálló almappa-áthelyezést nem vezetünk be.
+- Firmware, Wave ROM és KS-adatok külön kiválasztási sorok; a többfájlos KS-adatkészletet is jelezni kell. A firmware állapot-/hibaüzenetei megmaradnak.
+- ROM-lista frissítése megmarad. K-Station módban a nem használható KS-elemek egyértelműen inaktívak, magyarázattal.
+- A KS All Data.MID célhelye ROMs marad az eredeti működéssel összhangban; a többi presetbank a Patches alá tartozik.
+
+### 2. Megjelenés
+
+- Auto, Blue Standard v1.0, Blue Retina 4K v1.0 (256 px/kocka), Silver-K Legacy; külső skin betöltése megmarad.
+- Felületméret, Skin betöltése…, Újratöltés és Legacy sablon exportálása.
+- **Rögzített felhasználói döntés: Export template változatlanul mindig az eredeti Silver-K/Legacy sablont exportálja, függetlenül az aktív skintől. Aktív Blue-export nem fejlesztési feladat.**
+- A Skins folder funkcióját a fentebbi útvonalsor Megnyitás gombja adja.
+
+### 3. Hang és működés
+
+- MIDI-csatorna, audio buffer, késleltetés és teljesítménydiagnosztika megmarad.
+- Lenyitható Haladó KS-beállítások: KS controller, kísérleti két CPU-magos feldolgozás, KS gyári demó. Semelyik funkciót nem töröljük az átrendezéskor.
+- A Demo Song a teljes kompatibilis KS Flash-be ágyazott demót indítja, nem általános MIDI-lejátszó; a KS All Data.MID önmagában nem biztosít demózenét. Az elérhetőséghez igazított gombállapot és egyértelmű felirat javasolt, megvalósítás még szükséges.
+
+### Elfogadási feltételek
+
+- Minden eddigi Setup művelet elérhető és azonos jelentésű marad; a firmware-/adatkezelési működés nem változik.
+- K/KS, Standard/Retina/Legacy és a támogatott GUI-méretek alatt nincs takarás vagy levágás.
+- Útvonalak frissülnek adatmappaváltáskor, teljes tartalmuk másolható; nem szerkeszthetők véletlenül.
+- Átrendezés a külső skin-layout felülírásokkal és a mentett állapotokkal együtt is ellenőrizendő.
+
+### Patches-figyelés: még nem implementált ötlet
+
+Rekurzív háttérfigyelés, másolás befejezésének megvárása, csak változott fájlok újraindexelése, címkék/kedvencek és szándékos kizárások megőrzése, kikapcsolhatóság. Nem változtatja meg automatikusan az aktív hangszínt. ROM/firmware vagy skin cseréjét önálló engedélyezett műveletként kell kezelni; automatikus hangmotor-újraindítás nem elfogadott követelmény.
+
+### Naplóbejegyzés
+
+2026-10-31: a PR #5–#8 beolvasztási állapota, a sikeres dd76cfa main-platformellenőrzések és az üres Release-lista GitHubon ellenőrizve. Setup-koncepció és Export template döntés rögzítve. Ez a változtatás dokumentációs, futásidejű kódot nem módosít.
