@@ -1,7 +1,5 @@
 ![Silver-K Blue](blue/Artwork/Silver-K-Blue-logo.svg)
 
-# Silver-K Blue
-
 An unofficial [Silver-K](https://github.com/temaniak/Silver-K) variant with integrated **Blue Standard** and **Blue Retina 4K** skins and additional interface changes.
 
 Built on the work of the Silver-K, ungeermoolator and Gearmulator authors. This is an independently maintained variant, not an official upstream release. The documented upstream base is **v0.4.4a**, commit `4baaead06e23e2358729cca32b6b511c72022318`.
@@ -27,15 +25,15 @@ macOS builds target 12.0 or later and are ad hoc signed, not notarized. Windows 
 - Both skins are embedded in all current Blue products; no separate skin installation is required.
 - New settings default to Retina. Previously saved choices and external skins remain supported.
 
-Actual plugin renders from the integration source (`9004549`), captured at 2× scale without firmware; unavailable controls are therefore dimmed. These are UI previews, not audio acceptance tests.
+User-supplied screenshots of the Main view in REAPER, both using **Silver-K Blue Retina 4K v1.0** with **256 px rotary frames**. The interface adapts to the selected firmware.
 
-**Standard**
+**K-Station — Main view, Retina 4K (256 px)**
 
-![Blue Standard actual plugin render](blue/Artwork/Previews/Standard-embedded-Main-2x.png)
+![Silver-K Blue Retina 4K Main view with K-Station OS 2.1.01 in REAPER](blue/Artwork/Previews/k-station-retina-4k-main.png)
 
-**Retina 4K**
+**KS — Main view, Retina 4K (256 px)**
 
-![Blue Retina actual plugin render](blue/Artwork/Previews/Retina-embedded-Main-2x.png)
+![Silver-K Blue Retina 4K Main view with KS OS 2.1.02 in REAPER](blue/Artwork/Previews/ks-retina-4k-main.png)
 
 The source skin packages are in [blue/Skins](blue/Skins). Retina requires a compatible Blue binary; it cannot be used as an unchanged external skin with upstream v0.4.4a.
 
