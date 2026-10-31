@@ -33,3 +33,11 @@ A Setup oldalon saját kompatibilis firmware-t válassz. K-Station saját firmwa
 Standalone esetén válassz hangkimenetet és MIDI-bemenetet; DAW-ban engedélyezd a sávmonitorozást. Bővebben: [User guide](../../doc/USER_GUIDE.md).
 
 A jelenlegi kiadások és ellenőrzési korlátok a [főoldalon](../../README.hu.md) és a [kiadási jelentésben](10-Elso-beepitett-kiadas.md) találhatók. A ROM nélküli teszt nem helyettesíti a saját firmware-rel végzett DAW-os hangpróbát.
+
+## Mappák és fájlok
+
+- **ROMs:** firmware, Wave ROM és **KS All Data.MID** (KS program/performance indítóadat).
+- **Patches és almappái:** további presetek, programok és bankok.
+- **Skins:** külső skin-csomagok külön közvetlen almappákban; a beépített Blue skinekhez nem szükséges.
+
+[Részletes keresési és betöltési szabályok](../../doc/DATA_FOLDERS.hu.md).

@@ -19,9 +19,11 @@ Required files are copied into ROMs when selected from another location. Their o
 
 | Folder | Purpose |
 | --- | --- |
-| ROMs | Files required to start the engine |
+| ROMs | K-Station/KS firmware BIN, compatible KS Wave ROM, and KS All Data.MID (program/performance startup data) |
 | Patches | Additional patch banks and individual presets |
-| Skins | Custom skin files |
+| Skins | External skin packages, one package per immediate subfolder |
+
+Firmware discovery scans ROMs recursively (Setup → Rescan ROMs). Automatic KS All Data discovery checks only files directly in ROMs: .mid/.midi with “all data” in the name, validates their content, and only selects one when no KS data is already selected. Other names or multi-file sets can be selected with Setup → KS factory data. Patches folder scans include subfolders; continuous change watching is not yet implemented. See the [detailed folder map (Hungarian)](DATA_FOLDERS.hu.md).
 
 Blue Standard and Blue Retina 4K are built in and selectable in Setup without installing external files. New settings default to Retina; saved choices are preserved. External copies are optional and may appear separately in the list.
 
