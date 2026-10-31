@@ -1175,6 +1175,14 @@ struct Editor::Surface final : juce::Component, private juce::Timer
             if(folderPaths[i].getText()!=path)folderPaths[i].setText(path,false);
         }
     }
+    void refreshSetupAssetAvailability()
+    {
+        const bool ks=!processor.isKStation();
+        const bool enabled=ks&&!processor.isFirmwareLoading();
+        waveRom.setEnabled(enabled);factory.setEnabled(enabled);
+        waveRom.setTooltip(ks?"Select the KS sampled-wave ROM. The zero placeholder contains no sampled waves.":"KS only. K-Station does not use the external KS Wave ROM.");
+        factory.setTooltip(ks?"Select KS All Data.MID, a compatible multi-file MIDI set, or full KS Flash data. Default location: ROMs.":"KS only. K-Station does not use KS factory Flash/MIDI data. Use Patches for K-Station preset banks.");
+    }
     void refreshAdvancedKSVisibility()
     {
         const bool visible=page==4 && advancedKSExpanded;
@@ -1196,6 +1204,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         viewport.setBounds(page==2?juce::Rectangle<int>(24,146,int(skin["width"])-48,int(skin["height"])-170):rect(skin["advanced"]["viewport"]));
         for(juce::Component* c:std::array<juce::Component*,6>{&status,&latency,&loadRom,&folder,&channel,&help})c->setVisible(isSetup);
         refreshFolderPaths();
+        refreshSetupAssetAvailability();
         interfaceSize.setVisible(isSetup&&blueSetup());
         for(size_t i=0;i<folderPaths.size();++i){folderNames[i].setVisible(isSetup);folderPaths[i].setVisible(isSetup);openFolders[i].setVisible(isSetup);}
         rescanRoms.setVisible(isSetup);bufferSelect.setVisible(isSetup);waveRom.setVisible(isSetup);factory.setVisible(isSetup);skinSelect.setVisible(isSetup);customSkin.setVisible(isSetup);reloadSkin.setVisible(isSetup);exportSkin.setVisible(isSetup);openSkins.setVisible(isSetup&&!blueSetup());
@@ -1296,6 +1305,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
     void timerCallback() override
     {
         refreshFolderPaths();
+        refreshSetupAssetAvailability();
         refreshControllerSelection();
         twoCoreProcessing.setToggleState(processor.ksTwoCoreProcessing(),juce::dontSendNotification);twoCoreProcessing.setEnabled(!processor.isKStation()&&!processor.isFirmwareLoading());
         diagnostics.setButtonText(processor.performanceDiagnosticsMode()?"Diagnostics: recording":"Performance diagnostics");

@@ -27,6 +27,8 @@ Setup shows the full Patches, ROMs and Skins paths in read-only fields. Select a
 | Patches | Additional patch banks and individual presets |
 | Skins | External skin packages, one package per immediate subfolder |
 
+Wave ROM and KS factory data are KS-only selectors. In K-Station mode they are disabled, with tooltips explaining why; K-Station preset banks still belong in Patches.
+
 Firmware discovery scans ROMs recursively (Setup → Rescan ROMs). Automatic KS All Data discovery checks only files directly in ROMs: .mid/.midi with “all data” in the name, validates their content, and only selects one when no KS data is already selected. Other names or multi-file sets can be selected with Setup → KS factory data. Patches folder scans include subfolders; continuous change watching is not yet implemented. See the [detailed folder map (Hungarian)](DATA_FOLDERS.hu.md).
 
 Blue Standard and Blue Retina 4K are built in and selectable in Setup without installing external files. New settings default to Retina; saved choices are preserved. External copies are optional and may appear separately in the list.
