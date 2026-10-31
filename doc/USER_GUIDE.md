@@ -81,3 +81,7 @@ Save the DAW project or Standalone state to retain the current sound, parts and 
 - No sound: check MIDI channel, track monitoring, part state and output routing. A zero Wave ROM does not contain samples.
 - Missing patches: clear browser filters and check the selected source. Use Rescan when files have changed.
 - Updated AU still shows the previous interface: fully restart the DAW and rescan the plugin.
+
+## Blue skin selection
+
+Auto uses the embedded Blue Retina 4K skin. Blue Standard and Blue Retina 4K can also be selected explicitly; Silver-K Legacy retains the original interface. All modes adapt available controls to the loaded firmware. Auto does not select a different skin for each firmware. New settings default to Auto; explicitly saved preferences can still select another skin. Old DAW projects whose Auto state predates the Blue Auto version marker restore Legacy; new Auto project states restore Blue. Historical Silver-K/KS Grey/Classic project values remain readable and appear under the Legacy selector entry. External skin loading remains available.

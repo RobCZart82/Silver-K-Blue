@@ -14,6 +14,7 @@ struct SkinPackage
     juce::Typeface::Ptr typeface;
     static SkinPackage builtin();
     static juce::StringArray choices();
+    static bool isBlueChoice(const juce::String& choice);
     static bool loadEmbedded(const juce::String& choice, SkinPackage&, juce::String& error);
     static bool load(const juce::File&, SkinPackage&, juce::String& error);
     static std::vector<std::pair<juce::String, juce::File>> discover(const juce::File&);

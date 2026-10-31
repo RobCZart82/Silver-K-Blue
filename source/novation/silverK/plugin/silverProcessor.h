@@ -69,7 +69,7 @@ bool isKStation()const{return kMode.load();}
  struct FirmwareChoice {juce::File file;bool kStation;};
  std::vector<FirmwareChoice> firmwares;
  juce::File romFolder;
- juce::String skinChoice="Silver-K Blue Retina 4K v1.0",customSkin,currentPatch;
+ juce::String skinChoice="Auto",customSkin,currentPatch;
  // UI preference, separate from sound parameters and host/DPI scaling.
  std::atomic<double> editorScale{.75};
  std::shared_ptr<Library> libraryOwner;

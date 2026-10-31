@@ -837,6 +837,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         for(int i=0;i<builtins.size();++i)skinSelect.addItem(builtins[i],i+1);
         skinEntries=SkinPackage::discover(processor.skinsFolder());
         int selected=builtins.indexOf(processor.skinChoice)+1;
+        if(processor.skinChoice=="Silver-K" || processor.skinChoice=="KS Grey" || processor.skinChoice=="Classic")selected=builtins.indexOf("Silver-K Legacy")+1;
         for(size_t i=0;i<skinEntries.size();++i){skinSelect.addItem(skinEntries[i].first,int(i)+100);if(skinEntries[i].second==package.manifest)selected=int(i)+100;}
         if(!selected && package.manifest!=juce::File{}){skinEntries.emplace_back(package.name,package.manifest);selected=int(skinEntries.size())+99;skinSelect.addItem(package.name,selected);}
         skinSelect.setSelectedId(selected,juce::dontSendNotification);
@@ -1239,7 +1240,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         controllerSelect.setSelectedId(mode+1,juce::dontSendNotification);
         controllerSelect.setEnabled(ks::controllerReferenceAvailable()&&!processor.isKStation()&&!processor.isFirmwareLoading());
     }
-    bool greyLower()const{return look.isFlat() || (studioSkin()?!processor.isKStation():processor.skinChoice=="KS Grey" || (processor.skinChoice=="Auto"&&!processor.isKStation()));}
+    bool greyLower()const{return look.isFlat() || (studioSkin()?!processor.isKStation():processor.skinChoice=="KS Grey" || (processor.skinChoice=="Silver-K Legacy"&&!processor.isKStation()));}
     void refreshFirmwares(){if(processor.isFirmwareLoading())return;firmwareSelect.clear(juce::dontSendNotification);for(size_t i=0;i<processor.firmwares.size();++i){const auto& f=processor.firmwares[i];firmwareSelect.addItem(juce::String(f.kStation?"K-Station: ":"KS: ")+f.file.getFileName(),int(i)+1);if(f.file==processor.osFile)firmwareSelect.setSelectedId(int(i)+1,juce::dontSendNotification);}if(!firmwareSelect.getSelectedId())firmwareSelect.setText(processor.osFile.existsAsFile()?juce::String(processor.isKStation()?"K-Station: ":"KS: ")+processor.osFile.getFileName():"Choose firmware",juce::dontSendNotification);}
     void startFirmwareLoad(const juce::File& file,int targetPage){
         if(!processor.beginFirmwareLoad(file))return;
@@ -1257,7 +1258,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
 Editor::Editor(Processor& p):AudioProcessorEditor(p),m_processor(p)
 {
     auto package=SkinPackage::builtin();juce::String error;
-    if(SkinPackage::choices().indexOf(p.skinChoice)>=4)SkinPackage::loadEmbedded(p.skinChoice,package,error);
+    if(SkinPackage::isBlueChoice(p.skinChoice))SkinPackage::loadEmbedded(p.skinChoice,package,error);
     if(p.skinChoice=="Custom" || p.skinChoice.startsWith("Package:")){
         bool loaded=SkinPackage::load(juce::File(p.customSkin),package,error);
         if(!loaded && p.skinChoice.startsWith("Package:"))for(const auto& entry:SkinPackage::discover(p.skinsFolder())){
@@ -1290,7 +1291,7 @@ bool Editor::selectSkin(const juce::File& file,const juce::String& builtinChoice
 {
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
     auto candidate=SkinPackage::builtin();
-    if(SkinPackage::choices().indexOf(builtinChoice)>=4 && !SkinPackage::loadEmbedded(builtinChoice,candidate,error))return false;
+    if(SkinPackage::isBlueChoice(builtinChoice) && !SkinPackage::loadEmbedded(builtinChoice,candidate,error))return false;
     if(builtinChoice.isEmpty() && !SkinPackage::load(file,candidate,error))return false;
     if(m_processor.isFirmwareLoading()){error="Wait for firmware loading to finish";return false;}
     m_surface->browser.saveViewState();
