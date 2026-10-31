@@ -1309,7 +1309,8 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         refreshControllerSelection();
         twoCoreProcessing.setToggleState(processor.ksTwoCoreProcessing(),juce::dontSendNotification);twoCoreProcessing.setEnabled(!processor.isKStation()&&!processor.isFirmwareLoading());
         diagnostics.setButtonText(processor.performanceDiagnosticsMode()?"Diagnostics: recording":"Performance diagnostics");
-        demoSong.setButtonText(processor.demoSongActive()?"Stop Demo Song":"Demo Song");demoSong.setEnabled(!processor.isKStation() && processor.firmwareReady() && !processor.isFirmwareLoading());
+        demoSong.setButtonText(processor.demoSongActive()?"Stop Demo Song":"Demo Song");demoSong.setEnabled(processor.demoSongAvailable());
+        demoSong.setTooltip(processor.demoSongAvailable()?"Play / stop the original KS demo embedded in the loaded KS Flash.":"Requires KS firmware and full compatible KS Flash containing the embedded Demo Song. KS All Data.MID and other preset MIDI banks do not contain the song.");
         if(processor.isFirmwareLoading()){
             juce::String error;
             if(!processor.finishFirmwareLoad(error)){setEnabled(false);lcd.setText("Loading firmware...",juce::dontSendNotification);status.setText("Loading firmware...",juce::dontSendNotification);return;}

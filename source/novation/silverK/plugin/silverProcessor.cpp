@@ -347,6 +347,7 @@ Processor::DrumEditInfo Processor::drumEditInfo()const{
  if(p[187]<5 || p[187]>8 || p[188]>=49)return result;
  result.bank=p[187];result.note=36+p[188];result.name=juce::String::fromUTF8(reinterpret_cast<const char*>(p.data()+151),16).trim();return result;
 }
+bool Processor::demoSongAvailable()const{std::lock_guard lock(controlMutex);return !isFirmwareLoading() && ownedDevice && ownedDevice->demoAvailable();}
 bool Processor::demoSongActive()const{std::lock_guard lock(controlMutex);return ownedDevice && ownedDevice->demoActive();}
 bool Processor::setDemoSong(bool enabled,juce::String& error){
  std::lock_guard lock(controlMutex);error.clear();
