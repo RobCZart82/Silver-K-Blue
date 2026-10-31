@@ -616,6 +616,8 @@ struct Editor::Surface final : juce::Component, private juce::Timer
     juce::TextButton diagnostics{"Performance diagnostics"};
     juce::TextButton demoSong{"Demo Song"};
     juce::TextButton advancedKS{"Show advanced KS settings"};
+    juce::TextButton interfaceSize{"Interface size..."};
+    std::function<void(juce::Point<int>)> requestSizeMenu;
     bool advancedKSExpanded=false;
     juce::TextButton waveRom{"Wave ROM"},factory{"KS factory data"},customSkin{"Load skin..."};
     juce::TextButton reloadSkin{"Reload"},exportSkin{"Export template"},openSkins{"Skins folder"};
@@ -730,6 +732,9 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         addAndMakeVisible(demoSong);demoSong.setBounds(510,449,270,34);demoSong.setComponentID("demoSong");
         demoSong.setTooltip("Play / stop the original KS demo embedded in full KS Flash data. Factory MIDI banks do not contain the song.");
         demoSong.onClick=[this]{juce::String error;if(!processor.setDemoSong(!processor.demoSongActive(),error))juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::InfoIcon,"KS Demo Song",error);};
+        addAndMakeVisible(interfaceSize);interfaceSize.setComponentID("setupInterfaceSize");
+        interfaceSize.setTooltip("Choose 50%, 75%, 100%, or a custom interface size from 50% to 150%.");
+        interfaceSize.onClick=[this]{if(requestSizeMenu)requestSizeMenu(interfaceSize.localPointToGlobal(juce::Point<int>(0,interfaceSize.getHeight())));};
         addAndMakeVisible(advancedKS);advancedKS.setComponentID("setupAdvancedKS");
         advancedKS.setBounds(800,401,392,34);advancedKS.setClickingTogglesState(true);
         advancedKS.setTooltip("Show or hide the KS controller, experimental two-core processing and embedded KS demo. Does not change their settings.");
@@ -896,6 +901,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         loadRom.setBounds(38,270,180,34);waveRom.setBounds(230,270,180,34);factory.setBounds(422,270,190,34);
         rescanRoms.setBounds(624,270,170,34);folder.setBounds(806,270,210,34);
         status.setBounds(38,314,1202,32);help.setBounds(38,350,1202,92);
+        interfaceSize.setBounds(966,510,274,34);
         skinSelect.setBounds(38,510,360,34);customSkin.setBounds(410,510,180,34);reloadSkin.setBounds(602,510,120,34);exportSkin.setBounds(734,510,220,34);
         channel.setBounds(38,650,360,34);bufferSelect.setBounds(410,650,500,34);latency.setBounds(928,650,312,34);
         diagnostics.setBounds(38,698,280,34);advancedKS.setBounds(330,698,400,34);
@@ -1190,6 +1196,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         viewport.setBounds(page==2?juce::Rectangle<int>(24,146,int(skin["width"])-48,int(skin["height"])-170):rect(skin["advanced"]["viewport"]));
         for(juce::Component* c:std::array<juce::Component*,6>{&status,&latency,&loadRom,&folder,&channel,&help})c->setVisible(isSetup);
         refreshFolderPaths();
+        interfaceSize.setVisible(isSetup&&blueSetup());
         for(size_t i=0;i<folderPaths.size();++i){folderNames[i].setVisible(isSetup);folderPaths[i].setVisible(isSetup);openFolders[i].setVisible(isSetup);}
         rescanRoms.setVisible(isSetup);bufferSelect.setVisible(isSetup);waveRom.setVisible(isSetup);factory.setVisible(isSetup);skinSelect.setVisible(isSetup);customSkin.setVisible(isSetup);reloadSkin.setVisible(isSetup);exportSkin.setVisible(isSetup);openSkins.setVisible(isSetup&&!blueSetup());
         diagnostics.setVisible(isSetup);controllerSelect.setVisible(isSetup);refreshControllerSelection();
@@ -1361,6 +1368,7 @@ Editor::Editor(Processor& p):AudioProcessorEditor(p),m_processor(p)
 void Editor::connectSurface()
 {
     setLookAndFeel(&m_surface->look);addAndMakeVisible(*m_surface);
+    m_surface->requestSizeMenu=[this](juce::Point<int> position){if(!m_sizeMenuOpen)showSizeMenu(position);};
     m_surface->requestSkin=[this](juce::File file,juce::String choice){
         const juce::Component::SafePointer<Editor> self(this);
         juce::MessageManager::callAsync([self,file,choice]{if(!self)return;juce::String error;if(!self->selectSkin(file,choice,error)){self->m_surface->refreshSkinList();self->m_surface->status.setText("Skin: "+error,juce::dontSendNotification);}});
