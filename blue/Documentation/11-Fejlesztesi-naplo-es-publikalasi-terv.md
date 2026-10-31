@@ -4,7 +4,7 @@ Utolsó frissítés: **2026-10-31**
 
 ## Aktuális összefoglaló — 2026-10-31
 
-Ez a szakasz az aktuális állapot; a lentebbi dátumozott bejegyzések történeti bizonyítékok. A repository nyilvános, PR #1–#15 beolvadt. Legutóbb ellenőrzött PR #15: `476792528e5cb2e1438237e2fb93de7b30b8d06e`, Windows és macOS ellenőrzése sikeres; main: `f0b5ccc`. A GitHub Release-lista a frissítéskor üres; új közös kiadás még nincs publikálva. A sikeres CI nem teljes körű hibamentességi vagy hanghűségi igazolás.
+Ez a szakasz az aktuális állapot; a lentebbi dátumozott bejegyzések történeti bizonyítékok. A repository nyilvános, PR #1–#17 beolvadt. Legutóbb ellenőrzött PR #17: `bae54f9007232017ecea0463e30f0b6f1f3441fb`, Windows és macOS ellenőrzése sikeres; main: `23a5ea2`. A GitHub Release-lista a frissítéskor üres; új közös kiadás még nincs publikálva. A sikeres CI nem teljes körű hibamentességi vagy hanghűségi igazolás.
 
 | Tétel | Aktuális állapot |
 |---|---|
@@ -13,14 +13,14 @@ Ez a szakasz az aktuális állapot; a lentebbi dátumozott bejegyzések történ
 | Közös Release-folyamat | PR #6 beolvadt: Windows/macOS/forrás és SHA256SUMS egy kiadásban; publikálás hátravan |
 | Mappadokumentáció | PR #7 beolvadt; ROMs/Patches/Skins tényleges keresési szabályai dokumentálva |
 | Auto Blue és Legacy | PR #8 beolvadt; Auto → Blue Retina, külön Standard/Retina/Legacy választás; régi projektek migrációja tesztelve |
-| Setup új elrendezése | PR #11/#12/#14/#15 mainben: útvonalak, Haladó KS-rész, három panel, közvetlen méretmenü; firmware szerinti adatválasztó-állapot finomítása folyamatban |
+| Setup új elrendezése | PR #11/#12/#14/#15 mainben: útvonalak, Haladó KS-rész, három panel, közvetlen méretmenü; KS-adatválasztók és demógomb elérhetősége PR #16/#17-ben javítva |
 | Automatikus Patches-figyelés | Javasolt/tervezett; jelenleg kézi Rescan, nem új automatikus működés |
 | Grafikai eredet és teljes történeti leltár | Részleges; FinaleOnOff upstream forrásmegjelölése rögzítve |
 | Felhasználói elfogadás | Korábbi macOS REAPER AU/VST3 beszámoló megvan; az új kiadás külön használati tesztet igényel |
 
 ### Következő logikus feladatok
 
-1. Setup firmware szerinti inaktív állapotainak lezárása és használati ellenőrzése; a háromszekciós elrendezés már mainben van.
+1. Az elkészült Setup használati ellenőrzése valódi K-Station/KS firmware-rel és a célrendszereken; automatikus ROM nélküli ellenőrzései sikeresek.
 2. Az új állapotból sikeres, azonos commitú Windows/macOS csomagok közös kiadása forrás-ZIP-pel és ellenőrzőösszegekkel; letöltési linkek és release-manifeszt aktualizálása.
 3. Az új csomagok DAW/Standalone használati próbái, külön Windows és macOS eredményekkel.
 4. Eredetleltár és történeti tartalomellenőrzés lezárása. Patches-változásfigyelés csak külön célzott fejlesztésként.
@@ -269,7 +269,7 @@ A felhasználó elfogadta a három szekciós, ezüst–kék elrendezési tervet.
 
 - MIDI-csatorna, audio buffer, késleltetés és teljesítménydiagnosztika megmarad.
 - Lenyitható Haladó KS-beállítások: KS controller, kísérleti két CPU-magos feldolgozás, KS gyári demó. Semelyik funkciót nem töröljük az átrendezéskor.
-- A Demo Song a teljes kompatibilis KS Flash-be ágyazott demót indítja, nem általános MIDI-lejátszó; a KS All Data.MID önmagában nem biztosít demózenét. Az elérhetőséghez igazított gombállapot és egyértelmű felirat javasolt, megvalósítás még szükséges.
+- A Demo Song a teljes kompatibilis KS Flash-be ágyazott demót indítja, nem általános MIDI-lejátszó; a KS All Data.MID önmagában nem biztosít demózenét. Az elérhetőséghez igazított gombállapot és magyarázó gyorstipp PR #17-ben megvalósítva; a teljes Flash demó használati próbája hátravan.
 
 ### Elfogadási feltételek
 
@@ -321,3 +321,17 @@ A Wave ROM és KS factory data választók K-Station módban most inaktívak; a 
 ## 2026-10-31 — KS Demo Song tényleges elérhetősége
 
 A #16 PR Windows/macOS ellenőrzése sikeres és beolvadt. A Demo Song gomb engedélyezése most az engine meglévő demoAvailable jelzését követi, nem csupán a KS firmware betöltését. Teljes, kompatibilis demót tartalmazó KS Flash szükséges; KS All Data.MID/preset MIDI esetén a gomb inaktív és a gyorstipp elmagyarázza a feltételt. A demólejátszás és adatellenőrzés meglévő működése változatlan. A firmware nélküli és hiányzó demó-adatos tesztek az új lekérdezést is ellenőrzik.
+
+## 2026-10-31 — Átadási állapot a Setup-fejlesztés után
+
+A jóváhagyott Setup-fejlesztési lépcsők mainben vannak (#11–#17). Az automatikus, ROM nélküli platformellenőrzések sikeresek; nincs nyitott fejlesztési PR az átadási dokumentáció megkezdésekor. A README-k törölt régi kiadásokra mutató linkjeit eltávolítottuk. Új Release nem készült.
+
+Hátralévő ellenőrzések és külön döntések:
+
+- Valódi K-Station és KS firmware-rel a fájlválasztás, adatmappaváltás, méretmenü, inaktív gombok és az összes Setup-művelet interaktív próbája.
+- Hosszú elérési utak másolása, 50–150%-os méretek és saját külső skin-layoutok ellenőrzése; a helyi geometriai teszt nem helyettesíti ezt.
+- Teljes demót tartalmazó kompatibilis KS Flash-sel a Demo Song indítás/leállítás használati próbája. A KS All Data.MID nem ilyen adat.
+- Azonos main-commitból készült Windows/macOS artifactok kiválasztása és közös kiadás külön indítása, forráscsomaggal és ellenőrzőösszegekkel. Nem történik automatikus kiadáspublikálás.
+- Grafikai eredetleltár nyitott pontjai és az upstreamhez ajánlható változtatások külön áttekintése. Automatikus Patches-figyelés továbbra is javaslat, nem beépített funkció.
+
+Ez fejlesztési átadás, nem általános hibamentességi, hanghűségi vagy minden platformra kiterjedő használati elfogadás. A következő új funkció előtt ezek eredményét és a felhasználó prioritását kell figyelembe venni.

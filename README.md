@@ -10,10 +10,10 @@ Built on the work of the Silver-K, ungeermoolator and Gearmulator authors. This 
 
 | Platform | Formats | Current download |
 | --- | --- | --- |
-| Windows x64 | VST3, Standalone | [Windows build 3](https://github.com/RobCZart82/Silver-K-Blue/releases/tag/windows-blue-3-1) |
-| macOS Universal 2 | AU, VST3, Standalone; Apple Silicon + Intel | [macOS build 2](https://github.com/RobCZart82/Silver-K-Blue/releases/tag/macos-blue-2-1) |
+| Windows x64 | VST3, Standalone | Not yet published |
+| macOS Universal 2 | AU, VST3, Standalone; Apple Silicon + Intel | Not yet published |
 
-Both packages were built from `40b68eeebd8e2c7d4a92229aa25fcb1217a652cc`. They are test builds. The framework fixes proposed in [PR #1](https://github.com/RobCZart82/Silver-K-Blue/pull/1) are **not included** in these downloads. See each release for its exact validation and use the supplied SHA-256 file to verify the download.
+The previous platform-specific releases have been removed. A new combined Windows/macOS/source release has not yet been published. Latest successful build artifacts are available to signed-in users from [GitHub Actions](https://github.com/RobCZart82/Silver-K-Blue/actions); each run identifies its exact source commit. These are CI artifacts, not a published release or proof of interactive audio acceptance.
 
 macOS builds target 12.0 or later and are ad hoc signed, not notarized. Windows builds are unsigned. Build success does not establish interactive DAW/audio acceptance on every platform or physical Intel Mac.
 

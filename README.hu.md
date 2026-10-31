@@ -8,10 +8,10 @@ A [temaniak/Silver-K](https://github.com/temaniak/Silver-K) nem hivatalos, sajá
 
 | Platform | Formátumok | Letöltés |
 | --- | --- | --- |
-| Windows x64 | VST3, Standalone | [Windows build 3](https://github.com/RobCZart82/Silver-K-Blue/releases/tag/windows-blue-3-1) |
-| macOS Universal 2 | AU, VST3, Standalone; arm64 + x86_64 | [macOS build 2](https://github.com/RobCZart82/Silver-K-Blue/releases/tag/macos-blue-2-1) |
+| Windows x64 | VST3, Standalone | Még nincs új kiadás |
+| macOS Universal 2 | AU, VST3, Standalone; arm64 + x86_64 | Még nincs új kiadás |
 
-A csomagok forrása `40b68eeebd8e2c7d4a92229aa25fcb1217a652cc`. Tesztkiadások; a [PR #1](https://github.com/RobCZart82/Silver-K-Blue/pull/1) keretrendszer-javításai még nincsenek bennük. Az adott kiadás leírása rögzíti az ellenőrzések körét.
+A korábbi külön platformkiadások törölve lettek. Új közös Windows/macOS/forrás kiadás még nincs publikálva. A sikeres futások build-artifactjai bejelentkezve a [GitHub Actions](https://github.com/RobCZart82/Silver-K-Blue/actions) oldalon érhetők el; minden futásnál látható a pontos forráscommit. Ezek CI-csomagok, nem publikált kiadás vagy teljes használati/hangteszt igazolása.
 
 ## Telepítés és használat
 
