@@ -2,6 +2,9 @@
 
 # Aktuális fejlesztési terv és megvalósítási állapot
 
+**2026-10-31:** az aktuális státusz és az elfogadott Setup-koncepció a [központi fejlesztési napló](11-Fejlesztesi-naplo-es-publikalasi-terv.md) elején és végén található. Az alábbi v1.0 feljegyzés történeti alap; a későbbi beolvasztásokat nem írja felül.
+
+
 Állapot: Silver-K Blue v1.0, 2026-10-25. Ez váltja fel a történeti tervek aktuális státuszát. Alap: upstream v0.4.4a, commit `4baaead06e23e2358729cca32b6b511c72022318`. A „kész” itt helyben megvalósított és célzottan ellenőrzött fejlesztést jelent; nem eredeti repositoryba beolvasztott változtatást.
 
 ## Elkészült grafikai munka
