@@ -1,3 +1,5 @@
+![Silver-K Blue](blue/Artwork/Silver-K-Blue-logo.svg)
+
 # Silver-K Blue
 
 A [temaniak/Silver-K](https://github.com/temaniak/Silver-K) nem hivatalos, saját Blue Standard és Blue Retina 4K felülettel továbbfejlesztett változata. Az eredeti szerzők munkájára épül; dokumentált alapja v0.4.4a.

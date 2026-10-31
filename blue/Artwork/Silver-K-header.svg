@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="685" height="100" viewBox="0 0 685 100"><defs><linearGradient id="silver" x1="0%" y1="0%" x2="0%" y2="100%"><stop stop-color="#F1F5FA"/><stop offset="45%" stop-color="#CCD5DF"/><stop offset="100%" stop-color="#8F9FB2"/></linearGradient></defs>
+<path id="glyph-0-0" transform="translate(0 0) scale(1)" fill="url(#silver)" fill-rule="evenodd" d="M12 0H80V18H20V40H66L80 54V86L66 100H0V82H60V59H14L0 45V14Z"/>
+<path id="glyph-0-1" transform="translate(97 0) scale(1)" fill="url(#silver)" fill-rule="evenodd" d="M0 0H22V100H0Z"/>
+<path id="glyph-0-2" transform="translate(136 0) scale(1)" fill="url(#silver)" fill-rule="evenodd" d="M0 0H20V81H76V100H0Z"/>
+<path id="glyph-0-3" transform="translate(229 0) scale(1)" fill="url(#silver)" fill-rule="evenodd" d="M0 0H22L43 73L64 0H86L55 100H31Z"/>
+<path id="glyph-0-4" transform="translate(332 0) scale(1)" fill="url(#silver)" fill-rule="evenodd" d="M0 0H78V18H20V40H66V58H20V82H78V100H0Z"/>
+<path id="glyph-0-5" transform="translate(429 0) scale(1)" fill="url(#silver)" fill-rule="evenodd" d="M0 0H65L80 15V48L66 62L86 100H62L43 63H20V100H0Z M20 18V45H56L60 41V22L56 18Z"/>
+<path id="glyph-0-6" transform="translate(532 0) scale(1)" fill="url(#silver)" fill-rule="evenodd" d="M0 42H42V60H0Z"/>
+<path id="glyph-0-7" transform="translate(591 0) scale(1)" fill="url(#silver)" fill-rule="evenodd" d="M0 0H21V40H32L66 0H92L48 50L94 100H67L32 61H21V100H0Z"/>
+</svg>

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-juce_add_binary_data(silverData SOURCES ../../kstation/kstationJucePlugin/skins/silver-k-theme.json ../../kstation/kstationJucePlugin/skins/silver-k.json ../../kstation/kstationJucePlugin/skins/silver-k-knob-body.png ../../kstation/kstationJucePlugin/skins/silver-k-knob-grip.png ../../kstation/kstationJucePlugin/skins/silver-k-stand-knob-base.png ../../kstation/kstationJucePlugin/skins/silver-k-button-off.png ../../kstation/kstationJucePlugin/skins/silver-k-button-on.png)
+juce_add_binary_data(silverData SOURCES "${ROOT}/blue/Artwork/Silver-K-header.svg" ../../kstation/kstationJucePlugin/skins/silver-k-theme.json ../../kstation/kstationJucePlugin/skins/silver-k.json ../../kstation/kstationJucePlugin/skins/silver-k-knob-body.png ../../kstation/kstationJucePlugin/skins/silver-k-knob-grip.png ../../kstation/kstationJucePlugin/skins/silver-k-stand-knob-base.png ../../kstation/kstationJucePlugin/skins/silver-k-button-off.png ../../kstation/kstationJucePlugin/skins/silver-k-button-on.png)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 set(BLUE_ARCHIVES "${CMAKE_CURRENT_BINARY_DIR}/embedded-blue")
 file(GLOB_RECURSE BLUE_SKIN_INPUTS CONFIGURE_DEPENDS "${ROOT}/blue/Skins/*")

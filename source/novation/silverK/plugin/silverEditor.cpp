@@ -1,4 +1,5 @@
 #include "silverEditor.h"
+#include "BinaryData.h"
 #include "silverBrowser.h"
 #include "silverPerformance.h"
 #include "silverSkin.h"
@@ -598,6 +599,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
     SkinPackage package;
     juce::var skin;
     SilverLook look;
+    std::unique_ptr<juce::Drawable> headerLogo = juce::Drawable::createFromImageData(BinaryData::SilverKheader_svg, BinaryData::SilverKheader_svgSize);
     juce::TooltipWindow tooltip{this,750};
     juce::Component main, content;
     juce::Viewport viewport;
@@ -1161,7 +1163,13 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         const auto header=rect(skin["header"]).toFloat();
         if(flat){g.setColour(skinColour(*this,0xffeef1f5));g.fillRect(header);g.setColour(skinColour(*this,0xff087fe5));g.fillRect(header.getX(),header.getY(),3.f,header.getHeight());}
         else{g.setGradientFill(juce::ColourGradient(processor.skinChoice=="Classic"?skinColour(*this,0xff438276):skinColour(*this,0xff148de3),0,header.getY(),processor.skinChoice=="Classic"?skinColour(*this,0xff1c5048):skinColour(*this,0xff075293),0,header.getBottom(),false));g.fillRoundedRectangle(header,3);}
-        g.setColour(skinColour(*this,flat?0xff171b20:0xfff1f4f7));g.setFont(skinFont(*this,float(skin.getProperty("titleSize",compactSkin()?32.f:36.f)),juce::Font::bold));g.drawText(skin["name"].toString(),studioSkin()?rect(skin["title"]):juce::Rectangle<int>(40,21,250,45),juce::Justification::centredLeft);
+        g.setColour(skinColour(*this,flat?0xff171b20:0xfff1f4f7));g.setFont(skinFont(*this,float(skin.getProperty("titleSize",compactSkin()?32.f:36.f)),juce::Font::bold));if(headerLogo && package.id.startsWith("silver-k-blue-"))
+        {
+            // Match the supplied mockup: same vertical bounds as the model selector.
+            const auto model = firmwareSelect.getBounds();
+            headerLogo->drawWithin(g, juce::Rectangle<float>(23.f, float(model.getY()), float(model.getX()-33), float(model.getHeight())), juce::RectanglePlacement::stretchToFit, 1.f);
+        }
+        else g.drawText(skin["name"].toString(),studioSkin()?rect(skin["title"]):juce::Rectangle<int>(40,21,250,45),juce::Justification::centredLeft);
         if(page==0)
         {
             if(studioSkin())

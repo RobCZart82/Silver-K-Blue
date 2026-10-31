@@ -1,3 +1,5 @@
+![Silver-K Blue](blue/Artwork/Silver-K-Blue-logo.svg)
+
 # Silver-K Blue
 
 An unofficial [Silver-K](https://github.com/temaniak/Silver-K) variant with integrated **Blue Standard** and **Blue Retina 4K** skins and additional interface changes.
