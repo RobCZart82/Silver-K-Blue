@@ -297,3 +297,7 @@ A #10 logó-PR Windows és macOS ellenőrzése sikeres, beolvadt. A következő 
 ## 2026-10-31 — Setup második lépcső: Haladó KS-rész
 
 A #11 mappaútvonal-PR mindkét kötelező platformon sikeres és beolvadt. A KS controller, a kísérleti kétmagos feldolgozás és a KS Demo Song most alapértelmezetten összecsukott, külön gombbal nyitható részben marad elérhető. A nyitás/csukás nem módosít hangparamétert; az oldalak közötti váltás megőrzi a nyitott állapotot az editor élettartama alatt. Másik oldalon a Haladó kezelőszervek nem látszanak. K-Station esetén a firmware szerinti inaktív állapot megmarad, a Demo Song is inaktívként látható a nyitott részben. A teljes háromszekciós átrendezés továbbra is hátralévő lépcső.
+
+### PR #12 platformellenőrzés javítása
+
+Az első Windows/macOS körben a natív editor teszt még az összecsukható rész előtti láthatóságot várta (Demo visible in wrong model). A teszt most előbb ellenőrzi az alapértelmezett csukott állapotot, majd megnyitja a részt és külön ellenőrzi a Demo firmware szerinti használhatóságát. A hiba ugyanabban a PR-ben javítva; új fejlesztési lépcső nem indult.
