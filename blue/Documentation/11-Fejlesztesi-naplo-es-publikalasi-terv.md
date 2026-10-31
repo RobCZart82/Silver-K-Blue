@@ -285,3 +285,7 @@ Rekurzív háttérfigyelés, másolás befejezésének megvárása, csak változ
 ### Naplóbejegyzés
 
 2026-10-31: a PR #5–#8 beolvasztási állapota, a sikeres dd76cfa main-platformellenőrzések és az üres Release-lista GitHubon ellenőrizve. Setup-koncepció és Export template döntés rögzítve. Ez a változtatás dokumentációs, futásidejű kódot nem módosít.
+
+## 2026-10-31 — Vektoros fejléc-logó
+
+A felhasználó KS és K-Station látványterve alapján a Blue Standard és Retina fejlécében csak a SILVER-K szójel jelenik meg, BLUE sor és aláhúzás nélkül. Függőleges szélei a firmware-választóhoz igazodnak; a vektor függőlegesen nyújtva tölti ki a kijelölt helyet. Legacy változatlan. A README-k tetején a teljes Blue logó szerepel. Forrás: a felhasználó Silver-K-Blue.svg állománya; a fejléc-változat ebből származik. Ellenőrzés és kiadás állapota a kapcsolódó PR-ben.
