@@ -63,7 +63,11 @@ static void verify(Processor& p){
  auto* demo=find(*e,"demoSong");check(demo&&!demo->isVisible(),"Demo escaped Setup");
  auto* controller=dynamic_cast<juce::ComboBox*>(find(*e,"ksController"));check(controller&&!controller->isVisible(),"Controller selector escaped Setup");
  click(*e,"pageSetup");check(diagnostics->isVisible()&&diagnostics->getParentComponent()->getLocalBounds().contains(diagnostics->getBounds()),"Diagnostics missing/outside Setup");
- check(demo->isVisible()==!p.isKStation(),"Demo visible in wrong model");check(!demo->getBounds().intersects(controller->getBounds()),"Demo/controller overlap");
+ check(!demo->isVisible()&&!controller->isVisible(),"Advanced settings must start collapsed");
+ auto* disclosure=dynamic_cast<juce::TextButton*>(find(*e,"setupAdvancedKS"));check(disclosure&&disclosure->isVisible(),"Missing advanced settings disclosure");
+ disclosure->setToggleState(true,juce::dontSendNotification);click(*e,"setupAdvancedKS");
+ check(demo->isVisible(),"Demo missing from expanded advanced section");
+ check(demo->isEnabled()==(!p.isKStation()&&p.firmwareReady()&&!p.isFirmwareLoading()),"Demo availability does not match firmware");check(!demo->getBounds().intersects(controller->getBounds()),"Demo/controller overlap");
  check(controller->isVisible()&&controller->getParentComponent()->getLocalBounds().contains(controller->getBounds()),"Controller missing/outside Setup");
  check(controller->isEnabled()==!p.isKStation() && controller->getSelectedId()==p.ksControllerMode()+1,"Controller model/selection mismatch");
  auto* channel=find(*e,"controlChannel");auto* buffer=find(*e,"audioBuffer");check(channel&&buffer&&!channel->getBounds().intersects(buffer->getBounds())&&!controller->getBounds().intersects(buffer->getBounds()),"Setup controls overlap");
