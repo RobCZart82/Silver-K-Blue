@@ -224,3 +224,7 @@ PR #5 zöld Windows/macOS ellenőrzés után beolvadt; A01–A04 a main `f0a6eb9
 Új kézi `blue-release.yml` workflow: két sikeres, azonos SHA-jú, saját repository main ágán futott Windows/macOS build artifactját ellenőrzi. A ZIP-ek build-info és teljes SHA256SUMS leltára ellenőrzött. Ugyanazon commit git archive forrás-ZIP-je tartalmazza a Blue build-erőforrásokat; a függőségek továbbra is rögzített revíziókból töltődnek le. Egyetlen Release kapja a két platform ZIP-jét, a forrás-ZIP-et és SHA256SUMS.txt-t. Részleges feltöltés draft marad; meglévő verziót nem ír felül. A platformworkflow-k többé nem publikálnak külön Release-t.
 
 A közös kiadás ebben a változtatásban csak előkészített; tényleges publikálás és a README letöltési linkjeinek átvezetése még hátravan. A skinek v1.0 száma különbözik a program kiadási verziójától.
+
+## Adatmappák dokumentációja — 2026-10-31
+
+A `doc/DATA_FOLDERS.hu.md` rögzíti a ROMs/Patches/Skins tartalmát és tényleges keresési mélységét. KS All Data.MID a ROMs alá tartozik; automatikus név- és tartalomellenőrzése csak a közvetlen fájlokat nézi. Firmware- és Patches-keresés rekurzív, skin-katalógus közvetlen csomagalmappás. Folyamatos Patches-változásfigyelés tervezett, nem megvalósult. Magyar útmutatók és angol felhasználói mappatáblázat frissítve; futásidejű működés nem változott.

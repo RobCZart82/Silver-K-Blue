@@ -27,3 +27,11 @@ Saját kompatibilis firmware szükséges; KS módban Wave ROM és program/perfor
 A Standard külső skin upstream v0.4.4a-val is használható. A Retina nagyobb képeihez Blue-kompatibilis bináris kell. A napi upstream-ellenőrzés külön javaslati ágat készít; nem olvaszt automatikusan main-be és nem publikál kiadást.
 
 Forráslicenc: [GPLv3](LICENSE.md); [eredet és függőségek](THIRD_PARTY.md); [grafikai eredet és nyitott ellenőrzések](blue/Artwork/PROVENANCE.md). A történeti dokumentumok korábbi helyi csomagokra utalhatnak.
+
+## Mappák és fájlok
+
+- **ROMs:** firmware, Wave ROM és **KS All Data.MID** (KS program/performance indítóadat).
+- **Patches és almappái:** további presetek, programok és bankok.
+- **Skins:** külső skin-csomagok külön közvetlen almappákban; a beépített Blue skinekhez nem szükséges.
+
+[Részletes keresési és betöltési szabályok](doc/DATA_FOLDERS.hu.md).
