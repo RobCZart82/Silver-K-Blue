@@ -293,3 +293,7 @@ A felhasználó KS és K-Station látványterve alapján a Blue Standard és Ret
 ## 2026-10-31 — Setup első lépcső: mappaútvonalak
 
 A #10 logó-PR Windows és macOS ellenőrzése sikeres, beolvadt. A következő külön lépcső a Setup lap három másolható, csak olvasható Patches/ROMs/Skins útvonalsora és Megnyitás gombja. Az útvonalak követik az adatmappa megváltozását; a periodikus frissítés nem törli a kijelölést. A főmappa kiválasztása megmarad, egyértelműbb Change data folder felirattal. Nincs külön almappa-áthelyezés, nincs automatikus presetbetöltés. A három szekciós teljes átrendezés és a Haladó panel további lépcső; a régi Skins folder gomb átmenetileg még megmarad. Az embedded UI teszt ellenőrzi a csak olvashatóságot és az adatmappaváltás követését.
+
+## 2026-10-31 — Setup második lépcső: Haladó KS-rész
+
+A #11 mappaútvonal-PR mindkét kötelező platformon sikeres és beolvadt. A KS controller, a kísérleti kétmagos feldolgozás és a KS Demo Song most alapértelmezetten összecsukott, külön gombbal nyitható részben marad elérhető. A nyitás/csukás nem módosít hangparamétert; az oldalak közötti váltás megőrzi a nyitott állapotot az editor élettartama alatt. Másik oldalon a Haladó kezelőszervek nem látszanak. K-Station esetén a firmware szerinti inaktív állapot megmarad, a Demo Song is inaktívként látható a nyitott részben. A teljes háromszekciós átrendezés továbbra is hátralévő lépcső.
