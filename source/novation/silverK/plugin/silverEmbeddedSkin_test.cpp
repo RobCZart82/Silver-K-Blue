@@ -25,11 +25,13 @@ int main(){try{
    auto* advanced=dynamic_cast<juce::TextButton*>(find(editor,"setupAdvancedKS"));
    check(advanced&&advanced->isVisible(),"Missing advanced KS disclosure");
    for(const auto* id:{"ksController","ksTwoCoreProcessing","demoSong"})check(!find(editor,id)->isVisible(),"Advanced control visible while collapsed");
+   auto* sizeButton=dynamic_cast<juce::TextButton*>(find(editor,"setupInterfaceSize"));
+   check(sizeButton&&sizeButton->isVisible()&&bool(sizeButton->onClick),"Missing Setup size action");
    check(!find(editor,"openSkins")->isVisible(),"Duplicate Skins folder action still visible");
    const auto advancedBefore=p.parameters.copyState();
    advanced->setToggleState(true,juce::dontSendNotification);advanced->onClick();
    for(const auto* id:{"ksController","ksTwoCoreProcessing","demoSong"})check(find(editor,id)->isVisible(),"Advanced control inaccessible when expanded");
-   const juce::StringArray setupIds{"setupPathPatches","setupPathROMs","setupPathSkins","loadFirmware","waveRom","factoryData","rescanRoms","dataFolder","setupStatus","setupHelp","skinSelect","loadSkin","reloadSkin","exportSkin","controlChannel","audioBuffer","setupLatency","performanceDiagnostics","setupAdvancedKS","ksController","demoSong","ksTwoCoreProcessing","ksTwoCoreNotice"};
+   const juce::StringArray setupIds{"setupPathPatches","setupPathROMs","setupPathSkins","loadFirmware","waveRom","factoryData","rescanRoms","dataFolder","setupStatus","setupHelp","skinSelect","loadSkin","reloadSkin","exportSkin","setupInterfaceSize","controlChannel","audioBuffer","setupLatency","performanceDiagnostics","setupAdvancedKS","ksController","demoSong","ksTwoCoreProcessing","ksTwoCoreNotice"};
    for(int i=0;i<setupIds.size();++i){auto* a=find(editor,setupIds[i]);check(a!=nullptr,"Setup control missing");
     check(a->getParentComponent()->getLocalBounds().contains(a->getBounds()),"Setup control outside canvas");
     for(int j=i+1;j<setupIds.size();++j)check(!a->getBounds().intersects(find(editor,setupIds[j])->getBounds()),"Setup controls overlap: "+setupIds[i]+" / "+setupIds[j]);

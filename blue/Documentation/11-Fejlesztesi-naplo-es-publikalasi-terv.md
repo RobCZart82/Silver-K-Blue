@@ -309,3 +309,7 @@ A felhasználó új, REAPER-ben készített K-Station és KS Main képernyőkép
 ## 2026-10-31 — Setup harmadik lépcső: három szekció
 
 A #12 és #13 PR sikeres Windows/macOS ellenőrzés után beolvadt. A Blue Setup lap három egységes panelre rendezve: Files and folders, Appearance, Audio and operation. A mappaútvonalak felülre kerültek; a firmware/Wave ROM/KS adatválasztók, állapotüzenet és adatfájl-összefoglaló együtt láthatók. A Skins folder duplikált gombját a Skins útvonalsor Open művelete váltja ki. Megjelenésnél megmarad a skinválasztás, betöltés, újratöltés és változatlan Legacy-export. A hangszekcióban MIDI-csatorna, buffer, késleltetés, diagnosztika és lenyitható KS-rész található. Legacy saját elrendezése megmarad; a külső skin komponens-felülírások az alapelrendezés után érvényesülnek. A GUI-méret meglévő jobb egérgombos menüje változatlan.
+
+## 2026-10-31 — Setup felületméret-gomb
+
+A #14 háromszekciós Setup PR mindkét kötelező platformon sikeres és beolvadt. A Blue Megjelenés részben közvetlen Interface size gomb nyitja a meglévő méretválasztó menüt: 50/75/100% és egyéni 50–150%. A jobb egérgombos menü, méretmentés és aránytartás változatlan; a gomb nem vezet be második méretezési logikát. Az átfedés-ellenőrzés a gombra is kiterjed.
