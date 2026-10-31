@@ -18,9 +18,19 @@ int main(){try{
   {Editor editor(p);auto* combo=dynamic_cast<juce::ComboBox*>(find(editor,"skinSelect"));check(combo&&combo->getText()==name,"Embedded selection not shown");
    for(const auto* page:{"pageMain","pagePerf","pagePatches","pageSetup"}){auto* button=dynamic_cast<juce::TextButton*>(find(editor,page));check(button&&bool(button->onClick),"Missing navigation");button->onClick();check(editor.createComponentSnapshot(editor.getLocalBounds(),true,1.f).isValid(),"Page rendering failed");
     const auto previewRoot=juce::SystemStats::getEnvironmentVariable("SILVER_K_PREVIEWS",{});
-    if(previewRoot.isNotEmpty() && juce::String(page)=="pageMain"){
-     auto folder=juce::File(previewRoot);folder.createDirectory();auto file=folder.getChildFile(name.contains("Retina")?"Retina-embedded-Main-2x.png":"Standard-embedded-Main-2x.png");file.deleteFile();auto stream=file.createOutputStream();check(stream&&juce::PNGImageFormat().writeImageToStream(editor.createComponentSnapshot(editor.getLocalBounds(),true,2.f),*stream),"Preview export failed");
+    if(previewRoot.isNotEmpty() && (juce::String(page)=="pageMain" || juce::String(page)=="pageSetup")){
+     auto folder=juce::File(previewRoot);folder.createDirectory();auto file=folder.getChildFile((name.contains("Retina")?juce::String("Retina"):juce::String("Standard"))+"-embedded-"+(juce::String(page)=="pageMain"?"Main":"Setup")+"-2x.png");file.deleteFile();auto stream=file.createOutputStream();check(stream&&juce::PNGImageFormat().writeImageToStream(editor.createComponentSnapshot(editor.getLocalBounds(),true,2.f),*stream),"Preview export failed");
     }}
+   auto* setup=dynamic_cast<juce::TextButton*>(find(editor,"pageSetup"));setup->onClick();
+   for(const auto* folder:{"Patches","ROMs","Skins"}){
+    auto* path=dynamic_cast<juce::TextEditor*>(find(editor,"setupPath"+juce::String(folder)));
+    check(path&&path->isReadOnly()&&path->isVisible(),"Missing read-only folder path");
+    check(path->getText()==p.dataFolder.getChildFile(folder).getFullPathName(),"Incorrect folder path");
+   }
+   check(p.setDataFolder(root.getChildFile(name.contains("Retina")?"retina-moved":"standard-moved"),error),error);
+   setup->onClick();
+   auto* patches=dynamic_cast<juce::TextEditor*>(find(editor,"setupPathPatches"));
+   check(patches->getText()==p.patchesFolder().getFullPathName(),"Folder path did not follow data-folder change");
    check(editor.reloadSkin(error),error);check(p.customSkin.isEmpty(),"Reload wrote an external skin path");
   }
   check(p.parameters.copyState().isEquivalentTo(before),"Skin rendering changed sound parameters");

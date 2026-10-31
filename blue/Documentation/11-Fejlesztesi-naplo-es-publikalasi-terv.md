@@ -289,3 +289,7 @@ Rekurzív háttérfigyelés, másolás befejezésének megvárása, csak változ
 ## 2026-10-31 — Vektoros fejléc-logó
 
 A felhasználó KS és K-Station látványterve alapján a Blue Standard és Retina fejlécében csak a SILVER-K szójel jelenik meg, BLUE sor és aláhúzás nélkül. Függőleges szélei a firmware-választóhoz igazodnak; a vektor függőlegesen nyújtva tölti ki a kijelölt helyet. Legacy változatlan. A README-k tetején a teljes Blue logó szerepel. Forrás: a felhasználó Silver-K-Blue.svg állománya; a fejléc-változat ebből származik. Ellenőrzés és kiadás állapota a kapcsolódó PR-ben.
+
+## 2026-10-31 — Setup első lépcső: mappaútvonalak
+
+A #10 logó-PR Windows és macOS ellenőrzése sikeres, beolvadt. A következő külön lépcső a Setup lap három másolható, csak olvasható Patches/ROMs/Skins útvonalsora és Megnyitás gombja. Az útvonalak követik az adatmappa megváltozását; a periodikus frissítés nem törli a kijelölést. A főmappa kiválasztása megmarad, egyértelműbb Change data folder felirattal. Nincs külön almappa-áthelyezés, nincs automatikus presetbetöltés. A három szekciós teljes átrendezés és a Haladó panel további lépcső; a régi Skins folder gomb átmenetileg még megmarad. Az embedded UI teszt ellenőrzi a csak olvashatóságot és az adatmappaváltás követését.
