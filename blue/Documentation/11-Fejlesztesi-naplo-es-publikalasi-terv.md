@@ -228,3 +228,9 @@ A közös kiadás ebben a változtatásban csak előkészített; tényleges publ
 ## Adatmappák dokumentációja — 2026-10-31
 
 A `doc/DATA_FOLDERS.hu.md` rögzíti a ROMs/Patches/Skins tartalmát és tényleges keresési mélységét. KS All Data.MID a ROMs alá tartozik; automatikus név- és tartalomellenőrzése csak a közvetlen fájlokat nézi. Firmware- és Patches-keresés rekurzív, skin-katalógus közvetlen csomagalmappás. Folyamatos Patches-változásfigyelés tervezett, nem megvalósult. Magyar útmutatók és angol felhasználói mappatáblázat frissítve; futásidejű működés nem változott.
+
+## Auto Blue és egyszerűsített skinválasztó — 2026-10-31
+
+Új fejlesztési ágon: Auto, Blue Standard v1.0, Blue Retina 4K v1.0, Silver-K Legacy. Auto → beépített Blue Retina, firmware-követő kezelőszervekkel; nincs külön K/KS skin. Új beállítás alapja Auto; korábban kifejezetten megjegyzett más skin továbbra is választható. A régi globális Auto beállítás Blue-ra vált, a régi DAW-projekt Auto értéke blueAutoVersion hiányában Legacyként áll helyre. Új Auto projektállapot verziójelzővel Blue marad. A régi Silver-K/KS Grey/Classic projektértékek háttérben olvashatók; a választó Legacyként jelzi őket. A betöltés sorszám helyett névalapú felismerést használ. Eredeti grafikai tartalék és külső skin támogatás megmarad. Célzott teszt: Auto feloldás, új állapot visszatöltése és régi Auto migráció; platformellenőrzés és beolvasztás még szükséges.
+
+Helyi ellenőrzés: az átfordított `silverEmbeddedSkin_test` sikeres; mindkét Blue skin négy oldala, állapotmegőrzés, Auto → Retina feloldás és régi Auto → Legacy migráció ellenőrizve. Diffellenőrzés sikeres. Új kiadási bináris nem készült.

@@ -298,13 +298,14 @@ static bool loadPackage(const juce::File& file,SkinPackage& result,juce::String&
 bool SkinPackage::load(const juce::File& file,SkinPackage& result,juce::String& error)
 { return loadPackage(file,result,error); }
 juce::StringArray SkinPackage::choices()
-{ return {"Auto","Silver-K","KS Grey","Classic","Silver-K Blue Standard v1.0","Silver-K Blue Retina 4K v1.0"}; }
+{ return {"Auto","Silver-K Blue Standard v1.0","Silver-K Blue Retina 4K v1.0","Silver-K Legacy"}; }
+bool SkinPackage::isBlueChoice(const juce::String& choice)
+{ return choice=="Auto" || choice=="Silver-K Blue Standard v1.0" || choice=="Silver-K Blue Retina 4K v1.0"; }
 bool SkinPackage::loadEmbedded(const juce::String& choice,SkinPackage& result,juce::String& error)
 {
-    const auto index=choices().indexOf(choice);
-    if(index<4){error="Unknown embedded Blue skin";return false;}
+    if(!isBlueChoice(choice)){error="Unknown embedded Blue skin";return false;}
     juce::MemoryOutputStream data(64*1024*1024);
-    const juce::String prefix=index==4?"bluestandard":"blueretina";
+    const juce::String prefix=choice=="Silver-K Blue Standard v1.0"?"bluestandard":"blueretina";
     for(int chunk=0;;++chunk){
         int size=0;const auto* bytes=BlueSkinData::getNamedResource((prefix+juce::String(chunk)+"_bin").toRawUTF8(),size);
         if(!bytes)break;

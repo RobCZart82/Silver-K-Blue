@@ -27,6 +27,14 @@ int main(){try{
   juce::MemoryBlock state;p.getStateInformation(state);Processor restored;restored.setStateInformation(state.getData(),int(state.getSize()));check(restored.skinChoice==name,"Embedded skin choice did not restore");
   std::cout<<"PASS: "<<name<<" loads/reloads without skin files; four pages; host-state restore; parameters preserved\n";
  }
+ {
+ Processor autoProcessor;autoProcessor.skinChoice="Auto";juce::MemoryBlock saved;autoProcessor.getStateInformation(saved);
+ Processor current;current.setStateInformation(saved.getData(),int(saved.getSize()));check(current.skinChoice=="Auto","New Auto state did not restore");
+ auto xml=juce::AudioProcessor::getXmlFromBinary(saved.getData(),int(saved.getSize()));check(bool(xml),"Missing state XML");xml->removeAttribute("blueAutoVersion");
+ juce::MemoryBlock legacy;juce::AudioProcessor::copyXmlToBinary(*xml,legacy);Processor previous;previous.setStateInformation(legacy.getData(),int(legacy.getSize()));check(previous.skinChoice=="Silver-K Legacy","Old Auto did not migrate to Legacy");
+ }
+ SkinPackage autoSkin;check(SkinPackage::loadEmbedded("Auto",autoSkin,error),error);check(autoSkin.name=="Silver-K Blue Retina 4K v1.0","Auto must resolve to Blue Retina");
+ check(!SkinPackage::isBlueChoice("Silver-K Legacy"),"Legacy resolved as Blue");
  SkinPackage missing;check(!SkinPackage::loadEmbedded("missing",missing,error),"Unknown embedded choice accepted");
  check(SkinPackage::builtin().id=="builtin","Legacy builtin changed");
  std::cout<<"PASS: embedded skins and classic fallback\n";return 0;
