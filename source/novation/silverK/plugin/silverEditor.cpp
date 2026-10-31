@@ -887,8 +887,25 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         for(auto* child:root.getChildren())if(auto* found=findComponent(*child,id))return found;
         return nullptr;
     }
+    bool blueSetup()const{return package.id.startsWith("silver-k-blue-");}
+    void layoutBlueSetup()
+    {
+        if(!blueSetup())return;
+        for(size_t i=0;i<folderPaths.size();++i){const int y=152+int(i)*36;
+            folderNames[i].setBounds(38,y,94,28);folderPaths[i].setBounds(136,y,948,28);openFolders[i].setBounds(1096,y,144,28);}
+        loadRom.setBounds(38,270,180,34);waveRom.setBounds(230,270,180,34);factory.setBounds(422,270,190,34);
+        rescanRoms.setBounds(624,270,170,34);folder.setBounds(806,270,210,34);
+        status.setBounds(38,314,1202,32);help.setBounds(38,350,1202,92);
+        skinSelect.setBounds(38,510,360,34);customSkin.setBounds(410,510,180,34);reloadSkin.setBounds(602,510,120,34);exportSkin.setBounds(734,510,220,34);
+        channel.setBounds(38,650,360,34);bufferSelect.setBounds(410,650,500,34);latency.setBounds(928,650,312,34);
+        diagnostics.setBounds(38,698,280,34);advancedKS.setBounds(330,698,400,34);
+        controllerSelect.setBounds(38,756,550,34);demoSong.setBounds(606,756,300,34);
+        twoCoreProcessing.setBounds(38,804,1150,34);twoCoreNotice.setBounds(64,842,1150,30);
+    }
     void applyLayout()
     {
+        // Apply package overrides last, including external skins derived from Blue.
+        layoutBlueSetup();
         applySkin(*this);
         for(auto& d:decorations){const auto p=d->description["page"].toString();d->setVisible(p.isEmpty() || p==juce::StringArray{"Main","Extra","Perf","Patches","Setup"}[page]);}
     }
@@ -1160,6 +1177,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         controllerSelect.setVisible(visible);
         twoCoreProcessing.setVisible(visible);twoCoreNotice.setVisible(visible);
         demoSong.setVisible(visible);
+        repaint();
     }
     void showPage(int selected)
     {
@@ -1173,7 +1191,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         for(juce::Component* c:std::array<juce::Component*,6>{&status,&latency,&loadRom,&folder,&channel,&help})c->setVisible(isSetup);
         refreshFolderPaths();
         for(size_t i=0;i<folderPaths.size();++i){folderNames[i].setVisible(isSetup);folderPaths[i].setVisible(isSetup);openFolders[i].setVisible(isSetup);}
-        rescanRoms.setVisible(isSetup);bufferSelect.setVisible(isSetup);waveRom.setVisible(isSetup);factory.setVisible(isSetup);skinSelect.setVisible(isSetup);customSkin.setVisible(isSetup);reloadSkin.setVisible(isSetup);exportSkin.setVisible(isSetup);openSkins.setVisible(isSetup);
+        rescanRoms.setVisible(isSetup);bufferSelect.setVisible(isSetup);waveRom.setVisible(isSetup);factory.setVisible(isSetup);skinSelect.setVisible(isSetup);customSkin.setVisible(isSetup);reloadSkin.setVisible(isSetup);exportSkin.setVisible(isSetup);openSkins.setVisible(isSetup&&!blueSetup());
         diagnostics.setVisible(isSetup);controllerSelect.setVisible(isSetup);refreshControllerSelection();
         twoCoreProcessing.setVisible(isSetup);twoCoreNotice.setVisible(isSetup);
         refreshAdvancedKSVisibility();
@@ -1254,7 +1272,17 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         }
         else if(page==4)
         {
-            g.setColour(skinColour(*this,0xff171b20));g.setFont(skinFont(*this,22.f,juce::Font::bold));g.drawText("Instrument setup",52,94,900,34,juce::Justification::centredLeft);
+            if(blueSetup())
+            {
+                const juce::Rectangle<int> panels[]{{22,100,1234,354},{22,468,1234,112},{22,594,1234,advancedKSExpanded?310:154}};
+                const juce::String titles[]{"Files and folders","Appearance","Audio and operation"};
+                for(int i=0;i<3;++i){const auto r=panels[i].toFloat();
+                    g.setGradientFill(juce::ColourGradient(skinColour(*this,0xffeef1f5),r.getX(),r.getY(),skinColour(*this,0xffd9dfe5),r.getRight(),r.getBottom(),false));g.fillRoundedRectangle(r,4.f);
+                    g.setColour(skinColour(*this,0xffbdc7cf));g.drawRoundedRectangle(r.reduced(.5f),4.f,1.f);
+                    g.setColour(skinColour(*this,0xff171b20));g.setFont(skinFont(*this,18.f,juce::Font::bold));g.drawText(titles[i],panels[i].getX()+16,panels[i].getY()+8,1100,28,juce::Justification::centredLeft);
+                }
+            }
+            else {            g.setColour(skinColour(*this,0xff171b20));g.setFont(skinFont(*this,22.f,juce::Font::bold));g.drawText("Instrument setup",52,94,900,34,juce::Justification::centredLeft);}
         }
         g.setColour(skinColour(*this,0xff171b20).withAlpha(.4f));g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(1),5,1);
     }

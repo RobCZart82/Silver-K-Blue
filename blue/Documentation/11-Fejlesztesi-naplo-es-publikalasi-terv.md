@@ -305,3 +305,7 @@ Az első Windows/macOS körben a natív editor teszt még az összecsukható ré
 ## 2026-10-31 — README képernyőképek frissítése
 
 A felhasználó új, REAPER-ben készített K-Station és KS Main képernyőképei váltják a korábbi firmware nélküli Standard/Retina renderpárt az angol README-ben. Mindkét új kép Retina 4K, 256 px-es forgógomb-kockákat használ; a képfeliratok és helyettesítő szövegek ezt és a firmware-verziót jelölik. A teljes Blue logó megmarad, az ismétlődő cím elhagyva. A képek az eredeti PNG-k változatlan másolatai. A meglévő #13 PR bővítése, új PR nélkül.
+
+## 2026-10-31 — Setup harmadik lépcső: három szekció
+
+A #12 és #13 PR sikeres Windows/macOS ellenőrzés után beolvadt. A Blue Setup lap három egységes panelre rendezve: Files and folders, Appearance, Audio and operation. A mappaútvonalak felülre kerültek; a firmware/Wave ROM/KS adatválasztók, állapotüzenet és adatfájl-összefoglaló együtt láthatók. A Skins folder duplikált gombját a Skins útvonalsor Open művelete váltja ki. Megjelenésnél megmarad a skinválasztás, betöltés, újratöltés és változatlan Legacy-export. A hangszekcióban MIDI-csatorna, buffer, késleltetés, diagnosztika és lenyitható KS-rész található. Legacy saját elrendezése megmarad; a külső skin komponens-felülírások az alapelrendezés után érvényesülnek. A GUI-méret meglévő jobb egérgombos menüje változatlan.
