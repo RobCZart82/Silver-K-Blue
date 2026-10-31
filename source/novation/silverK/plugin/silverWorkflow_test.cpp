@@ -79,6 +79,7 @@ static void drumBrowserChecks(Processor& p,const juce::File& root){
 static void drumPlaybackChecks(Processor& p,const juce::File& root){
  Library library(root.getChildFile("drum-playback-db"));auto grouped=groupDrumMaps(drumFrames(7));const auto& map=grouped[0];auto patch=library.createPatch(Data(map.begin(),map.end()),{});juce::String error;
  check(p.setKSControllerMode(1,error),error.toRawUTF8());
+ check(!p.demoSongAvailable(),"Missing demo reported as available");
  check(!p.setDemoSong(true,error) && error.contains("does not contain") && !p.demoSongActive(),"Missing demo data guard");
  p.setNonRealtime(true);juce::AudioBuffer<float> audio(4,256);juce::MidiBuffer midi;midi.ensureSize(1024);
  audioAllocations=0;auto render=[&](int count){for(int n=0;n<count;++n){audio.clear();inAudio=true;p.processBlock(audio,midi);inAudio=false;}p.refreshControls();};

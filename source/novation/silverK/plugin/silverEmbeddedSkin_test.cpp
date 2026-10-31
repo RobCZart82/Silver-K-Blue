@@ -26,6 +26,7 @@ int main(){try{
    check(advanced&&advanced->isVisible(),"Missing advanced KS disclosure");
    for(const auto* id:{"ksController","ksTwoCoreProcessing","demoSong"})check(!find(editor,id)->isVisible(),"Advanced control visible while collapsed");
    auto* sizeButton=dynamic_cast<juce::TextButton*>(find(editor,"setupInterfaceSize"));
+   check(!p.demoSongAvailable(),"Demo available without loaded firmware");
    check(sizeButton&&sizeButton->isVisible()&&bool(sizeButton->onClick),"Missing Setup size action");
    check(!find(editor,"openSkins")->isVisible(),"Duplicate Skins folder action still visible");
    const auto advancedBefore=p.parameters.copyState();

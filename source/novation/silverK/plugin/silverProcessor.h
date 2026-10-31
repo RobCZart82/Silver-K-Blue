@@ -95,6 +95,7 @@ bool isKStation()const{return kMode.load();}
  int ksControllerMode()const{return ks::controllerReferenceAvailable()?int(ksController.load()):int(ks::ControllerMode::Native);}
  bool setKSControllerMode(int,juce::String& error); // UI/control thread only.
  bool demoSongActive()const;
+ bool demoSongAvailable()const;
  bool setDemoSong(bool,juce::String& error);
  struct DrumEditInfo{int bank=0,note=-1;juce::String name;};
  DrumEditInfo drumEditInfo()const;

@@ -67,7 +67,7 @@ static void verify(Processor& p){
  auto* disclosure=dynamic_cast<juce::TextButton*>(find(*e,"setupAdvancedKS"));check(disclosure&&disclosure->isVisible(),"Missing advanced settings disclosure");
  disclosure->setToggleState(true,juce::dontSendNotification);click(*e,"setupAdvancedKS");
  check(demo->isVisible(),"Demo missing from expanded advanced section");
- check(demo->isEnabled()==(!p.isKStation()&&p.firmwareReady()&&!p.isFirmwareLoading()),"Demo availability does not match firmware");check(!demo->getBounds().intersects(controller->getBounds()),"Demo/controller overlap");
+ check(demo->isEnabled()==p.demoSongAvailable(),"Demo availability does not match firmware");check(!demo->getBounds().intersects(controller->getBounds()),"Demo/controller overlap");
  check(controller->isVisible()&&controller->getParentComponent()->getLocalBounds().contains(controller->getBounds()),"Controller missing/outside Setup");
  check(controller->isEnabled()==!p.isKStation() && controller->getSelectedId()==p.ksControllerMode()+1,"Controller model/selection mismatch");
  for(const auto* id:{"waveRom","factoryData"}){

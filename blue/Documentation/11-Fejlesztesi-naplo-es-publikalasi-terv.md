@@ -317,3 +317,7 @@ A #14 háromszekciós Setup PR mindkét kötelező platformon sikeres és beolva
 ## 2026-10-31 — Setup KS-adatválasztók állapota
 
 A Wave ROM és KS factory data választók K-Station módban most inaktívak; a gyorstipp elmagyarázza, hogy ezek KS-adatok, a K-Station presetbankok a Patches alá tartoznak. KS módban a betöltésen kívül használhatók, a meglévő választási funkció változatlan. Az állapot oldalváltáskor és firmware-váltáskor frissül. A natív editor teszt mindkét modellnél ellenőrzi az elérhetőséget, amikor ROM-paraméterekkel fut; firmware nélkül a KS alapállapotot ellenőrzi.
+
+## 2026-10-31 — KS Demo Song tényleges elérhetősége
+
+A #16 PR Windows/macOS ellenőrzése sikeres és beolvadt. A Demo Song gomb engedélyezése most az engine meglévő demoAvailable jelzését követi, nem csupán a KS firmware betöltését. Teljes, kompatibilis demót tartalmazó KS Flash szükséges; KS All Data.MID/preset MIDI esetén a gomb inaktív és a gyorstipp elmagyarázza a feltételt. A demólejátszás és adatellenőrzés meglévő működése változatlan. A firmware nélküli és hiányzó demó-adatos tesztek az új lekérdezést is ellenőrzik.
