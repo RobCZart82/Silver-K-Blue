@@ -1,7 +1,5 @@
 ![Silver-K Blue](blue/Artwork/Silver-K-Blue-logo.svg)
 
-# Silver-K Blue
-
 An unofficial [Silver-K](https://github.com/temaniak/Silver-K) variant with integrated **Blue Standard** and **Blue Retina 4K** skins and additional interface changes.
 
 Built on the work of the Silver-K, ungeermoolator and Gearmulator authors. This is an independently maintained variant, not an official upstream release. The documented upstream base is **v0.4.4a**, commit `4baaead06e23e2358729cca32b6b511c72022318`.
