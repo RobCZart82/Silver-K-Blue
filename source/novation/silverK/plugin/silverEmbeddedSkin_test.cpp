@@ -15,7 +15,13 @@ int main(){try{
   check(strip.isValid(),"Embedded strip missing");check(strip.getWidth()==(name.contains("Retina")?256:64)&&strip.getHeight()==128*strip.getWidth(),"Embedded filmstrip geometry mismatch");
   Processor p;check(p.setDataFolder(root.getChildFile(name.contains("Retina")?"retina":"standard"),error),error);p.skinChoice=name;p.customSkin.clear();
   const auto before=p.parameters.copyState();
-  {Editor editor(p);auto* combo=dynamic_cast<juce::ComboBox*>(find(editor,"skinSelect"));check(combo&&combo->getText()==name,"Embedded selection not shown");
+  {Editor editor(p);
+   auto* first=find(editor,"partTab1");auto* last=find(editor,"partTab4");auto* model=find(editor,"firmwareSelect");auto* performance=find(editor,"performanceSwitch");auto* nav=find(editor,"pageMain");
+   const auto partRow=first->getBounds().getUnion(last->getBounds());
+   check(partRow.getCentreX()==639,"Header part row must align with Mixer centre");
+   check(model->getRight()<partRow.getX()&&partRow.getRight()<performance->getX()&&performance->getRight()<nav->getX(),"Header groups overlap");
+   check(std::abs(performance->getBounds().getCentreX()-(partRow.getRight()+nav->getX())/2)<=1,"Performance group not centred in header gap");
+   auto* combo=dynamic_cast<juce::ComboBox*>(find(editor,"skinSelect"));check(combo&&combo->getText()==name,"Embedded selection not shown");
    for(const auto* page:{"pageMain","pagePerf","pagePatches","pageSetup"}){auto* button=dynamic_cast<juce::TextButton*>(find(editor,page));check(button&&bool(button->onClick),"Missing navigation");button->onClick();check(editor.createComponentSnapshot(editor.getLocalBounds(),true,1.f).isValid(),"Page rendering failed");
     const auto previewRoot=juce::SystemStats::getEnvironmentVariable("SILVER_K_PREVIEWS",{});
     if(previewRoot.isNotEmpty() && (juce::String(page)=="pageMain" || juce::String(page)=="pageSetup")){

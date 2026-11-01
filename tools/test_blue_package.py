@@ -29,7 +29,7 @@ class BluePackageTests(unittest.TestCase):
             if missing_guide:
                 (root/'doc/USER_GUIDE.md').unlink()
             products = root/'products'
-            for relative in ['Standalone/Silver-K.exe','VST3/Silver-K.vst3/Contents/x86_64-win/Silver-K.vst3']:
+            for relative in ['Standalone/Silver-K Blue.exe','VST3/Silver-K Blue.vst3/Contents/x86_64-win/Silver-K Blue.vst3']:
                 target = products/relative
                 target.parent.mkdir(parents=True, exist_ok=True)
                 data = bytearray(128)
@@ -54,7 +54,7 @@ class BluePackageTests(unittest.TestCase):
                 base = archive.stem+'/'
                 self.assertIsNone(bundle.testzip())
                 readme = bundle.read(base+'README.md').decode()
-                self.assertIn('same plugin identity',readme)
+                self.assertIn('separate plugin identity',readme)
                 self.assertIn('your own compatible firmware',readme)
                 for name in ['INSTALL.md','USER_GUIDE.md','SKINS.md','README-HU.md']:
                     self.assertIn(base+name,bundle.namelist())

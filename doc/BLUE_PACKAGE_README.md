@@ -4,15 +4,15 @@ Silver-K Blue is an unofficial variant of [temaniak/Silver-K](https://github.com
 
 ## Install
 
-Close your DAW before updating. Blue uses the same plugin identity as Silver-K: move the previous plugin outside every host scan folder as a backup, then replace the complete bundle. Avoid keeping two copies with the same identity in scanned folders.
+Close your DAW before updating. Blue uses a separate plugin identity and the name Silver-K Blue, allowing installation alongside upstream Silver-K. Older Blue sessions used the original identity: keep the old build for those projects; they do not automatically migrate to the new Blue identity.
 
 | Platform | Product in this archive | Destination |
 | --- | --- | --- |
-| Windows x64 | Plugins/VST3/Silver-K.vst3 | C:\Program Files\Common Files\VST3\ |
-| Windows x64 | Standalone/Silver-K.exe | A permanent folder; launch directly |
-| macOS | Plugins/VST3/Silver-K.vst3 | ~/Library/Audio/Plug-Ins/VST3/ |
-| macOS | Plugins/AU/Silver-K.component | ~/Library/Audio/Plug-Ins/Components/ |
-| macOS | Standalone/Silver-K.app | Applications or another permanent folder |
+| Windows x64 | Plugins/VST3/Silver-K Blue.vst3 | C:\Program Files\Common Files\VST3\ |
+| Windows x64 | Standalone/Silver-K Blue.exe | A permanent folder; launch directly |
+| macOS | Plugins/VST3/Silver-K Blue.vst3 | ~/Library/Audio/Plug-Ins/VST3/ |
+| macOS | Plugins/AU/Silver-K Blue.component | ~/Library/Audio/Plug-Ins/Components/ |
+| macOS | Standalone/Silver-K Blue.app | Applications or another permanent folder |
 
 Only products for the archive's platform are included. Use a 64-bit host. macOS Universal 2 includes arm64 and x86_64; the build targets macOS 12.0 or later. Physical Intel Macs and older macOS versions require separate runtime validation. Windows builds are unsigned; macOS bundles use ad hoc signing and are not notarized. A missing Windows Visual C++ runtime must be installed separately.
 

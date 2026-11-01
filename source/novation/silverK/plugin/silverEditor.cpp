@@ -221,6 +221,16 @@ public:
     void drawButtonBackground(juce::Graphics& g,juce::Button& b,const juce::Colour&,bool hover,bool down) override
     {
         auto bounds=b.getLocalBounds().toFloat().reduced(1);
+        if(b.getComponentID()=="setupAdvancedKS" && package.id.startsWith("silver-k-blue-")){
+            g.setColour(juce::Colour(hover?0xffe7edf2:0xfff1f4f7));g.fillRoundedRectangle(bounds,4.f);
+            g.setColour(juce::Colours::black);g.drawRoundedRectangle(bounds.reduced(.5f),4.f,1.f);
+            for(float x:{bounds.getX()+14.f,bounds.getRight()-14.f}){
+                const float y=bounds.getCentreY();const float direction=b.getToggleState()?-1.f:1.f;
+                juce::Path arrow;arrow.startNewSubPath(x-4.f,y-2.f*direction);arrow.lineTo(x,y+2.f*direction);arrow.lineTo(x+4.f,y-2.f*direction);
+                g.strokePath(arrow,juce::PathStrokeType(1.5f));
+            }
+            return;
+        }
         const auto style=b.getProperties()["silverSkinStyle"];
         const auto& custom=image(style[b.getToggleState()?"buttonOn":"buttonOff"].toString());
         const bool waveformHoverOnly=bool(style.getProperty("waveformHoverOnly",false));
@@ -269,13 +279,18 @@ public:
     void drawButtonText(juce::Graphics& g,juce::TextButton& b,bool,bool) override
     {
         if(b.getProperties().contains("waveform"))return;
+        if(b.getComponentID()=="setupAdvancedKS" && package.id.startsWith("silver-k-blue-")){
+            g.setColour(juce::Colours::black);g.setFont(selectorFont(b));
+            g.drawFittedText(b.getButtonText(),b.getLocalBounds().reduced(26,3),juce::Justification::centred,1);return;
+        }
         const bool compact=bool(b.getProperties()["compact"]) || (b.getParentComponent()&&bool(b.getParentComponent()->getProperties()["compact"]));
         const auto textColour=isFlat()?skinColour(b,b.getToggleState()?0xfff1f4f7:0xff171b20):(bool(b.getProperties()["partTab"])&&b.getToggleState())?skinColour(b,0xff171b20):(bool(b.getProperties()["led"])&&!bool(b.getProperties()["dark"])?skinColour(b,0xff171b20):skinColour(b,0xfff1f4f7));
         g.setColour(b.isEnabled()?textColour:textColour.withAlpha(.4f));
         g.setFont(skinFont(b,(compact||bool(b.getProperties()["small"]))?11.f:13.f,juce::Font::bold));
         auto area=b.getLocalBounds().reduced(3);
         if(!isFlat() && bool(b.getProperties()["led"]))area.removeFromLeft(juce::roundToInt(capWidth(b))+5);
-        g.drawFittedText(b.getButtonText(),area,juce::Justification::centred,1);
+        const bool leftAlignedLed=bool(b.getProperties()["led"]) && package.id.startsWith("silver-k-blue-");
+        g.drawFittedText(b.getButtonText(),area,leftAlignedLed?juce::Justification::centredLeft:juce::Justification::centred,1);
     }
     void drawComboBox(juce::Graphics& g,int w,int h,bool,int,int,int,int,juce::ComboBox& c) override
     {
@@ -733,7 +748,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         demoSong.setTooltip("Play / stop the original KS demo embedded in full KS Flash data. Factory MIDI banks do not contain the song.");
         demoSong.onClick=[this]{juce::String error;if(!processor.setDemoSong(!processor.demoSongActive(),error))juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::InfoIcon,"KS Demo Song",error);};
         addAndMakeVisible(interfaceSize);interfaceSize.setComponentID("setupInterfaceSize");
-        interfaceSize.setTooltip("Choose 50%, 75%, 100%, or a custom interface size from 50% to 150%.");
+        interfaceSize.setTooltip("Choose 50%, 75%, 100%, 125%, or a custom interface size from 50% to 150%.");
         interfaceSize.onClick=[this]{if(requestSizeMenu)requestSizeMenu(interfaceSize.localPointToGlobal(juce::Point<int>(0,interfaceSize.getHeight())));};
         addAndMakeVisible(advancedKS);advancedKS.setComponentID("setupAdvancedKS");
         advancedKS.setBounds(800,401,392,34);advancedKS.setClickingTogglesState(true);
@@ -898,13 +913,13 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         if(!blueSetup())return;
         for(size_t i=0;i<folderPaths.size();++i){const int y=152+int(i)*36;
             folderNames[i].setBounds(38,y,94,28);folderPaths[i].setBounds(136,y,948,28);openFolders[i].setBounds(1096,y,144,28);}
-        loadRom.setBounds(38,270,180,34);waveRom.setBounds(230,270,180,34);factory.setBounds(422,270,190,34);
-        rescanRoms.setBounds(624,270,170,34);folder.setBounds(806,270,210,34);
+        loadRom.setBounds(38,270,210,34);waveRom.setBounds(260,270,210,34);factory.setBounds(482,270,210,34);
+        rescanRoms.setBounds(704,270,210,34);folder.setBounds(926,270,210,34);
         status.setBounds(38,314,1202,32);help.setBounds(38,350,1202,92);
-        interfaceSize.setBounds(966,510,274,34);
-        skinSelect.setBounds(38,510,360,34);customSkin.setBounds(410,510,180,34);reloadSkin.setBounds(602,510,120,34);exportSkin.setBounds(734,510,220,34);
-        channel.setBounds(38,650,360,34);bufferSelect.setBounds(410,650,500,34);latency.setBounds(928,650,312,34);
-        diagnostics.setBounds(38,698,280,34);advancedKS.setBounds(330,698,400,34);
+        interfaceSize.setBounds(1030,510,210,34);
+        skinSelect.setBounds(38,510,314,34);customSkin.setBounds(364,510,210,34);reloadSkin.setBounds(586,510,210,34);exportSkin.setBounds(808,510,210,34);
+        channel.setBounds(38,650,314,34);bufferSelect.setBounds(364,650,314,34);latency.setBounds(696,650,544,34);
+        diagnostics.setBounds(38,698,314,34);advancedKS.setBounds(364,698,400,34);
         controllerSelect.setBounds(38,756,550,34);demoSong.setBounds(606,756,300,34);
         twoCoreProcessing.setBounds(38,804,1150,34);twoCoreNotice.setBounds(64,842,1150,30);
     }
@@ -930,9 +945,14 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         drumDisplay.setVisible(available && processor.drumEditEnabled());
         if(compactSkin()){
             const auto base=rect(skin["studioHeader"]["performance"]);
-            performanceSwitch.setBounds(available?base.withWidth(110):base);
-            drumEdit.setBounds(base.getX()+116,base.getY(),110,base.getHeight());
-            drumDisplay.setBounds(231,64,1000,18);
+            performanceSwitch.setBounds(blueSetup()?base:(available?base.withWidth(110):base));
+            if(blueSetup()){
+                drumEdit.setBounds(base.getX(),64,base.getWidth(),18);
+                drumDisplay.setBounds(231,64,base.getX()-243,18);
+            }else{
+                drumEdit.setBounds(base.getX()+116,base.getY(),110,base.getHeight());
+                drumDisplay.setBounds(231,64,1000,18);
+            }
         }else{drumEdit.setBounds(675,64,160,20);drumDisplay.setBounds(30,64,635,20);}
         for(auto* c:std::initializer_list<juce::Component*>{&performanceSwitch,&drumEdit,&drumDisplay})applySkin(*c);
         if(!available){drumDisplay.setText({},juce::dontSendNotification);return;}
@@ -1252,7 +1272,9 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         {
             // Match the supplied mockup: same vertical bounds as the model selector.
             const auto model = firmwareSelect.getBounds();
-            headerLogo->drawWithin(g, juce::Rectangle<float>(23.f, float(model.getY()), float(model.getX()-33), float(model.getHeight())), juce::RectanglePlacement::stretchToFit, 1.f);
+            const auto logo=skin["studioHeader"]["logo"];
+            const auto logoBounds=logo.isArray()?rect(logo).toFloat():juce::Rectangle<float>(23.f,float(model.getY()),198.f,float(model.getHeight()));
+            headerLogo->drawWithin(g, logoBounds, juce::RectanglePlacement::stretchToFit, 1.f);
         }
         else g.drawText(skin["name"].toString(),studioSkin()?rect(skin["title"]):juce::Rectangle<int>(40,21,250,45),juce::Justification::centredLeft);
         if(page==0)
@@ -1294,6 +1316,13 @@ struct Editor::Surface final : juce::Component, private juce::Timer
                 const juce::String titles[]{"Files and folders","Appearance","Audio and operation"};
                 for(int i=0;i<3;++i){const auto r=panels[i].toFloat();
                     g.setGradientFill(juce::ColourGradient(skinColour(*this,0xffeef1f5),r.getX(),r.getY(),skinColour(*this,0xffd9dfe5),r.getRight(),r.getBottom(),false));g.fillRoundedRectangle(r,4.f);
+                    const auto& aluminium=look.image("aluminiumGrain1");
+                    if(aluminium.isValid()){
+                        // Reuse the Main panel material at its native 2x density.
+                        // Tile instead of stretching the grain across wide Setup sections.
+                        g.setFillType(juce::FillType(aluminium,juce::AffineTransform::scale(.5f).translated(r.getX(),r.getY())));
+                        g.fillRoundedRectangle(r,4.f);
+                    }
                     g.setColour(skinColour(*this,0xffbdc7cf));g.drawRoundedRectangle(r.reduced(.5f),4.f,1.f);
                     g.setColour(skinColour(*this,0xff171b20));g.setFont(skinFont(*this,18.f,juce::Font::bold));g.drawText(titles[i],panels[i].getX()+16,panels[i].getY()+8,1100,28,juce::Justification::centredLeft);
                 }
@@ -1332,10 +1361,10 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         localExtra.clockSelect.setSelectedId(int(processor.clockSource())+1,juce::dontSendNotification);
         const bool ready=processor.firmwareReady();main.setEnabled(ready);content.setEnabled(ready);loadProgram.setEnabled(true);
         previousPreset.setEnabled(ready);nextPreset.setEnabled(ready);channel.setSelectedId(int(processor.editorChannel())+1,juce::dontSendNotification);
-        juce::StringArray dataNames,dataPaths;for(const auto& file:processor.ksDataFiles()){dataNames.add(file.getFileName());dataPaths.add(file.getFullPathName());}
+        juce::StringArray dataNames;for(const auto& file:processor.ksDataFiles())dataNames.add(file.getFileName());
         const auto missing=[](const juce::File& file){return file.existsAsFile()?file.getFileName():juce::String("Not selected / missing");};
         help.setText(processor.dataFolder.getFullPathName()+"\nROMs | Firmware: "+missing(processor.osFile)+" | Wave ROM: "+missing(processor.bankFile)+"\nKS Data: "+(dataNames.isEmpty()?juce::String("Required: select KS All Data or its MIDI files"):dataNames.joinIntoString(", "))+"\nPatches: additional sounds | Skins: custom skins",juce::dontSendNotification);
-        help.setTooltip("Firmware: "+processor.osFile.getFullPathName()+"\nWave ROM: "+processor.bankFile.getFullPathName()+"\nKS Data:\n"+dataPaths.joinIntoString("\n"));bufferSelect.setSelectedId(processor.bufferProfile()+1,juce::dontSendNotification);const auto rate=processor.getSampleRate();latency.setText(rate>0?"Plugin latency: "+juce::String(1000.*processor.getLatencySamples()/rate,1)+" ms":"",juce::dontSendNotification);
+        help.setTooltip({});bufferSelect.setSelectedId(processor.bufferProfile()+1,juce::dontSendNotification);const auto rate=processor.getSampleRate();latency.setText(rate>0?"Plugin latency: "+juce::String(1000.*processor.getLatencySamples()/rate,1)+" ms":"",juce::dontSendNotification);
     }
     uint64_t lastFirmwareRevision=0;
     void refreshControllerSelection(){
@@ -1379,7 +1408,7 @@ Editor::Editor(Processor& p):AudioProcessorEditor(p),m_processor(p)
 void Editor::connectSurface()
 {
     setLookAndFeel(&m_surface->look);addAndMakeVisible(*m_surface);
-    m_surface->requestSizeMenu=[this](juce::Point<int> position){if(!m_sizeMenuOpen)showSizeMenu(position);};
+    m_surface->requestSizeMenu=[this](juce::Point<int> position){if(!m_sizeMenuOpen)showSizeMenu(position,true);};
     m_surface->requestSkin=[this](juce::File file,juce::String choice){
         const juce::Component::SafePointer<Editor> self(this);
         juce::MessageManager::callAsync([self,file,choice]{if(!self)return;juce::String error;if(!self->selectSkin(file,choice,error)){self->m_surface->refreshSkinList();self->m_surface->status.setText("Skin: "+error,juce::dontSendNotification);}});
@@ -1447,12 +1476,12 @@ void Editor::mouseDown(const juce::MouseEvent& event)
 {
     if(event.mods.isPopupMenu()&&!m_sizeMenuOpen)showSizeMenu(event.getScreenPosition());
 }
-void Editor::showSizeMenu(juce::Point<int> screenPosition)
+void Editor::showSizeMenu(juce::Point<int> screenPosition,bool direct)
 {
     m_sizeMenuOpen=true;
     juce::PopupMenu sizes,menu;
-    for(int percent:{50,75,100})sizes.addItem(percent,juce::String(percent)+"%",true,std::abs(getUiScale()*100-percent)<.1);
-    sizes.addSeparator();sizes.addItem(1,juce::String::fromUTF8("Custom\xe2\x80\xa6"));menu.addSubMenu("Size",sizes);
+    for(int percent:{50,75,100,125})sizes.addItem(percent,juce::String(percent)+"%",true,std::abs(getUiScale()*100-percent)<.1);
+    sizes.addSeparator();sizes.addItem(1,juce::String::fromUTF8("Custom\xe2\x80\xa6"));if(direct)menu=sizes;else menu.addSubMenu("Size",sizes);
     const juce::Component::SafePointer<Editor> self(this);
     // Rectangle(Point, Point) takes two corners, not a position and size.
     const juce::Rectangle<int> target(screenPosition.x,screenPosition.y,1,1);
