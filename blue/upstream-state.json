@@ -1,7 +1,7 @@
 {
   "upstreamRepository": "temaniak/Silver-K",
   "upstreamBranch": "main",
-  "upstreamCommit": "4baaead06e23e2358729cca32b6b511c72022318",
+  "upstreamCommit": "722f65c4cf355a79915c64e7483c9bcfb7aefe3a",
   "latestRelease": {
     "tag_name": "v0.4.4a",
     "published_at": "2026-10-22T12:12:31Z",
