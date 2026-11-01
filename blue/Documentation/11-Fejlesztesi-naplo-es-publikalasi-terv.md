@@ -395,3 +395,7 @@ Az alkalmazás ikonforrása 1024×1024 méretű, átlátszó margóval és leker
 A K-Station Main LFO négy tekerőjének pozíciója a KS nézet már megfelelő rácsához igazítva: bal oszlop x=1027, jobb x=1152, sorok y=502/608. Korábban a bal oszlop 3 px-lel balra, a jobb 3 px-lel jobbra, mindkettő 4 px-lel lejjebb volt. A Rate 1/2 és Delay 1/2 funkciók és feliratok változatlanok. Mindkét Blue JSON elrendezésben a négy téglalap egyezése ellenőrizve.
 
 A README Main-előnézetei a felhasználó új K-Station.png és KS-Rack.png képeire cserélve, eredeti PNG-felbontásban. A képleírások a két firmware-nézetet nevezik meg, hostra vonatkozó feltételezés nélkül.
+
+## 2026-11-01 — Setup információs sorok rendezése
+
+A Blue Files and folders információs része az útvonalak sorrendjét követi: Patches, ROMs, Skins. A három sor bal oldali neve félkövér, közös szélességű címkeoszlopban; a részletek normál betűvel jelennek meg. A ROMs sor a ténylegesen kiválasztott firmware-, Wave ROM- és KS-adatfájlneveket mutatja, nem rögzített példaneveket. Hosszú soronkénti szövegre a meglévő szélességhez igazítás érvényes. Standard/Retina közös rajzolás, Legacy szövege változatlan. Ez megjelenítési változás; importálási és keresési szabály nem módosult. Ellenőrzés: tiszta diff; platformfordítás és interaktív hosszúfájlnév-próba a CI/használati ellenőrzés feladata.
