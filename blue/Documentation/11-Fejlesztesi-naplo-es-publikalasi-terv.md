@@ -391,3 +391,5 @@ Az Audio and operation részben a Haladó KS kapcsoló, a KS controller lista é
 A fő Data folder útvonala negyedik, legfelső sorba került a Blue Setupban, a meglévő mappaválasztó műveletet végző Open gombbal. Patches/ROMs/Skins továbbra is a saját mappáját nyitja meg. Az alsó ismétlődő főútvonal eltávolítva; a fájlműveletek és információk lejjebb igazítva a panelen belül. Legacy elrendezése megmarad.
 
 Az alkalmazás ikonforrása 1024×1024 méretű, átlátszó margóval és lekerekített sarkokkal készült az eredeti képből. A meglévő JUCE ICON_BIG beállítás ezt használja a platformikonok előállításához. Vizuális előnézet ellenőrizve; a megjelenés az új build telepítése után frissül.
+
+A K-Station Main LFO négy tekerőjének pozíciója a KS nézet már megfelelő rácsához igazítva: bal oszlop x=1027, jobb x=1152, sorok y=502/608. Korábban a bal oszlop 3 px-lel balra, a jobb 3 px-lel jobbra, mindkettő 4 px-lel lejjebb volt. A Rate 1/2 és Delay 1/2 funkciók és feliratok változatlanok. Mindkét Blue JSON elrendezésben a négy téglalap egyezése ellenőrizve.
