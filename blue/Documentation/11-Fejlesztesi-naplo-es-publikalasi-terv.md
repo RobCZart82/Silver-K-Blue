@@ -335,3 +335,7 @@ Hátralévő ellenőrzések és külön döntések:
 - Grafikai eredetleltár nyitott pontjai és az upstreamhez ajánlható változtatások külön áttekintése. Automatikus Patches-figyelés továbbra is javaslat, nem beépített funkció.
 
 Ez fejlesztési átadás, nem általános hibamentességi, hanghűségi vagy minden platformra kiterjedő használati elfogadás. A következő új funkció előtt ezek eredményét és a felhasználó prioritását kell figyelembe venni.
+
+### README-logó térközének finomítása
+
+A BLUE felirat és a hozzá tartozó kék vonal együtt 24 SVG-egységgel feljebb került a SILVER-K alá. A két sor közti hézag 44-ről 20 egységre csökkent, a rajzvászon magassága ehhez igazodik. A plugin fejlécének logója változatlan. Ellenőrzés: érvényes SVG/XML és tiszta diff.
