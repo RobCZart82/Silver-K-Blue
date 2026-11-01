@@ -930,9 +930,14 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         drumDisplay.setVisible(available && processor.drumEditEnabled());
         if(compactSkin()){
             const auto base=rect(skin["studioHeader"]["performance"]);
-            performanceSwitch.setBounds(available?base.withWidth(110):base);
-            drumEdit.setBounds(base.getX()+116,base.getY(),110,base.getHeight());
-            drumDisplay.setBounds(231,64,1000,18);
+            performanceSwitch.setBounds(blueSetup()?base:(available?base.withWidth(110):base));
+            if(blueSetup()){
+                drumEdit.setBounds(base.getX(),64,base.getWidth(),18);
+                drumDisplay.setBounds(231,64,base.getX()-243,18);
+            }else{
+                drumEdit.setBounds(base.getX()+116,base.getY(),110,base.getHeight());
+                drumDisplay.setBounds(231,64,1000,18);
+            }
         }else{drumEdit.setBounds(675,64,160,20);drumDisplay.setBounds(30,64,635,20);}
         for(auto* c:std::initializer_list<juce::Component*>{&performanceSwitch,&drumEdit,&drumDisplay})applySkin(*c);
         if(!available){drumDisplay.setText({},juce::dontSendNotification);return;}
@@ -1252,7 +1257,9 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         {
             // Match the supplied mockup: same vertical bounds as the model selector.
             const auto model = firmwareSelect.getBounds();
-            headerLogo->drawWithin(g, juce::Rectangle<float>(23.f, float(model.getY()), float(model.getX()-33), float(model.getHeight())), juce::RectanglePlacement::stretchToFit, 1.f);
+            const auto logo=skin["studioHeader"]["logo"];
+            const auto logoBounds=logo.isArray()?rect(logo).toFloat():juce::Rectangle<float>(23.f,float(model.getY()),198.f,float(model.getHeight()));
+            headerLogo->drawWithin(g, logoBounds, juce::RectanglePlacement::stretchToFit, 1.f);
         }
         else g.drawText(skin["name"].toString(),studioSkin()?rect(skin["title"]):juce::Rectangle<int>(40,21,250,45),juce::Justification::centredLeft);
         if(page==0)
