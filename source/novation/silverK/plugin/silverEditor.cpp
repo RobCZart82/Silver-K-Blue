@@ -619,6 +619,8 @@ struct Editor::Surface final : juce::Component, private juce::Timer
     juce::Component main, content;
     juce::Viewport viewport;
     juce::Label lcd,status,latency,help;
+    juce::Label mainFolderName;
+    juce::TextEditor mainFolderPath;
     std::array<juce::Label,3> folderNames;
     std::array<juce::TextEditor,3> folderPaths;
     std::array<juce::TextButton,3> openFolders;
@@ -716,6 +718,10 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         reloadSkin.onClick=[this]{refreshSkinList();if(requestSkin)requestSkin(package.manifest!=juce::File{}?package.manifest:juce::File(processor.customSkin),package.manifest==juce::File{}&&!processor.skinChoice.startsWith("Package:")&&processor.skinChoice!="Custom"?processor.skinChoice:juce::String{});};
         exportSkin.onClick=[this]{juce::File exported;juce::String error;if(SkinPackage::exportTemplate(processor.skinsFolder(),exported,error)){refreshSkinList();status.setText("Template exported: "+exported.getParentDirectory().getFullPathName(),juce::dontSendNotification);}else status.setText(error,juce::dontSendNotification);};
         openSkins.onClick=[this]{processor.skinsFolder().createDirectory();processor.skinsFolder().revealToUser();};
+        addAndMakeVisible(mainFolderName);addAndMakeVisible(mainFolderPath);
+        mainFolderName.setText("Data folder",juce::dontSendNotification);setSkinColour(mainFolderName,juce::Label::textColourId,juce::Colour(0xff171b20));
+        mainFolderPath.setComponentID("setupMainPath");mainFolderPath.setReadOnly(true);mainFolderPath.setMultiLine(false);mainFolderPath.setSelectAllWhenFocused(true);
+        mainFolderPath.setTooltip("Parent data folder. Use Open to choose a different data folder.");
         folder.setButtonText("Change data folder...");
         folder.setTooltip("Choose the parent data folder. Patches, ROMs and Skins remain its subfolders.");
         for(size_t i=0;i<folderPaths.size();++i)
@@ -911,16 +917,17 @@ struct Editor::Surface final : juce::Component, private juce::Timer
     void layoutBlueSetup()
     {
         if(!blueSetup())return;
-        for(size_t i=0;i<folderPaths.size();++i){const int y=152+int(i)*36;
+        for(size_t i=0;i<folderPaths.size();++i){const int y=180+int(i)*36;
             folderNames[i].setBounds(38,y,94,28);folderPaths[i].setBounds(136,y,948,28);openFolders[i].setBounds(1096,y,144,28);}
-        loadRom.setBounds(38,270,210,34);waveRom.setBounds(260,270,210,34);factory.setBounds(482,270,210,34);
-        rescanRoms.setBounds(704,270,210,34);folder.setBounds(926,270,210,34);
-        status.setBounds(38,314,1202,32);help.setBounds(38,350,1202,92);
+        mainFolderName.setBounds(38,144,94,28);mainFolderPath.setBounds(136,144,948,28);folder.setBounds(1096,144,144,28);folder.setButtonText("Open");
+        loadRom.setBounds(38,292,210,34);waveRom.setBounds(260,292,210,34);factory.setBounds(482,292,210,34);
+        rescanRoms.setBounds(704,292,210,34);
+        status.setBounds(38,332,1202,32);help.setBounds(38,368,1202,72);
         interfaceSize.setBounds(1030,510,210,34);
         skinSelect.setBounds(38,510,314,34);customSkin.setBounds(364,510,210,34);reloadSkin.setBounds(586,510,210,34);exportSkin.setBounds(808,510,210,34);
         channel.setBounds(38,650,314,34);bufferSelect.setBounds(364,650,314,34);latency.setBounds(696,650,544,34);
-        diagnostics.setBounds(38,698,314,34);advancedKS.setBounds(364,698,400,34);
-        controllerSelect.setBounds(38,756,550,34);demoSong.setBounds(606,756,300,34);
+        diagnostics.setBounds(38,698,314,34);advancedKS.setBounds(364,698,314,34);
+        controllerSelect.setBounds(38,756,314,34);demoSong.setBounds(364,756,314,34);
         twoCoreProcessing.setBounds(38,804,1150,34);twoCoreNotice.setBounds(64,842,1150,30);
     }
     void applyLayout()
@@ -1187,6 +1194,8 @@ struct Editor::Surface final : juce::Component, private juce::Timer
     }
     void refreshFolderPaths()
     {
+        const auto rootPath=processor.dataFolder.getFullPathName();
+        if(mainFolderPath.getText()!=rootPath)mainFolderPath.setText(rootPath,false);
         const auto folders=setupFolders();
         for(size_t i=0;i<folders.size();++i)
         {
@@ -1225,6 +1234,8 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         for(juce::Component* c:std::array<juce::Component*,6>{&status,&latency,&loadRom,&folder,&channel,&help})c->setVisible(isSetup);
         refreshFolderPaths();
         refreshSetupAssetAvailability();
+        mainFolderName.setVisible(isSetup&&blueSetup());mainFolderPath.setVisible(isSetup&&blueSetup());
+        folder.setButtonText(blueSetup()?"Open":"Change data folder...");
         interfaceSize.setVisible(isSetup&&blueSetup());
         for(size_t i=0;i<folderPaths.size();++i){folderNames[i].setVisible(isSetup);folderPaths[i].setVisible(isSetup);openFolders[i].setVisible(isSetup);}
         rescanRoms.setVisible(isSetup);bufferSelect.setVisible(isSetup);waveRom.setVisible(isSetup);factory.setVisible(isSetup);skinSelect.setVisible(isSetup);customSkin.setVisible(isSetup);reloadSkin.setVisible(isSetup);exportSkin.setVisible(isSetup);openSkins.setVisible(isSetup&&!blueSetup());
@@ -1315,7 +1326,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
                 const juce::Rectangle<int> panels[]{{22,100,1234,354},{22,468,1234,112},{22,594,1234,advancedKSExpanded?310:154}};
                 const juce::String titles[]{"Files and folders","Appearance","Audio and operation"};
                 for(int i=0;i<3;++i){const auto r=panels[i].toFloat();
-                    g.setGradientFill(juce::ColourGradient(skinColour(*this,0xffeef1f5),r.getX(),r.getY(),skinColour(*this,0xffd9dfe5),r.getRight(),r.getBottom(),false));g.fillRoundedRectangle(r,4.f);
+                    g.setColour(skinColour(*this,0xffe4e8ec));g.fillRoundedRectangle(r,4.f);
                     const auto& aluminium=look.image("aluminiumGrain1");
                     if(aluminium.isValid()){
                         // Reuse the Main panel material at its native 2x density.
@@ -1363,7 +1374,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         previousPreset.setEnabled(ready);nextPreset.setEnabled(ready);channel.setSelectedId(int(processor.editorChannel())+1,juce::dontSendNotification);
         juce::StringArray dataNames;for(const auto& file:processor.ksDataFiles())dataNames.add(file.getFileName());
         const auto missing=[](const juce::File& file){return file.existsAsFile()?file.getFileName():juce::String("Not selected / missing");};
-        help.setText(processor.dataFolder.getFullPathName()+"\nROMs | Firmware: "+missing(processor.osFile)+" | Wave ROM: "+missing(processor.bankFile)+"\nKS Data: "+(dataNames.isEmpty()?juce::String("Required: select KS All Data or its MIDI files"):dataNames.joinIntoString(", "))+"\nPatches: additional sounds | Skins: custom skins",juce::dontSendNotification);
+        help.setText((blueSetup()?juce::String():processor.dataFolder.getFullPathName()+"\n")+"ROMs | Firmware: "+missing(processor.osFile)+" | Wave ROM: "+missing(processor.bankFile)+"\nKS Data: "+(dataNames.isEmpty()?juce::String("Required: select KS All Data or its MIDI files"):dataNames.joinIntoString(", "))+"\nPatches: additional sounds | Skins: custom skins",juce::dontSendNotification);
         help.setTooltip({});bufferSelect.setSelectedId(processor.bufferProfile()+1,juce::dontSendNotification);const auto rate=processor.getSampleRate();latency.setText(rate>0?"Plugin latency: "+juce::String(1000.*processor.getLatencySamples()/rate,1)+" ms":"",juce::dontSendNotification);
     }
     uint64_t lastFirmwareRevision=0;

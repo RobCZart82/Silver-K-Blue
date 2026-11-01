@@ -383,3 +383,15 @@ A Windows CI feltárta, hogy a konverziós ellenőrzés még a korábbi termékn
 A BLUE felirat és a hozzá tartozó kék vonal együtt 24 SVG-egységgel feljebb került a SILVER-K alá. A két sor közti hézag 44-ről 20 egységre csökkent, a rajzvászon magassága ehhez igazodik. A plugin fejlécének logója változatlan. Ellenőrzés: érvényes SVG/XML és tiszta diff.
 
 A #20 PR a #19 beolvasztása után friss mainnel összefésülve; mindkét fejlesztési naplóbejegyzés megőrizve.
+
+## 2026-11-01 — További Setup-finomítások
+
+Az Audio and operation részben a Haladó KS kapcsoló, a KS controller lista és a Demo Song gomb is a felső mezők 314 logikai px szélességét követi, két közös oszlopban. A Setup három paneljének alapja egyszínű ezüst, színátmenet nélkül; a meglévő finom alumíniumszemcsézet megmarad. Standard/Retina és K-Station/KS közös módosítása.
+
+A fő Data folder útvonala negyedik, legfelső sorba került a Blue Setupban, a meglévő mappaválasztó műveletet végző Open gombbal. Patches/ROMs/Skins továbbra is a saját mappáját nyitja meg. Az alsó ismétlődő főútvonal eltávolítva; a fájlműveletek és információk lejjebb igazítva a panelen belül. Legacy elrendezése megmarad.
+
+Az alkalmazás ikonforrása 1024×1024 méretű, átlátszó margóval és lekerekített sarkokkal készült az eredeti képből. A meglévő JUCE ICON_BIG beállítás ezt használja a platformikonok előállításához. Vizuális előnézet ellenőrizve; a megjelenés az új build telepítése után frissül.
+
+A K-Station Main LFO négy tekerőjének pozíciója a KS nézet már megfelelő rácsához igazítva: bal oszlop x=1027, jobb x=1152, sorok y=502/608. Korábban a bal oszlop 3 px-lel balra, a jobb 3 px-lel jobbra, mindkettő 4 px-lel lejjebb volt. A Rate 1/2 és Delay 1/2 funkciók és feliratok változatlanok. Mindkét Blue JSON elrendezésben a négy téglalap egyezése ellenőrizve.
+
+A README Main-előnézetei a felhasználó új K-Station.png és KS-Rack.png képeire cserélve, eredeti PNG-felbontásban. A képleírások a két firmware-nézetet nevezik meg, hostra vonatkozó feltételezés nélkül.

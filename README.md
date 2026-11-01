@@ -25,15 +25,15 @@ macOS builds target 12.0 or later and are ad hoc signed, not notarized. Windows 
 - Both skins are embedded in all current Blue products; no separate skin installation is required.
 - New settings default to Retina. Previously saved choices and external skins remain supported.
 
-User-supplied screenshots of the Main view in REAPER, both using **Silver-K Blue Retina 4K v1.0** with **256 px rotary frames**. The interface adapts to the selected firmware.
+User-supplied screenshots of the Main view, both using **Silver-K Blue Retina 4K v1.0** with **256 px rotary frames**. The interface adapts to the selected firmware.
 
 **K-Station — Main view, Retina 4K (256 px)**
 
-![Silver-K Blue Retina 4K Main view with K-Station OS 2.1.01 in REAPER](blue/Artwork/Previews/k-station-retina-4k-main.png)
+![Silver-K Blue Retina 4K Main view with K-Station OS 2.1.01](blue/Artwork/Previews/k-station-retina-4k-main.png)
 
-**KS — Main view, Retina 4K (256 px)**
+**KS-Rack — Main view, Retina 4K (256 px)**
 
-![Silver-K Blue Retina 4K Main view with KS OS 2.1.02 in REAPER](blue/Artwork/Previews/ks-retina-4k-main.png)
+![Silver-K Blue Retina 4K Main view with KS-Rack OS 2.1.02](blue/Artwork/Previews/ks-retina-4k-main.png)
 
 The source skin packages are in [blue/Skins](blue/Skins). Retina requires a compatible Blue binary; it cannot be used as an unchanged external skin with upstream v0.4.4a.
 
