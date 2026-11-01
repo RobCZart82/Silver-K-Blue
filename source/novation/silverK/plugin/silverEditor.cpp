@@ -734,7 +734,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         demoSong.setTooltip("Play / stop the original KS demo embedded in full KS Flash data. Factory MIDI banks do not contain the song.");
         demoSong.onClick=[this]{juce::String error;if(!processor.setDemoSong(!processor.demoSongActive(),error))juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::InfoIcon,"KS Demo Song",error);};
         addAndMakeVisible(interfaceSize);interfaceSize.setComponentID("setupInterfaceSize");
-        interfaceSize.setTooltip("Choose 50%, 75%, 100%, or a custom interface size from 50% to 150%.");
+        interfaceSize.setTooltip("Choose 50%, 75%, 100%, 125%, or a custom interface size from 50% to 150%.");
         interfaceSize.onClick=[this]{if(requestSizeMenu)requestSizeMenu(interfaceSize.localPointToGlobal(juce::Point<int>(0,interfaceSize.getHeight())));};
         addAndMakeVisible(advancedKS);advancedKS.setComponentID("setupAdvancedKS");
         advancedKS.setBounds(800,401,392,34);advancedKS.setClickingTogglesState(true);
@@ -1394,7 +1394,7 @@ Editor::Editor(Processor& p):AudioProcessorEditor(p),m_processor(p)
 void Editor::connectSurface()
 {
     setLookAndFeel(&m_surface->look);addAndMakeVisible(*m_surface);
-    m_surface->requestSizeMenu=[this](juce::Point<int> position){if(!m_sizeMenuOpen)showSizeMenu(position);};
+    m_surface->requestSizeMenu=[this](juce::Point<int> position){if(!m_sizeMenuOpen)showSizeMenu(position,true);};
     m_surface->requestSkin=[this](juce::File file,juce::String choice){
         const juce::Component::SafePointer<Editor> self(this);
         juce::MessageManager::callAsync([self,file,choice]{if(!self)return;juce::String error;if(!self->selectSkin(file,choice,error)){self->m_surface->refreshSkinList();self->m_surface->status.setText("Skin: "+error,juce::dontSendNotification);}});
@@ -1462,12 +1462,12 @@ void Editor::mouseDown(const juce::MouseEvent& event)
 {
     if(event.mods.isPopupMenu()&&!m_sizeMenuOpen)showSizeMenu(event.getScreenPosition());
 }
-void Editor::showSizeMenu(juce::Point<int> screenPosition)
+void Editor::showSizeMenu(juce::Point<int> screenPosition,bool direct)
 {
     m_sizeMenuOpen=true;
     juce::PopupMenu sizes,menu;
-    for(int percent:{50,75,100})sizes.addItem(percent,juce::String(percent)+"%",true,std::abs(getUiScale()*100-percent)<.1);
-    sizes.addSeparator();sizes.addItem(1,juce::String::fromUTF8("Custom\xe2\x80\xa6"));menu.addSubMenu("Size",sizes);
+    for(int percent:{50,75,100,125})sizes.addItem(percent,juce::String(percent)+"%",true,std::abs(getUiScale()*100-percent)<.1);
+    sizes.addSeparator();sizes.addItem(1,juce::String::fromUTF8("Custom\xe2\x80\xa6"));if(direct)menu=sizes;else menu.addSubMenu("Size",sizes);
     const juce::Component::SafePointer<Editor> self(this);
     // Rectangle(Point, Point) takes two corners, not a position and size.
     const juce::Rectangle<int> target(screenPosition.x,screenPosition.y,1,1);

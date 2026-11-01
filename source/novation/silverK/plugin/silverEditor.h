@@ -19,7 +19,7 @@ public:
 private:
     bool selectSkin(const juce::File&, const juce::String& builtinChoice, juce::String& error);
     void connectSurface();
-    void showSizeMenu(juce::Point<int> screenPosition);
+    void showSizeMenu(juce::Point<int> screenPosition, bool direct=false);
     void showCustomSize();
     Processor& m_processor;
     struct Surface;

@@ -17,7 +17,7 @@ Required files are copied into ROMs when selected from another location. Their o
 
 ## Main folder
 
-Blue Setup groups controls into Files and folders, Appearance, and Audio and operation. Appearance → Interface size opens the existing size menu (50%, 75%, 100%, or Custom 50–150%); the right-click menu remains available. The Skins path row replaces the duplicate Skins folder button. Legacy keeps its original arrangement.
+Blue Setup groups controls into Files and folders, Appearance, and Audio and operation. Appearance → Interface size opens the percentage list directly (50%, 75%, 100%, 125%, or Custom 50–150%); the right-click menu remains available. The Skins path row replaces the duplicate Skins folder button. Legacy keeps its original arrangement.
 
 Setup shows the full Patches, ROMs and Skins paths in read-only fields. Select and copy a path, or use its Open button to reveal the folder. Change data folder changes their shared parent; it does not relocate the three subfolders independently.
 

@@ -357,3 +357,7 @@ A Blue Setup három szekciója a Main lap meglévő aluminiumGrain1 anyagát has
 ### 5. észrevétel — LED-feliratok balra igazítása
 
 A Blue felületek ovális LED-es kapcsolóinak feliratai a LED utáni szövegterületen balra igazítottak. Az oszcillátorok PW Position / LFO 2 PWM / Env PWM sorai közös kezdővonalat kapnak a középre igazítás helyett; azonos szabály Standard/Retina és K-Station/KS nézetben. A normál nyomógombok, partfülek és Legacy szövegigazítása változatlan. Ugyanazon #19 PR része.
+
+### 6. észrevétel — közvetlen méretlista és 125%
+
+A Setup Interface size gomb közvetlenül a százaléklistát nyitja, köztes Size almenü nélkül. 125% új sor hozzáadva; 50/75/100%, elválasztó és Custom megmarad. A jobb kattintásos menü továbbra is Size almenüt használ, ugyanazzal a kibővített listával. Az egyéni 50–150% tartomány, aránytartás és mentés változatlan; a meglévő méretezési teszt 125%-ot is ellenőriz. Ugyanazon #19 PR része.
