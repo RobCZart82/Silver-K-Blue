@@ -349,3 +349,7 @@ A négy partfül közös közepe a Mixer x=639 középvonalára került mindkét
 ### 3. észrevétel — Setup információs gyorstipp
 
 A Files and folders információs összefoglaló fölötti, a tartalmat eltakaró ismétlődő tooltip eltávolítva. A látható állapot- és adatfájl-feliratok, mappaútvonalak és a kezelőgombok magyarázó gyorstippjei megmaradnak. Ugyanazon #19 PR része, beolvasztás nélkül.
+
+### 4. észrevétel — Setup alumínium anyag
+
+A Blue Setup három szekciója a Main lap meglévő aluminiumGrain1 anyagát használja, az eredeti 2× pixelsűrűséggel csempézve, a lekerekített panelhatáron belül. A finom szemcsézet nem nyúlik meg a széles panelen; a Haladó rész nyitásakor is követi a panel méretét. Standard/Retina és K-Station/KS közös megjelenítés; Legacy nem változik. Meglévő grafika újrafelhasználása, nincs új képfájl. Ugyanazon #19 PR-ben marad.

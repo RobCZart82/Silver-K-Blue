@@ -1301,6 +1301,13 @@ struct Editor::Surface final : juce::Component, private juce::Timer
                 const juce::String titles[]{"Files and folders","Appearance","Audio and operation"};
                 for(int i=0;i<3;++i){const auto r=panels[i].toFloat();
                     g.setGradientFill(juce::ColourGradient(skinColour(*this,0xffeef1f5),r.getX(),r.getY(),skinColour(*this,0xffd9dfe5),r.getRight(),r.getBottom(),false));g.fillRoundedRectangle(r,4.f);
+                    const auto& aluminium=look.image("aluminiumGrain1");
+                    if(aluminium.isValid()){
+                        // Reuse the Main panel material at its native 2x density.
+                        // Tile instead of stretching the grain across wide Setup sections.
+                        g.setFillType(juce::FillType(aluminium,juce::AffineTransform::scale(.5f).translated(r.getX(),r.getY())));
+                        g.fillRoundedRectangle(r,4.f);
+                    }
                     g.setColour(skinColour(*this,0xffbdc7cf));g.drawRoundedRectangle(r.reduced(.5f),4.f,1.f);
                     g.setColour(skinColour(*this,0xff171b20));g.setFont(skinFont(*this,18.f,juce::Font::bold));g.drawText(titles[i],panels[i].getX()+16,panels[i].getY()+8,1100,28,juce::Justification::centredLeft);
                 }
