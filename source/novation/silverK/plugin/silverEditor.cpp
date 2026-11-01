@@ -221,6 +221,16 @@ public:
     void drawButtonBackground(juce::Graphics& g,juce::Button& b,const juce::Colour&,bool hover,bool down) override
     {
         auto bounds=b.getLocalBounds().toFloat().reduced(1);
+        if(b.getComponentID()=="setupAdvancedKS" && package.id.startsWith("silver-k-blue-")){
+            g.setColour(juce::Colour(hover?0xffe7edf2:0xfff1f4f7));g.fillRoundedRectangle(bounds,4.f);
+            g.setColour(juce::Colours::black);g.drawRoundedRectangle(bounds.reduced(.5f),4.f,1.f);
+            for(float x:{bounds.getX()+14.f,bounds.getRight()-14.f}){
+                const float y=bounds.getCentreY();const float direction=b.getToggleState()?-1.f:1.f;
+                juce::Path arrow;arrow.startNewSubPath(x-4.f,y-2.f*direction);arrow.lineTo(x,y+2.f*direction);arrow.lineTo(x+4.f,y-2.f*direction);
+                g.strokePath(arrow,juce::PathStrokeType(1.5f));
+            }
+            return;
+        }
         const auto style=b.getProperties()["silverSkinStyle"];
         const auto& custom=image(style[b.getToggleState()?"buttonOn":"buttonOff"].toString());
         const bool waveformHoverOnly=bool(style.getProperty("waveformHoverOnly",false));
@@ -269,6 +279,10 @@ public:
     void drawButtonText(juce::Graphics& g,juce::TextButton& b,bool,bool) override
     {
         if(b.getProperties().contains("waveform"))return;
+        if(b.getComponentID()=="setupAdvancedKS" && package.id.startsWith("silver-k-blue-")){
+            g.setColour(juce::Colours::black);g.setFont(selectorFont(b));
+            g.drawFittedText(b.getButtonText(),b.getLocalBounds().reduced(26,3),juce::Justification::centred,1);return;
+        }
         const bool compact=bool(b.getProperties()["compact"]) || (b.getParentComponent()&&bool(b.getParentComponent()->getProperties()["compact"]));
         const auto textColour=isFlat()?skinColour(b,b.getToggleState()?0xfff1f4f7:0xff171b20):(bool(b.getProperties()["partTab"])&&b.getToggleState())?skinColour(b,0xff171b20):(bool(b.getProperties()["led"])&&!bool(b.getProperties()["dark"])?skinColour(b,0xff171b20):skinColour(b,0xfff1f4f7));
         g.setColour(b.isEnabled()?textColour:textColour.withAlpha(.4f));
@@ -904,8 +918,8 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         status.setBounds(38,314,1202,32);help.setBounds(38,350,1202,92);
         interfaceSize.setBounds(1030,510,210,34);
         skinSelect.setBounds(38,510,314,34);customSkin.setBounds(364,510,210,34);reloadSkin.setBounds(586,510,210,34);exportSkin.setBounds(808,510,210,34);
-        channel.setBounds(38,650,360,34);bufferSelect.setBounds(410,650,500,34);latency.setBounds(928,650,312,34);
-        diagnostics.setBounds(38,698,280,34);advancedKS.setBounds(330,698,400,34);
+        channel.setBounds(38,650,314,34);bufferSelect.setBounds(364,650,314,34);latency.setBounds(696,650,544,34);
+        diagnostics.setBounds(38,698,314,34);advancedKS.setBounds(364,698,400,34);
         controllerSelect.setBounds(38,756,550,34);demoSong.setBounds(606,756,300,34);
         twoCoreProcessing.setBounds(38,804,1150,34);twoCoreNotice.setBounds(64,842,1150,30);
     }

@@ -365,3 +365,7 @@ A Setup Interface size gomb közvetlenül a százaléklistát nyitja, köztes Si
 ### 7. észrevétel — Setup gombok egységes szélessége
 
 A fájlműveletek öt és a Megjelenés négy kijelölt gombja egységes 210 logikai px szélességet és 34 px magasságot kapott, 12 px közökkel. A skinválasztó mező a fennmaradó helyet használja, így minden művelet egy sorban marad. Standard/Retina, K-Station/KS közös elrendezés; a két skin JSON-komponenspozíciója is frissítve. A leghosszabb Change data folder felirat számára is megmarad az eddigi szélesség. Ugyanazon #19 PR része.
+
+### 8. észrevétel — egységes Setup mezők és Haladó kapcsoló
+
+A skinválasztó, Editor MIDI channel és Audio buffer mezők, valamint a Performance diagnostics gomb egyaránt 314 logikai px szélességű. A Haladó KS-gomb világos alapú fekete kerettel/felirattal, két szélén lefelé mutató nyíllal jelzi a kinyitást; nyitva a nyilak felfelé mutatnak. A funkció és a beállítások változatlanok, Standard/Retina és mindkét firmware nézet közös módosítása. Ugyanazon #19 PR, beolvasztás nélkül.
