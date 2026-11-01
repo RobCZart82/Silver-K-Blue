@@ -345,3 +345,7 @@ A PR több egymást követő felhasználói észrevételt gyűjt; nem olvaszthat
 ### 2. észrevétel — fejléc igazítása
 
 A négy partfül közös közepe a Mixer x=639 középvonalára került mindkét Blue felületen. A firmware mező a változatlan méretű logó és partgombsor közé került. A Performance LED/felirat kompaktabb, közösen a partgombsor és navigáció közti rés közepén. Dobtérkép esetén a ritkán megjelenő Drum Edit a Performance csoport alá kerül, hogy ne fedje a navigációt. Legacy és a hangparaméterek változatlanok. Ugyanazon #19 PR további tétele; automatikus merge nincs.
+
+### 3. észrevétel — Setup információs gyorstipp
+
+A Files and folders információs összefoglaló fölötti, a tartalmat eltakaró ismétlődő tooltip eltávolítva. A látható állapot- és adatfájl-feliratok, mappaútvonalak és a kezelőgombok magyarázó gyorstippjei megmaradnak. Ugyanazon #19 PR része, beolvasztás nélkül.

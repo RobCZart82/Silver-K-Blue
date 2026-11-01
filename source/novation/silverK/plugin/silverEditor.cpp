@@ -1339,10 +1339,10 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         localExtra.clockSelect.setSelectedId(int(processor.clockSource())+1,juce::dontSendNotification);
         const bool ready=processor.firmwareReady();main.setEnabled(ready);content.setEnabled(ready);loadProgram.setEnabled(true);
         previousPreset.setEnabled(ready);nextPreset.setEnabled(ready);channel.setSelectedId(int(processor.editorChannel())+1,juce::dontSendNotification);
-        juce::StringArray dataNames,dataPaths;for(const auto& file:processor.ksDataFiles()){dataNames.add(file.getFileName());dataPaths.add(file.getFullPathName());}
+        juce::StringArray dataNames;for(const auto& file:processor.ksDataFiles())dataNames.add(file.getFileName());
         const auto missing=[](const juce::File& file){return file.existsAsFile()?file.getFileName():juce::String("Not selected / missing");};
         help.setText(processor.dataFolder.getFullPathName()+"\nROMs | Firmware: "+missing(processor.osFile)+" | Wave ROM: "+missing(processor.bankFile)+"\nKS Data: "+(dataNames.isEmpty()?juce::String("Required: select KS All Data or its MIDI files"):dataNames.joinIntoString(", "))+"\nPatches: additional sounds | Skins: custom skins",juce::dontSendNotification);
-        help.setTooltip("Firmware: "+processor.osFile.getFullPathName()+"\nWave ROM: "+processor.bankFile.getFullPathName()+"\nKS Data:\n"+dataPaths.joinIntoString("\n"));bufferSelect.setSelectedId(processor.bufferProfile()+1,juce::dontSendNotification);const auto rate=processor.getSampleRate();latency.setText(rate>0?"Plugin latency: "+juce::String(1000.*processor.getLatencySamples()/rate,1)+" ms":"",juce::dontSendNotification);
+        help.setTooltip({});bufferSelect.setSelectedId(processor.bufferProfile()+1,juce::dontSendNotification);const auto rate=processor.getSampleRate();latency.setText(rate>0?"Plugin latency: "+juce::String(1000.*processor.getLatencySamples()/rate,1)+" ms":"",juce::dontSendNotification);
     }
     uint64_t lastFirmwareRevision=0;
     void refreshControllerSelection(){
