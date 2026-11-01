@@ -335,3 +335,9 @@ Hátralévő ellenőrzések és külön döntések:
 - Grafikai eredetleltár nyitott pontjai és az upstreamhez ajánlható változtatások külön áttekintése. Automatikus Patches-figyelés továbbra is javaslat, nem beépített funkció.
 
 Ez fejlesztési átadás, nem általános hibamentességi, hanghűségi vagy minden platformra kiterjedő használati elfogadás. A következő új funkció előtt ezek eredményét és a felhasználó prioritását kell figyelembe venni.
+
+## 2026-11-01 — Használati teszt észrevételek, közös nyitott PR
+
+1. Terméknév Silver-K Blue, külön Standalone/VST3/AU bundle és belső azonosítók a párhuzamos upstream telepítéshez. Bundle: com.robczart.silverkblue; AU subtype/plugin code: SkBl, gyártókód TusP megőrizve. A korábbi Blue az eredeti identitását használta: régi host-projektekhez a régi build megőrzendő, automatikus hostazonosító-migráció nincs. A megosztott adatkönyvtár és a felhasználó által jóváhagyott SILVER-K fejlécgrafika változatlan. Csomagolás és bináris metadata-ellenőrzés az új nevet/azonosítót követi.
+
+A PR több egymást követő felhasználói észrevételt gyűjt; nem olvasztható be a felhasználó lezáró jelzéséig. Automatikus merge nincs.

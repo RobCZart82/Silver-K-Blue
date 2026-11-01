@@ -83,12 +83,12 @@ def main():
                 shutil.copy2(src, dest)
             return dest
         if macos:
-            products = [('Standalone', 'Silver-K.app', 'Standalone'),
-                        ('VST3', 'Silver-K.vst3', 'Plugins/VST3'),
-                        ('AU', 'Silver-K.component', 'Plugins/AU')]
+            products = [('Standalone', 'Silver-K Blue.app', 'Standalone'),
+                        ('VST3', 'Silver-K Blue.vst3', 'Plugins/VST3'),
+                        ('AU', 'Silver-K Blue.component', 'Plugins/AU')]
         else:
-            products = [('Standalone', 'Silver-K.exe', 'Standalone'),
-                        ('VST3', 'Silver-K.vst3', 'Plugins/VST3')]
+            products = [('Standalone', 'Silver-K Blue.exe', 'Standalone'),
+                        ('VST3', 'Silver-K Blue.vst3', 'Plugins/VST3')]
         for source, filename, target in products:
             built = args.products / source / filename
             if macos:

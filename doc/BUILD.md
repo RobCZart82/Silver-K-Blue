@@ -40,8 +40,8 @@ An optional macOS VST3 SDK host checks full-speed Prefetch (mode 1) against Offl
 
 ```sh
 cmake --build build --target silver_vst3_prefetch_check -j 6
-build/source/novation/silverK/buildStandalone/silverPlugin/silver_vst3_prefetch_check /path/to/Silver-K.vst3 /path/to/processor.state 1 /tmp/silver-prefetch.f32
-build/source/novation/silverK/buildStandalone/silverPlugin/silver_vst3_prefetch_check /path/to/Silver-K.vst3 /path/to/processor.state 2 /tmp/silver-offline.f32
+build/source/novation/silverK/buildStandalone/silverPlugin/silver_vst3_prefetch_check "/path/to/Silver-K Blue.vst3" /path/to/processor.state 1 /tmp/silver-prefetch.f32
+build/source/novation/silverK/buildStandalone/silverPlugin/silver_vst3_prefetch_check "/path/to/Silver-K Blue.vst3" /path/to/processor.state 2 /tmp/silver-offline.f32
 cmp /tmp/silver-prefetch.f32 /tmp/silver-offline.f32
 ```
 
@@ -52,7 +52,7 @@ macOS bundles receive an ad hoc signature for local testing. Signing for distrib
 `tools/package_release.py --platform macOS-universal` checks both architecture slices and rejects binaries or Info.plist entries requiring a version above macOS 12.0, including Wave ROM Builder. The individual check is:
 
 ```sh
-python3 tools/check_macos_compatibility.py build/source/novation/silverK/buildStandalone/silverPlugin/silverK_artefacts/Release/Standalone/Silver-K.app
+python3 tools/check_macos_compatibility.py "build/source/novation/silverK/buildStandalone/silverPlugin/silverK_artefacts/Release/Standalone/Silver-K Blue.app"
 ```
 
 ## Windows x64

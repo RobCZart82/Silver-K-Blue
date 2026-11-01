@@ -7,11 +7,11 @@ import uuid
 from pathlib import Path
 
 MANUFACTURER = 'NK Stuff'
-BUNDLE_ID = 'com.theusualsuspects.silverk'
+BUNDLE_ID = 'com.robczart.silverkblue'
 VST3_CLASSES = {
-    'Audio Module Class': 'ABCDEF019182FAEB5475735054736B76',
-    'Component Controller Class': 'ABCDEF011234ABCD5475735054736B76',
-    'Plugin Compatibility Class': 'ABCDEF01C0DEF00D5475735054736B76',
+    'Audio Module Class': 'ABCDEF019182FAEB54757350536B426C',
+    'Component Controller Class': 'ABCDEF011234ABCD54757350536B426C',
+    'Plugin Compatibility Class': 'ABCDEF01C0DEF00D54757350536B426C',
 }
 
 
@@ -28,8 +28,8 @@ class ClassInfo(ctypes.Structure):
 def check_identity(products):
     products = Path(products)
     windows = sys.platform == 'win32'
-    binary = products / 'VST3/Silver-K.vst3/Contents' / (
-        'x86_64-win/Silver-K.vst3' if windows else 'MacOS/Silver-K')
+    binary = products / 'VST3/Silver-K Blue.vst3/Contents' / (
+        'x86_64-win/Silver-K Blue.vst3' if windows else 'MacOS/Silver-K Blue')
     library = (ctypes.WinDLL if windows else ctypes.CDLL)(str(binary.resolve()))
     call = ctypes.WINFUNCTYPE if windows else ctypes.CFUNCTYPE
     library.GetPluginFactory.restype = ctypes.c_void_p
@@ -53,7 +53,7 @@ def check_identity(products):
             raw = bytes(entry.cid)
             cid = uuid.UUID(bytes_le=raw).hex.upper() if windows else raw.hex().upper()
             category = entry.category.decode()
-            if entry.name.decode() != 'Silver-K' or category in classes:
+            if entry.name.decode() != 'Silver-K Blue' or category in classes:
                 raise RuntimeError('Unexpected VST3 class name or duplicate category')
             classes[category] = cid
         if classes != VST3_CLASSES:
@@ -62,13 +62,13 @@ def check_identity(products):
         call(ctypes.c_uint32, ctypes.c_void_p)(vtable[2])(factory)
     identity = dict(manufacturer=vendor, vst3_classes=classes)
     if not windows:
-        for relative in ('AU/Silver-K.component', 'VST3/Silver-K.vst3', 'Standalone/Silver-K.app'):
+        for relative in ('AU/Silver-K Blue.component', 'VST3/Silver-K Blue.vst3', 'Standalone/Silver-K Blue.app'):
             info = plistlib.loads((products / relative / 'Contents/Info.plist').read_bytes())
             if info.get('CFBundleIdentifier') != BUNDLE_ID:
                 raise RuntimeError(f'Bundle ID changed: {relative}')
             if relative.startswith('AU/'):
                 component, = info['AudioComponents']
-                expected = dict(name=MANUFACTURER + ': Silver-K', manufacturer='TusP', subtype='Tskv', type='aumu')
+                expected = dict(name=MANUFACTURER + ': Silver-K Blue', manufacturer='TusP', subtype='SkBl', type='aumu')
                 if any(component.get(key) != value for key, value in expected.items()):
                     raise RuntimeError(f'AU identity changed: {component}')
                 identity['au'] = expected

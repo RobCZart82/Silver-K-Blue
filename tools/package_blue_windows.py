@@ -36,10 +36,10 @@ def main():
     args = parser.parse_args()
     revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
     macos = args.platform == 'macOS-Universal2'
-    products = [('Standalone','Silver-K.app' if macos else 'Silver-K.exe','Standalone'),
-                ('VST3','Silver-K.vst3','Plugins/VST3')]
+    products = [('Standalone','Silver-K Blue.app' if macos else 'Silver-K Blue.exe','Standalone'),
+                ('VST3','Silver-K Blue.vst3','Plugins/VST3')]
     if macos:
-        products.append(('AU','Silver-K.component','Plugins/AU'))
+        products.append(('AU','Silver-K Blue.component','Plugins/AU'))
     for category, filename, destination in products:
         product = args.products/category/filename
         if macos:
@@ -77,7 +77,7 @@ def main():
             shutil.copy2(ROOT / 'doc' / f, stage / f)
         (stage / 'README-HU.md').write_text('''# Silver-K Blue — beépített skines tesztbuild
 
-A Plugins/VST3/Silver-K.vst3 teljes csomagját a host által használt VST3 mappába másold. macOS-on a Plugins/AU/Silver-K.component az AU mappába kerülhet. A Standalone mappában található alkalmazás önállóan indítható. A korábbi azonos Silver-K példányt előbb mentsd beolvasási útvonalon kívülre.
+A Plugins/VST3/Silver-K Blue.vst3 teljes csomagját a host által használt VST3 mappába másold. macOS-on a Plugins/AU/Silver-K Blue.component az AU mappába kerülhet. A Standalone mappában található alkalmazás önállóan indítható. Az eredeti Silver-K mellé telepíthető. A régi, közös azonosítójú Blue buildet a régi projektekhez külön őrizd meg.
 
 A Silver-K Blue Standard v1.0 és Silver-K Blue Retina 4K v1.0 már be van építve mindegyik termékbe; a Setup skinválasztóban külön telepítés nélkül elérhetők. Új telepítésnél a Retina az alap. A Skins mappában a szerkeszthető külső változatokat is mellékeljük, de a beépített változatokhoz nem szükséges őket telepíteni.
 
