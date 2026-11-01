@@ -275,7 +275,8 @@ public:
         g.setFont(skinFont(b,(compact||bool(b.getProperties()["small"]))?11.f:13.f,juce::Font::bold));
         auto area=b.getLocalBounds().reduced(3);
         if(!isFlat() && bool(b.getProperties()["led"]))area.removeFromLeft(juce::roundToInt(capWidth(b))+5);
-        g.drawFittedText(b.getButtonText(),area,juce::Justification::centred,1);
+        const bool leftAlignedLed=bool(b.getProperties()["led"]) && package.id.startsWith("silver-k-blue-");
+        g.drawFittedText(b.getButtonText(),area,leftAlignedLed?juce::Justification::centredLeft:juce::Justification::centred,1);
     }
     void drawComboBox(juce::Graphics& g,int w,int h,bool,int,int,int,int,juce::ComboBox& c) override
     {
