@@ -336,6 +336,50 @@ Hátralévő ellenőrzések és külön döntések:
 
 Ez fejlesztési átadás, nem általános hibamentességi, hanghűségi vagy minden platformra kiterjedő használati elfogadás. A következő új funkció előtt ezek eredményét és a felhasználó prioritását kell figyelembe venni.
 
+## 2026-11-01 — Használati teszt észrevételek, közös nyitott PR
+
+1. Terméknév Silver-K Blue, külön Standalone/VST3/AU bundle és belső azonosítók a párhuzamos upstream telepítéshez. Bundle: com.robczart.silverkblue; AU subtype/plugin code: SkBl, gyártókód TusP megőrizve. A korábbi Blue az eredeti identitását használta: régi host-projektekhez a régi build megőrzendő, automatikus hostazonosító-migráció nincs. A megosztott adatkönyvtár és a felhasználó által jóváhagyott SILVER-K fejlécgrafika változatlan. Csomagolás és bináris metadata-ellenőrzés az új nevet/azonosítót követi.
+
+A PR több egymást követő felhasználói észrevételt gyűjt; nem olvasztható be a felhasználó lezáró jelzéséig. Automatikus merge nincs.
+
+### 2. észrevétel — fejléc igazítása
+
+A négy partfül közös közepe a Mixer x=639 középvonalára került mindkét Blue felületen. A firmware mező a változatlan méretű logó és partgombsor közé került. A Performance LED/felirat kompaktabb, közösen a partgombsor és navigáció közti rés közepén. Dobtérkép esetén a ritkán megjelenő Drum Edit a Performance csoport alá kerül, hogy ne fedje a navigációt. Legacy és a hangparaméterek változatlanok. Ugyanazon #19 PR további tétele; automatikus merge nincs.
+
+### 3. észrevétel — Setup információs gyorstipp
+
+A Files and folders információs összefoglaló fölötti, a tartalmat eltakaró ismétlődő tooltip eltávolítva. A látható állapot- és adatfájl-feliratok, mappaútvonalak és a kezelőgombok magyarázó gyorstippjei megmaradnak. Ugyanazon #19 PR része, beolvasztás nélkül.
+
+### 4. észrevétel — Setup alumínium anyag
+
+A Blue Setup három szekciója a Main lap meglévő aluminiumGrain1 anyagát használja, az eredeti 2× pixelsűrűséggel csempézve, a lekerekített panelhatáron belül. A finom szemcsézet nem nyúlik meg a széles panelen; a Haladó rész nyitásakor is követi a panel méretét. Standard/Retina és K-Station/KS közös megjelenítés; Legacy nem változik. Meglévő grafika újrafelhasználása, nincs új képfájl. Ugyanazon #19 PR-ben marad.
+
+### 5. észrevétel — LED-feliratok balra igazítása
+
+A Blue felületek ovális LED-es kapcsolóinak feliratai a LED utáni szövegterületen balra igazítottak. Az oszcillátorok PW Position / LFO 2 PWM / Env PWM sorai közös kezdővonalat kapnak a középre igazítás helyett; azonos szabály Standard/Retina és K-Station/KS nézetben. A normál nyomógombok, partfülek és Legacy szövegigazítása változatlan. Ugyanazon #19 PR része.
+
+### 6. észrevétel — közvetlen méretlista és 125%
+
+A Setup Interface size gomb közvetlenül a százaléklistát nyitja, köztes Size almenü nélkül. 125% új sor hozzáadva; 50/75/100%, elválasztó és Custom megmarad. A jobb kattintásos menü továbbra is Size almenüt használ, ugyanazzal a kibővített listával. Az egyéni 50–150% tartomány, aránytartás és mentés változatlan; a meglévő méretezési teszt 125%-ot is ellenőriz. Ugyanazon #19 PR része.
+
+### 7. észrevétel — Setup gombok egységes szélessége
+
+A fájlműveletek öt és a Megjelenés négy kijelölt gombja egységes 210 logikai px szélességet és 34 px magasságot kapott, 12 px közökkel. A skinválasztó mező a fennmaradó helyet használja, így minden művelet egy sorban marad. Standard/Retina, K-Station/KS közös elrendezés; a két skin JSON-komponenspozíciója is frissítve. A leghosszabb Change data folder felirat számára is megmarad az eddigi szélesség. Ugyanazon #19 PR része.
+
+### 8. észrevétel — egységes Setup mezők és Haladó kapcsoló
+
+A skinválasztó, Editor MIDI channel és Audio buffer mezők, valamint a Performance diagnostics gomb egyaránt 314 logikai px szélességű. A Haladó KS-gomb világos alapú fekete kerettel/felirattal, két szélén lefelé mutató nyíllal jelzi a kinyitást; nyitva a nyilak felfelé mutatnak. A funkció és a beállítások változatlanok, Standard/Retina és mindkét firmware nézet közös módosítása. Ugyanazon #19 PR, beolvasztás nélkül.
+
+### 9. észrevétel — Patches állapotszöveg kontrasztja
+
+A lista alatti betöltési és egyéb állapotüzenetek explicit sötét szövegszínt kaptak a világosszürke háttéren, a többi böngészőfelirattal egyezően. A közös böngésző miatt K-Station és KS módban, Standard és Retina felületen is érvényes; a skin színfelülírása továbbra is támogatott.
+
+### PR #19 beolvasztás előtti ellenőrzés
+
+A Windows CI feltárta, hogy a konverziós ellenőrzés még a korábbi terméknevet várta. Az elvárt név Silver-K Blue lett; a teszt többi ellenőrzése változatlan. Beolvasztás csak a legfrissebb commit kötelező Windows/macOS ellenőrzéseinek sikerével engedélyezett.
+
 ### README-logó térközének finomítása
 
 A BLUE felirat és a hozzá tartozó kék vonal együtt 24 SVG-egységgel feljebb került a SILVER-K alá. A két sor közti hézag 44-ről 20 egységre csökkent, a rajzvászon magassága ehhez igazodik. A plugin fejlécének logója változatlan. Ellenőrzés: érvényes SVG/XML és tiszta diff.
+
+A #20 PR a #19 beolvasztása után friss mainnel összefésülve; mindkét fejlesztési naplóbejegyzés megőrizve.

@@ -14,7 +14,7 @@ struct KEngine;
 class Processor final : public juce::AudioProcessor,private juce::AudioProcessorValueTreeState::Listener,private juce::Timer {
 public:
  Processor();~Processor() override;
- const juce::String getName()const override{return "Silver-K";}
+ const juce::String getName()const override{return "Silver-K Blue";}
  void prepareToPlay(double,int)override;void releaseResources()override{}
  void processBlock(juce::AudioBuffer<float>&,juce::MidiBuffer&)override;
  bool isBusesLayoutSupported(const BusesLayout&)const override;

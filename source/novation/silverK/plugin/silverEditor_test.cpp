@@ -147,7 +147,7 @@ static void sizing(){
  }
  {
   Editor e(p);check(e.getWidth()==960&&e.getHeight()==750,"Default size must be 75%");
-  for(double scale:{.5,.75,1.,.82,1.5}){e.setUiScale(scale);check(e.getWidth()==juce::roundToInt(1280*scale)&&e.getHeight()==juce::roundToInt(1000*scale),"Menu/custom scale dimensions");}
+  for(double scale:{.5,.75,1.,1.25,.82,1.5}){e.setUiScale(scale);check(e.getWidth()==juce::roundToInt(1280*scale)&&e.getHeight()==juce::roundToInt(1000*scale),"Menu/custom scale dimensions");}
   e.setUiScale(.82);const auto bounds=e.getBounds();e.setUiScale(.1);e.setUiScale(std::nan(""));check(e.getBounds()==bounds,"Invalid custom scale changed size");
   e.setBoundsConstrained({0,0,900,900});check(std::abs(double(e.getWidth())/e.getHeight()-1.28)<.003,"Drag resize lost aspect ratio");
   e.setUiScale(.82);

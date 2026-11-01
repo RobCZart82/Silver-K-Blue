@@ -39,7 +39,7 @@ The source skin packages are in [blue/Skins](blue/Skins). Retina requires a comp
 
 ## Installation and first startup
 
-**Blue uses the same plugin identity as Silver-K.** Close the host, back up the previous complete plugin outside all host scan folders, then replace the whole bundle. Avoid duplicate copies in scanned folders. Follow the [installation guide](doc/INSTALL.md).
+**Blue now uses a separate plugin identity and the product name Silver-K Blue. It can be installed alongside upstream Silver-K. Projects saved with older Blue builds used the upstream identity and do not automatically switch to this new identity; keep the old build for those sessions.** Close the host and install the complete Silver-K Blue bundle. Follow the [installation guide](doc/INSTALL.md).
 
 **Supply your own compatible firmware.** K-Station uses its own firmware. KS additionally requires compatible program/performance MIDI data and Wave ROM. The automatically created zero Wave ROM supports generated oscillator waves; sampled-wave sounds may be incomplete or silent. Proprietary firmware and factory sound data are not included.
 

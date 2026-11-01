@@ -1,6 +1,6 @@
 # Installation
 
-Blue uses the same plugin identity as Silver-K. Back up the previous plugin outside all host scan folders and replace the complete bundle; avoid duplicate copies in scanned folders. Both Blue skins are built in and selectable in Setup, with Retina as the default for new settings. The external Skins folder is optional.
+Blue now uses a separate plugin identity and the product name Silver-K Blue. It can be installed alongside upstream Silver-K. Projects saved with older Blue builds used the upstream identity and do not automatically switch to this new identity; keep the old build for those sessions. Install the complete Silver-K Blue bundle; do not rename the original Silver-K to migrate projects. Both Blue skins are built in and selectable in Setup, with Retina as the default for new settings. The external Skins folder is optional.
 
 ## macOS
 

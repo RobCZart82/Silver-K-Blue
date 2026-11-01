@@ -17,7 +17,7 @@ A korábbi külön platformkiadások törölve lettek. Új közös Windows/macOS
 
 Mindkét skin be van építve, a Setup listából választható. Új beállításnál a Retina az alapértelmezett; a mentett választás megmarad. A külső Skins mappa opcionális.
 
-A Blue és az eredeti Silver-K pluginazonosítója azonos. Zárd be a hostot, mentsd a korábbi teljes plugint a beolvasott mappákon kívülre, és a teljes bundle-t cseréld. Ne maradjon két azonos példány a host keresési útvonalán.
+A Silver-K Blue külön pluginazonosítót kapott, ezért az eredeti Silver-K mellé telepíthető. A régi Blue-val mentett projektek a korábbi, közös azonosítóra hivatkoznak; nem váltanak automatikusan az új Blue-ra. Ezekhez őrizd meg a korábbi buildet.
 
 Saját kompatibilis firmware szükséges; KS módban Wave ROM és program/performance MIDI-adat is kell. A nulla Wave ROM nem tartalmaz mintahullámokat. Gyártói firmware-t és gyári hangadatot nem mellékelünk. A macOS minimumcél 12.0; a build ad hoc aláírt és nem notarizált. A Windows build nincs tanúsítvánnyal aláírva.
 
