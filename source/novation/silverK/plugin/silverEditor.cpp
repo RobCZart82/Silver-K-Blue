@@ -899,11 +899,11 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         if(!blueSetup())return;
         for(size_t i=0;i<folderPaths.size();++i){const int y=152+int(i)*36;
             folderNames[i].setBounds(38,y,94,28);folderPaths[i].setBounds(136,y,948,28);openFolders[i].setBounds(1096,y,144,28);}
-        loadRom.setBounds(38,270,180,34);waveRom.setBounds(230,270,180,34);factory.setBounds(422,270,190,34);
-        rescanRoms.setBounds(624,270,170,34);folder.setBounds(806,270,210,34);
+        loadRom.setBounds(38,270,210,34);waveRom.setBounds(260,270,210,34);factory.setBounds(482,270,210,34);
+        rescanRoms.setBounds(704,270,210,34);folder.setBounds(926,270,210,34);
         status.setBounds(38,314,1202,32);help.setBounds(38,350,1202,92);
-        interfaceSize.setBounds(966,510,274,34);
-        skinSelect.setBounds(38,510,360,34);customSkin.setBounds(410,510,180,34);reloadSkin.setBounds(602,510,120,34);exportSkin.setBounds(734,510,220,34);
+        interfaceSize.setBounds(1030,510,210,34);
+        skinSelect.setBounds(38,510,314,34);customSkin.setBounds(364,510,210,34);reloadSkin.setBounds(586,510,210,34);exportSkin.setBounds(808,510,210,34);
         channel.setBounds(38,650,360,34);bufferSelect.setBounds(410,650,500,34);latency.setBounds(928,650,312,34);
         diagnostics.setBounds(38,698,280,34);advancedKS.setBounds(330,698,400,34);
         controllerSelect.setBounds(38,756,550,34);demoSong.setBounds(606,756,300,34);
