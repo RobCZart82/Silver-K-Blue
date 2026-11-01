@@ -919,8 +919,8 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         interfaceSize.setBounds(1030,510,210,34);
         skinSelect.setBounds(38,510,314,34);customSkin.setBounds(364,510,210,34);reloadSkin.setBounds(586,510,210,34);exportSkin.setBounds(808,510,210,34);
         channel.setBounds(38,650,314,34);bufferSelect.setBounds(364,650,314,34);latency.setBounds(696,650,544,34);
-        diagnostics.setBounds(38,698,314,34);advancedKS.setBounds(364,698,400,34);
-        controllerSelect.setBounds(38,756,550,34);demoSong.setBounds(606,756,300,34);
+        diagnostics.setBounds(38,698,314,34);advancedKS.setBounds(364,698,314,34);
+        controllerSelect.setBounds(38,756,314,34);demoSong.setBounds(364,756,314,34);
         twoCoreProcessing.setBounds(38,804,1150,34);twoCoreNotice.setBounds(64,842,1150,30);
     }
     void applyLayout()
@@ -1315,7 +1315,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
                 const juce::Rectangle<int> panels[]{{22,100,1234,354},{22,468,1234,112},{22,594,1234,advancedKSExpanded?310:154}};
                 const juce::String titles[]{"Files and folders","Appearance","Audio and operation"};
                 for(int i=0;i<3;++i){const auto r=panels[i].toFloat();
-                    g.setGradientFill(juce::ColourGradient(skinColour(*this,0xffeef1f5),r.getX(),r.getY(),skinColour(*this,0xffd9dfe5),r.getRight(),r.getBottom(),false));g.fillRoundedRectangle(r,4.f);
+                    g.setColour(skinColour(*this,0xffe4e8ec));g.fillRoundedRectangle(r,4.f);
                     const auto& aluminium=look.image("aluminiumGrain1");
                     if(aluminium.isValid()){
                         // Reuse the Main panel material at its native 2x density.

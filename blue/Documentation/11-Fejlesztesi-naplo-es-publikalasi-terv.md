@@ -383,3 +383,7 @@ A Windows CI feltárta, hogy a konverziós ellenőrzés még a korábbi termékn
 A BLUE felirat és a hozzá tartozó kék vonal együtt 24 SVG-egységgel feljebb került a SILVER-K alá. A két sor közti hézag 44-ről 20 egységre csökkent, a rajzvászon magassága ehhez igazodik. A plugin fejlécének logója változatlan. Ellenőrzés: érvényes SVG/XML és tiszta diff.
 
 A #20 PR a #19 beolvasztása után friss mainnel összefésülve; mindkét fejlesztési naplóbejegyzés megőrizve.
+
+## 2026-11-01 — További Setup-finomítások
+
+Az Audio and operation részben a Haladó KS kapcsoló, a KS controller lista és a Demo Song gomb is a felső mezők 314 logikai px szélességét követi, két közös oszlopban. A Setup három paneljének alapja egyszínű ezüst, színátmenet nélkül; a meglévő finom alumíniumszemcsézet megmarad. Standard/Retina és K-Station/KS közös módosítása.
