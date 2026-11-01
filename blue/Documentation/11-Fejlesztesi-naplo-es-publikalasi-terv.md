@@ -377,3 +377,9 @@ A lista alatti betöltési és egyéb állapotüzenetek explicit sötét szöveg
 ### PR #19 beolvasztás előtti ellenőrzés
 
 A Windows CI feltárta, hogy a konverziós ellenőrzés még a korábbi terméknevet várta. Az elvárt név Silver-K Blue lett; a teszt többi ellenőrzése változatlan. Beolvasztás csak a legfrissebb commit kötelező Windows/macOS ellenőrzéseinek sikerével engedélyezett.
+
+### README-logó térközének finomítása
+
+A BLUE felirat és a hozzá tartozó kék vonal együtt 24 SVG-egységgel feljebb került a SILVER-K alá. A két sor közti hézag 44-ről 20 egységre csökkent, a rajzvászon magassága ehhez igazodik. A plugin fejlécének logója változatlan. Ellenőrzés: érvényes SVG/XML és tiszta diff.
+
+A #20 PR a #19 beolvasztása után friss mainnel összefésülve; mindkét fejlesztési naplóbejegyzés megőrizve.
