@@ -37,3 +37,15 @@ Forráslicenc: [GPLv3](LICENSE.md); [eredet és függőségek](THIRD_PARTY.md); 
 - **Skins:** külső skin-csomagok külön közvetlen almappákban; a beépített Blue skinekhez nem szükséges.
 
 [Részletes keresési és betöltési szabályok](doc/DATA_FOLDERS.hu.md).
+
+## Képernyőképek
+
+A Main nézet Silver-K Blue Retina 4K v1.0 felülettel, 256 px-es forgópotméter-képkockákkal.
+
+**K-Station — Main nézet**
+
+![Silver-K Blue Main nézet K-Station OS 2.1.01 firmware-rel](blue/Artwork/Previews/k-station-retina-4k-main.png)
+
+**KS-Rack — Main nézet**
+
+![Silver-K Blue Main nézet KS-Rack OS 2.1.02 firmware-rel](blue/Artwork/Previews/ks-retina-4k-main.png)
