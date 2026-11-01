@@ -373,3 +373,7 @@ A skinválasztó, Editor MIDI channel és Audio buffer mezők, valamint a Perfor
 ### 9. észrevétel — Patches állapotszöveg kontrasztja
 
 A lista alatti betöltési és egyéb állapotüzenetek explicit sötét szövegszínt kaptak a világosszürke háttéren, a többi böngészőfelirattal egyezően. A közös böngésző miatt K-Station és KS módban, Standard és Retina felületen is érvényes; a skin színfelülírása továbbra is támogatott.
+
+### PR #19 beolvasztás előtti ellenőrzés
+
+A Windows CI feltárta, hogy a konverziós ellenőrzés még a korábbi terméknevet várta. Az elvárt név Silver-K Blue lett; a teszt többi ellenőrzése változatlan. Beolvasztás csak a legfrissebb commit kötelező Windows/macOS ellenőrzéseinek sikerével engedélyezett.
