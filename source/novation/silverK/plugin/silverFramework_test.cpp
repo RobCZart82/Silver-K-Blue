@@ -3,6 +3,7 @@
 #include "synthLib/wavReader.h"
 #include "synthLib/midiBufferParser.h"
 #include "synthLib/sysexToMidi.h"
+#include "synthLib/midiToSysex.h"
 #include "synthLib/vstpreset.h"
 #include "jucePluginLib/patchdb/jobqueue.h"
 #include <atomic>
@@ -90,6 +91,49 @@ void midi()
     events=parse({0x90,60,0x80,60,0});require(events.size()==1 && events[0].a==0x80,"New status did not replace incomplete note");
     events=parse({0x90,60,100,0xf0,1,0xf7,61,100});require(events.size()==2,"SysEx did not cancel running status");
 }
+void smfImports()
+{
+    using Bytes=synthLib::SysexBuffer;
+    auto vlq=[](Bytes& bytes,size_t value){
+        uint8_t packed[4];int n=0;packed[n++]=uint8_t(value&127);
+        while((value>>=7)!=0)packed[n++]=uint8_t((value&127)|128);
+        while(n)bytes.push_back(packed[--n]);
+    };
+    auto packet=[&](Bytes& track,uint8_t status,const Bytes& body){
+        track.insert(track.end(),{0,status});vlq(track,body.size());track.insert(track.end(),body.begin(),body.end());
+    };
+    auto file=[](const Bytes& track){
+        Bytes b={'M','T','h','d',0,0,0,6,0,0,0,1,0,96,'M','T','r','k',0,0,0,0};
+        for(int n=0;n<4;++n)b[18+n]=uint8_t(track.size()>>(8*(3-n)));
+        b.insert(b.end(),track.begin(),track.end());return b;
+    };
+    Bytes dump(270,7);dump.front()=0xf0;dump.back()=0xf7;
+    Bytes track;
+    // A long meta-event containing fake SysEx must be skipped, not imported.
+    track.insert(track.end(),{0,0xff,1});vlq(track,140);
+    Bytes text(140,32);text[2]=0xf0;text[3]=1;text[4]=0xf7;track.insert(track.end(),text.begin(),text.end());
+    track.insert(track.end(),{0,0x90,60,100,0,61,100}); // running status
+    packet(track,0xf0,Bytes(dump.begin()+1,dump.begin()+101));
+    track.insert(track.end(),{0,0xff,1,0}); // non-wire metadata between packets
+    packet(track,0xf7,Bytes(dump.begin()+101,dump.end()));
+    track.insert(track.end(),{0,0xff,0x2f,0});
+    const auto split=file(track);synthLib::SysexBufferList messages;
+    require(synthLib::MidiToSysex::extractSysexFromData(messages,split) && messages==synthLib::SysexBufferList{dump},"SMF continuation was not joined exactly");
+    for(size_t size=0;size<split.size();++size){
+        messages.clear();require(!synthLib::MidiToSysex::extractSysexFromData(messages,Bytes(split.begin(),split.begin()+size)),"Truncated SMF published a patch");
+    }
+    track.clear();packet(track,0xf0,Bytes(dump.begin()+1,dump.end()));
+    messages.clear();require(synthLib::MidiToSysex::extractSysexFromData(messages,file(track)) && messages==synthLib::SysexBufferList{dump},"Single-event SMF ending in F7 failed");
+    track.clear();packet(track,0xf7,dump);
+    messages.clear();require(synthLib::MidiToSysex::extractSysexFromData(messages,file(track)) && messages==synthLib::SysexBufferList{dump},"Framed F7 escape failed");
+    track.clear();packet(track,0xf0,Bytes(dump.begin()+1,dump.begin()+101));
+    messages.clear();require(!synthLib::MidiToSysex::extractSysexFromData(messages,file(track)),"Unfinished SysEx accepted");
+    track.insert(track.end(),{0,0x90,60,100});
+    messages.clear();require(!synthLib::MidiToSysex::extractSysexFromData(messages,file(track)),"Channel message inside unfinished SysEx accepted");
+    track={0,0xf0,0x81,0x80,0x80,0x80,0};
+    messages.clear();require(!synthLib::MidiToSysex::extractSysexFromData(messages,file(track)),"Overlong VLQ accepted");
+    messages.clear();require(synthLib::MidiToSysex::extractSysexFromData(messages,dump) && messages==synthLib::SysexBufferList{dump},"Raw SYX import regressed");
+}
 void exports()
 {
     for (const auto count:{0,1,2})
@@ -139,6 +183,6 @@ void queues()
 }
 int main()
 {
-    try { streams();waves();midi();exports();presets();queues();std::cout<<"PASS: stream/WAV safety, MIDI parsing/export, preset import and queue shutdown\n";return 0; }
+    try { streams();waves();midi();smfImports();exports();presets();queues();std::cout<<"PASS: stream/WAV safety, MIDI parsing/export, preset import and queue shutdown\n";return 0; }
     catch(const std::exception& e) { std::cerr<<e.what()<<'\n';return 1; }
 }

@@ -23,7 +23,7 @@ def source_snapshot_files(root, source_files):
     """Include the runtime Blue resources required by the native CMake build."""
     roots = ('source/', 'cmake/', 'assets/', 'tools/', 'doc/', '.github/',
              'blue/Skins/', 'blue/Artwork/')
-    top = {'CMakeLists.txt', 'README.md', 'LICENSE.md', 'THIRD_PARTY.md', '.gitignore', '.gitattributes'}
+    top = {'CMakeLists.txt', 'README.md', 'LICENSE.md', 'THIRD_PARTY.md', '.gitignore', '.gitattributes', 'blue/upstream-state.json'}
     public_docs = {'doc/BUILD.md', 'doc/INSTALL.md', 'doc/USER_GUIDE.md',
                    'doc/SKINS.md', 'doc/WAVE_ROM_BUILDER.md',
                    'doc/releases/0.4a.md', f'doc/releases/{VERSION}.md'}
@@ -39,6 +39,15 @@ def source_snapshot_files(root, source_files):
 
 def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def source_links(commit, upstream):
+    snapshot = 'https://github.com/RobCZart82/Silver-K-Blue'
+    baseline = 'https://github.com/' + upstream['upstreamRepository']
+    return (f'Snapshot repository:\n{snapshot}/tree/{commit}\n'
+            f'{snapshot}/archive/{commit}.tar.gz\n\n'
+            f'Upstream baseline (before Blue changes):\n'
+            f'{baseline}/tree/{upstream["upstreamCommit"]}\n')
 
 
 def main():
@@ -141,9 +150,7 @@ def main():
         sources = f'''Silver-K corresponding source is included in Silver-K-source.zip.
 Snapshot SHA-256: {digest(source_archive)}
 Base Git commit: {commit}; local changes included: {dirty}.
-Upstream baseline (the bundled snapshot also includes local changes):
-https://github.com/temaniak/Silver-K/tree/{commit}
-https://github.com/temaniak/Silver-K/archive/{commit}.tar.gz
+{source_links(commit, json.loads((ROOT / 'blue/upstream-state.json').read_text()))}
 
 Build instructions and local compatibility patches are in that source tree.
 Required dependency sources (built locally, not prebuilt binaries):
