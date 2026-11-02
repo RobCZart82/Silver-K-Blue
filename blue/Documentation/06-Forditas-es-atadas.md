@@ -2,6 +2,19 @@
 
 A teljes repository az aktuális build kiindulópontja. Nem kell rá újból alkalmazni a blue/upstream-v0.4.4a.patch történeti pillanatfelvételt vagy régi helyi tooltip-patcheket.
 
+## Fejlesztési és átvételi követelmény — változatlan GUI
+
+A 2026-11-02-i felhasználói döntés alapján a további háttérfejlesztések megőrzik a Standard, Retina és Legacy skinek jelenlegi grafikáját, komponenspozícióit/méreteit, panel- és oldalelrendezését, valamint a meglévő kezelőszerveket. Új panel, gomb, beállítási mező vagy skinmódosítás nem része az aktív fejlesztési tervnek. A követelményt upstream változásokra is alkalmazni kell.
+
+GP-01–GP-06 munkák átvételekor:
+
+- A változáslistán ellenőrizni kell a skin-layout/theme/manifest, képfájlok és a natív editor geometriai/rajzolási módosításait. E fájlok vagy kódrészek módosítása nem vélelmezhetően szükséges egy háttérjavításhoz; a grafikai megjelenést/elrendezést módosító rész nem tartozik az engedélyezett körbe.
+- Az érintett natív editor-, Performance-, beépítettskin- és külsőskin-regressziókat azonos tesztkörnyezettel kell ellenőrizni. Ha a változás közvetve érintheti a GUI-t, összehasonlítható render vagy használati ellenőrzés szükséges a releváns skinekkel és méretekkel. Ez ellenőrzés, nem grafikai újratervezés.
+- Meg kell őrizni a hostállapot, pluginazonosítók, skinválasztás és meglévő méretezés kompatibilitását. Teljesítményjavításnál ugyanazon bemenethez kell helyességi/hangkimeneti és időzítési bizonyítékot rögzíteni.
+- A PASS/FAIL/SKIP eredményekhez pontos commit és futáslink vagy helyi parancs tartozzon. A firmware hiányában kihagyott tesztrész nem firmware-es elfogadás; a mockolt és izolált teszt nem DAW-/hardverpróba.
+
+A [napló aktív terve](11-Fejlesztesi-naplo-es-publikalasi-terv.md) külön kezeli a megvalósítást, az automatizált ellenőrzést és a használati elfogadást. Új kezelőszervet igénylő Undo/A–B vagy audio-bővítés nem kezdhető meg ezen terv alapján. A jelen dokumentációfrissítés nem változtat futó kódot, grafikát vagy tesztelési workflow-t.
+
 A pontos Windows x64 és macOS Universal 2 parancsokat a [doc/BUILD.md](../../doc/BUILD.md) tartalmazza. Az első konfigurálás hálózatról tölti a rögzített függőségek forrásait; ez nem teljes offline környezet.
 
 Mindkét Blue skin és az alkalmazásikon a build erőforrásai közé tartozik. A kész csomag forráscommitját a build-info.json rögzíti, nem a skin v1.0 verziója. A képek módosítása nélkül készült új kód is új forráscommitot és új binárist jelent.
