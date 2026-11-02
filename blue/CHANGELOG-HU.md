@@ -1,5 +1,13 @@
 # Silver-K Blue — változásjegyzék
 
+## Fejlesztés alatt — 2026-11-02, PR #24
+
+- Az X-Station webes szerkesztő tiszta checkoutból is fordítható: a hiányzó külső demók helyett üres könyvtárral indul. A hordozható HTML újragenerálva; külön webes build-/teszt-CI ellenőrzi a forrásával való egyezést.
+- A natív patch-import összefűzi az SMF F0/F7 SysEx-folytatásokat, figyelembe veszi a track- és eseményhatárokat, és elutasítja a hibás/csonkolt bemenetet részleges patchlista nélkül. A nyers SYX import megmarad.
+- A webes tesztbillentyűzet Shift vagy kiosztásváltás után is leállítja a ténylegesen indított hangot; új billentyűkezelési regressziós tesztek.
+- A régebbi `package_release.py` külön rögzíti a Blue snapshot és az upstream baseline repository-ját/revízióját. Az upstream metadata bekerül a forrássnapshotba; új proveniencia-teszt.
+- A pontos commitok, platformeredmények és a még el nem végzett hardveres/DAW-ellenőrzések a [fejlesztési naplóban](Documentation/11-Fejlesztesi-naplo-es-publikalasi-terv.md) szerepelnek. Ez a bejegyzés nyitott PR-t dokumentál, nem új kiadást.
+
 ## Fejlesztés alatt — 2026-10-30
 
 - Bináris olvasás és alfolyamok határellenőrzése; javított FourCC sablon.

@@ -8,4 +8,37 @@ Mindkét Blue skin és az alkalmazásikon a build erőforrásai közé tartozik.
 
 Teszteléshez külön SILVER_K_DATA könyvtárat használj. A ROM nélküli regressziók és a saját firmware-t igénylő tesztek eredményét külön rögzítsd; a kihagyott teszt nem sikeres firmware-es teszt.
 
-A main-beolvasztás feltételeit, a PR #1 nyitott ellenőrzéseit és a publikálási sorrendet a [fejlesztési napló](11-Fejlesztesi-naplo-es-publikalasi-terv.md) rögzíti. A letölthető csomagok tartalmazzák a forrásra mutató commitlinket és licenceket; a generikus forráscsomag Blue-erőforrásainak javítása a PR #1 része.
+A main-beolvasztás feltételeit, az aktuális PR-ok ellenőrzéseit és a publikálási sorrendet a [fejlesztési napló](11-Fejlesztesi-naplo-es-publikalasi-terv.md) rögzíti. A korábbi PR #1-re vonatkozó nyitott státusz történeti volt; a 2026-11-02-i auditjavításokat a PR #24 tartalmazza.
+
+## Az auditjavítások célzott ellenőrzése — PR #24
+
+A natív importáló SMF track-/eseményhosszakat ellenőriz, és összefűzi az F0/F7 SysEx-folytatásokat. Csonkolt vagy hibás SMF-ből nem ad át részleges patchlistát; a nyers SYX-beolvasás megmarad. A regressziók az egy- és többeseményes üzenetet, hosszú metaadatot, running statust, F7 escape-et, csonkolást és hibás VLQ-t is ellenőrzik. A szigorú SMF-feldolgozás nem ígéri a korábban heurisztikusan beolvasott, nem szabályos MIDI-fájlok támogatását.
+
+Konfigurált natív buildkönyvtárból, Windows PowerShellben:
+
+```powershell
+cmake --build build --config Release --target silverFramework_test --parallel 4
+$env:SILVER_K_DATA = "$env:TEMP/silver-blue-audit-tests"
+ctest --test-dir build -C Release --output-on-failure --no-tests=error -R '^silver_framework_safety$'
+python -m unittest discover -s tools -p "test_*.py"
+python tools/check_repository.py
+```
+
+macOS-on a már konfigurált Release buildhez ugyanez a target és CTest-szűrő használható; az elkülönített adatmappát shell-környezeti változóként add meg. A teljes platformellenőrzéseket továbbra is a Windows/macOS workflow-k futtatják.
+
+Az X-Station szerkesztő külön webalkalmazás. Node.js 24 mellett, a repository gyökeréből:
+
+```sh
+cd x-station-editor/web
+npm ci
+npm test
+npm run build
+```
+
+A könyvtár kezdetben üres; saját kompatibilis SYX/ZIP fájlokat kell importálni. A build nem igényel és nem csomagol gyártói demódumpot. A `build/` a webes kimenet, a követett `x-station-editor/dist/XStationEditor.html` a hordozható változat. Webes forrásmódosítás után ezt is újra kell generálni; a külön `xstation-web.yml` workflow eltérés esetén hibázik. A hardveres MIDI-próbát a mockolt tesztek nem helyettesítik.
+
+## Forráscommit és upstream eredet
+
+A jelenlegi Blue platform-workflow-k a `tools/package_blue_windows.py` eszközt használják Windows és macOS csomagolására; a `build-info.json` a Blue repository-t és a pontos forráscommitot rögzíti. A PR #24 proveniencia-javítása a külön, régebbi `tools/package_release.py` eszköz `SOURCES.txt` kimenetét érinti.
+
+Ebben a Blue snapshot linkje a `RobCZart82/Silver-K-Blue` repository-ra mutat. Az upstream baseline repository-ja és commitja a `blue/upstream-state.json` külön adataiból származik, nem a Blue HEAD SHA-jából. A metadata a generikus forrássnapshot része. A snapshot hash-e, alapcommitja és a helyi módosítások jelölése továbbra is külön szerepel. A forráslinkek javítása önmagában nem új bináris kiadás vagy upstream-integráció.

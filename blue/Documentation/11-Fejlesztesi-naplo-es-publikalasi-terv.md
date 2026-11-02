@@ -1,8 +1,36 @@
 # Silver-K Blue — fejlesztési terv és munkanapló
 
-Utolsó frissítés: **2026-11-01**
+Utolsó frissítés: **2026-11-02**
 
-## Aktuális kiegészítés — 2026-11-01
+## Aktuális kiegészítés — 2026-11-02: repository-audit javításai
+
+A [PR #24](https://github.com/RobCZart82/Silver-K-Blue/pull/24) a 2026-11-02-i célzott audit négy megállapítását javítja. Alapcommit: `3ae4505aaa1de7bb9ee2f26ee66e238c98a4d016`; javításokat tartalmazó commit: `426e59c898c795bccc0af03ac6f981cf33eef8c3`. A PR e bejegyzés készítésekor nyitott, nincs beolvasztva. A lentebbi „aktuális” szakaszok korábbi, dátumozott pillanatfelvételek; ez a kiegészítés az újabb állapot.
+
+### Megvalósított javítások
+
+| Auditpont | Korábbi hiba | Javítás és lefedettség |
+|---|---|---|
+| 1 — X-Station build | Két nem követett `demo-*.syx` importja miatt a tiszta checkout Vite- és portable-buildje is leállt. | A szerkesztő üres könyvtárral indul, saját SYX/ZIP importálható. A kötelező demóimportok és beolvasó pluginok eltávolítva, a követett hordozható HTML újragenerálva. A külön webes CI buildet, teszteket és a HTML-forrás egyezését ellenőrzi. |
+| 2 — natív SMF/SysEx import | A patch-böngésző az F7 continuation esemény státuszát lezárásnak tekintette, így a csomagokra bontott dump csonkán jutott az ellenőrzéshez. | Határellenőrzött SMF track-/eseményfeldolgozás, F0/F7 csomagok összefűzése, metaesemények és running status kezelése. Hibás/csonkolt fájl nem publikál részleges patchlistát; a nyers SYX út megmarad. A fájlalapú API is ezt a feldolgozót használja. Regressziók a `silver_framework_safety` tesztben. |
+| 3 — webes tesztbillentyűzet | A `z` lenyomása után Shift mellett érkező `Z` felengedés nem küldött note-offot. | A fizikai billentyűhöz a ténylegesen indított hang tartozik; Shift vagy kiosztásváltás után is azt állítja le. Külön tesztek a módosult felengedésre, ismétlésre, szövegbevitelre és visszaállításra. |
+| 4 — forráseredet | A régebbi csomagoló a Blue HEAD SHA-ját upstream repository-URL-be illesztette. | A `package_release.py` a Blue snapshotot a Blue repository-hoz linkeli; az upstream baseline külön, a `blue/upstream-state.json` repository-/commitadataival szerepel. Ez a metadata a forrássnapshot része; külön regressziós teszt ellenőrzi a két revízió szétválasztását. |
+
+Az X-Station webes szerkesztő külön alkalmazás; az üres induló könyvtár nem a natív plugin presetkönyvtárának módosítása. E munkában új upstream-verzió integrációja és kiadáspublikálás nem történt.
+
+### Ellenőrzési bizonyíték — `426e59c`
+
+- **PASS, helyi:** X-Station 25 teszt, Vite build és portable build. **SKIP:** egy külső hivatalos fixture-adatot igénylő teszt.
+- **PASS, helyi:** a Python-eszközök mind a 16 unittest tesztje; repository-audit és whitespace-ellenőrzés.
+- **PASS, helyi MSVC C++17:** a tényleges `midiToSysex.cpp` és az új SMF-regressziók elkülönített harnessben. A fájlolvasás helyettesített volt; ez a memóriabeli parser ellenőrzése, nem teljes natív alkalmazásteszt.
+- **PASS, GitHub CI:** [X-Station web editor — 41395891667](https://github.com/RobCZart82/Silver-K-Blue/actions/runs/41395891667), beleértve a tiszta buildet és a követett HTML egyezését.
+- **PASS, GitHub CI:** [Windows x64 — 41395891478](https://github.com/RobCZart82/Silver-K-Blue/actions/runs/41395891478), natív build, ROM nélküli regressziók és csomagolás.
+- **PASS, GitHub CI:** [macOS Universal 2 — 41395891680](https://github.com/RobCZart82/Silver-K-Blue/actions/runs/41395891680), natív build, ROM nélküli regressziók és csomagolás.
+
+A fenti futások a javításokat tartalmazó `426e59c` commithoz tartoznak, nem a későbbi dokumentációs commithoz. A fizikai MIDI-eszközös próba, DAW-/hangteszt és minden firmware-rel végzett elfogadás **NEM FUTOTT** e javítási körben. A CI sikere nem kiadási vagy beolvasztási engedély. Új tag vagy Release nem készült.
+
+Újrafuttatási parancsok és a csomagolók közti különbség: [Fordítás és forrásátadás](06-Forditas-es-atadas.md). Rövid változáslista: [CHANGELOG-HU](../CHANGELOG-HU.md).
+
+## Korábbi kiegészítés — 2026-11-01
 
 Ez a kiegészítés felülírja a lentebbi történeti állapotjelzéseket. PR #1–#21 beolvadt; main: `144bf20235a124dfa01dc5665e2347e5083ea20b`. A hozzá tartozó Windows (#62, run 41343709287) és macOS (#61, run 41343709273) build sikeres. A #19 Blue terméknevet és külön pluginazonosítókat, valamint használati javításokat hozott; #20 a README-logót igazította; #21 a Setup, ikon, LFO és képernyőképek javításait tartalmazza. A korábbi „nyitott PR / nincs automatikus merge” megjegyzések az akkori munkafázist írják le. A 0.5 Alpha nincs integrálva. A CI sikere nem teljes hanghűségi vagy minden DAW-ra kiterjedő elfogadás.
 
