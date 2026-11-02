@@ -2,7 +2,30 @@
 
 Utolsó frissítés: **2026-11-02**
 
-## Upstream átvétel — első fejlesztési egység, 2026-11-02
+## Aktuális összesítés — 2026-11-02
+
+Ellenőrzött main: `72531ed0750cb25c51c2ef355ad2e7b9397f0df3`. Az alábbi összesítés az aktuális státusz; a későbbi dátumozott munkabejegyzések a fejlesztés közbeni állapotot őrzik, a bennük szereplő „fejlesztési ág”, „ellenőrizendő” vagy „nem futott” nem írja felül ezt a táblát.
+
+| Egység | Integráció | Ellenőrzés és határ |
+|---|---|---|
+| #24 audit, #25 dokumentáció | Mainben | Import-, webes billentyűzet-, forráseredet-javítások és GUI-megőrzési elvek |
+| [#26](https://github.com/RobCZart82/Silver-K-Blue/pull/26) bemeneti védelem, SMF-kompatibilitás, tesztbővítés | Main `8e145188799bca5a9cb9b48429bc541bfaa0743c` | Javított PR-fej `23a5d40`: Windows/macOS/web PASS; 11 ROM nélküli teszt. Privát Windows persistence/latencia referencia- és natív KS-vezérlővel PASS |
+| [#27](https://github.com/RobCZart82/Silver-K-Blue/pull/27) K-Station bemeneti diagnosztika | Main `72531ed0750cb25c51c2ef355ad2e7b9397f0df3` | Összevezetett PR-fej `db8672716ff5f0c8faa611ae98c7fbb58b64c7cd`: [Windows](https://github.com/RobCZart82/Silver-K-Blue/actions/runs/41436917239), [macOS](https://github.com/RobCZart82/Silver-K-Blue/actions/runs/41436917263), [web](https://github.com/RobCZart82/Silver-K-Blue/actions/runs/41436917230) PASS. A workflow már 12 ROM nélküli tesztet választ ki; privát K-Station számláló-/session-próba helyben PASS |
+| [#28](https://github.com/RobCZart82/Silver-K-Blue/pull/28) KS indítási hangállapot-teszt | Nyitott PR, még nincs mainben | Fej `2090ce984789a92e82642d7014186266e7f46e85`: [Windows](https://github.com/RobCZart82/Silver-K-Blue/actions/runs/41438387114), [macOS](https://github.com/RobCZart82/Silver-K-Blue/actions/runs/41438387161), [web](https://github.com/RobCZart82/Silver-K-Blue/actions/runs/41438387014) PASS. A firmware-es ág CI-ben SKIP; helyi Windows referencia/natív próba PASS |
+
+A main beolvasztás utáni új ellenőrzése külön bizonyíték: e frissítés ellenőrzésekor a [Windows](https://github.com/RobCZart82/Silver-K-Blue/actions/runs/41443754456) futott, a [macOS](https://github.com/RobCZart82/Silver-K-Blue/actions/runs/41443754232) várakozott, a [web](https://github.com/RobCZart82/Silver-K-Blue/actions/runs/41443754303) PASS volt. A PR-fej eredménye nem helyettesíti a main pontos revíziójának eredményét.
+
+### Következő lépések és megmaradt korlátok
+
+- GP-01 részben kész: a felsorolt tesztek már CI-ben vannak; a teljes lefedettségi felmérés nyitott.
+- GP-02/GP-03 részben igazolt: izolált Windows firmware-es mentés/indulás/latencia és natív KS-ismétlés sikeres. A teljes többpéldányos, DAW-os, fizikai MIDI- és macOS firmware-es elfogadás nincs lezárva.
+- #28-at a #27 utáni mainnel össze kell vezetni, majd az új fej CI-jét ellenőrizni. A teszt a jelenlegi szerkesztési csatornát fedi le, nem minden Performance-partot/sustain-állapotot. A beragadt induló hang a vizsgált esetben nem reprodukálható; upstream CC64/123/120 tisztítás nem került át, motorhiba-javítás nem állítható.
+- GP-04: ez az egyeztetés frissíti az aktív státuszokat; a történeti kiadási és grafikai feljegyzéseket megőrzi.
+- GP-05 méréssel igazolt szűk keresztmetszetre vár; GP-06 automatikus Patches-figyelés továbbra is opcionális terv. KS audio-bemenet/sztereó fogadás külön képességvizsgálatot igényel.
+
+A privát próbák K-Station 2.101 és KS 2.102 firmware-t, KS All Data fájlt és generált 129024 bájtos nullás hullámállományt használtak. Ez nem igazolja a gyári minták hanghűségét. A nyilvános firmware-es teszt SKIP-je nem PASS. GUI/skin-változtatás, teljes upstream-merge, új tag vagy kiadás nem része ennek a munkának.
+
+## Történeti munkabejegyzés: upstream átvétel — első fejlesztési egység, 2026-11-02
 
 Alap: Blue main `5c9556fcaa7072b9f6eeb9652e598ab84962ea47`; célzott upstream forrás: temaniak/Silver-K `ab91ba112f2dd7be5ad21c1a6567290fe7ef20e6` (v0.5a). A felhasználóval elfogadott, változatlan GUI-t megkövetelő terv alapján ez az első, korlátozott implementációs lépés; nem a teljes 0.5 Alpha átvétele.
 
@@ -33,7 +56,7 @@ A dokumentációfrissítés alapja: main `5c9556fcaa7072b9f6eeb9652e598ab84962ea
 
 ### Aktív terv és lezárási feltételek
 
-Az alábbi feladatok **tervezettek**, e dokumentációs változtatás nem valósítja meg őket. A sorrend előbb a meglévő működés igazolását, utána a célzott háttérfejlesztést követi.
+Az alábbi táblázat a feladatok tartalmát és lezárási feltételeit rögzíti; megvalósítási állapotuk a fenti aktuális összesítésben található. A sorrend előbb a meglévő működés igazolását, utána a célzott háttérfejlesztést követi.
 
 | ID / sorrend | Feladat | Lezárási feltétel | GUI-korlát |
 |---|---|---|---|
@@ -57,7 +80,7 @@ Minden aktív feladatnál külön rögzítendő: megvalósítás (tervezett/PR/m
 - Nem kerül be automatikus, teljes upstream-merge. Új paramétert, módosult kezelőszervet vagy elrendezést igénylő upstream változás nem vehető át ezen terv részeként.
 - Az X-Station webes alkalmazás külön munkafolyamat. További protokoll-/hardverellenőrzése nem jelent felhatalmazást a natív Silver-K Blue GUI megváltoztatására.
 
-A következő első implementációs egység GP-01; GP-02 és GP-03 lefedettségi felmérése erre épülhet. Ez a dokumentációs commit nem indít implementációt, beolvasztást vagy kiadást.
+A GP-01 első implementációs egysége a #26/#27 részeként mainbe került; GP-02 és GP-03 további lefedettségi felmérése erre épülhet. Ez a dokumentációs frissítés nem indít beolvasztást vagy kiadást.
 
 ## Korábbi kiegészítés — 2026-11-02: repository-audit javításai
 

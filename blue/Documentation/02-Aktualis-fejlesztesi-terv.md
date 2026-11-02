@@ -2,14 +2,14 @@
 
 **2026-11-02 — aktuális követelmény:** a jelenlegi Standard, Retina és Legacy GUI/skinek megőrzendők. Nincs grafikai átrendezés, új panel vagy kezelőszerv, elemek átméretezése/áthelyezése vagy megjelenésváltás. A követelmény az upstream átvételekre is érvényes.
 
-A [PR #24](https://github.com/RobCZart82/Silver-K-Blue/pull/24) már beolvadt; a dokumentációfrissítés alapja main `5c9556fcaa7072b9f6eeb9652e598ab84962ea47`. Az audit négy javítása nem új, még megvalósítandó feladat. A részletes bizonyítékot és az aktív GP-01–GP-06 tervet a [központi fejlesztési napló](11-Fejlesztesi-naplo-es-publikalasi-terv.md) tartalmazza.
+A [PR #24](https://github.com/RobCZart82/Silver-K-Blue/pull/24) már beolvadt; az aktuális egyeztetés alapja main `72531ed0750cb25c51c2ef355ad2e7b9397f0df3` (#26 és #27 is beolvadt; #28 még nyitott). Az audit négy javítása nem új, még megvalósítandó feladat. A részletes bizonyítékot és az aktív GP-01–GP-06 tervet a [központi fejlesztési napló](11-Fejlesztesi-naplo-es-publikalasi-terv.md) tartalmazza.
 
 | Prioritás | Tervezett munka | Jelenlegi állapot |
 |---|---|---|
-| 1 — GP-01 | Meglévő tesztek CI-lefedettsége; ROM nélküli és firmware-es eredmények különválasztása | Felmérés/implementáció előtt |
-| 2 — GP-02 | Projektmentés, visszatöltés, adatfájlok és firmware-életciklus | Van részleges tesztkód; teljes használati elfogadás nincs e tervvel igazolva |
-| 3 — GP-03 | Kis/változó hangblokkok, frekvenciaváltás és valós idejű működés | Lefedettségi felmérés, majd csak a hiányzó regressziók |
-| 4 — GP-04 | Aktuális dokumentáció, eredetadat és kiadási bizonyíték egyeztetése | Ez a frissítés a tervet rendezi; nem zár le minden történeti eltérést |
+| 1 — GP-01 | Meglévő tesztek CI-lefedettsége; ROM nélküli és firmware-es eredmények különválasztása | Részben kész: 12 ROM nélküli CI-teszt mainben; teljes lefedettségi felmérés nyitott |
+| 2 — GP-02 | Projektmentés, visszatöltés, adatfájlok és firmware-életciklus | Izolált Windows firmware-es persistence/indulás PASS referencia/natív KS-sel; DAW/macOS/többpéldányos elfogadás nyitott |
+| 3 — GP-03 | Kis/változó hangblokkok, frekvenciaváltás és valós idejű működés | Bemeneti adapter és Windows firmware-es latencia/rate/buffer próbák PASS; további lefedettségi felmérés szükséges |
+| 4 — GP-04 | Aktuális dokumentáció, eredetadat és kiadási bizonyíték egyeztetése | Main/PR/CI/helyi bizonyíték egyeztetve a központi naplóban; nem teljes kiadási elfogadás |
 | 5 — GP-05 | Méréssel indokolt belső teljesítményjavítás | Csak bizonyított szűk keresztmetszetre, helyességi ellenőrzéssel |
 | 6 — GP-06 | Opcionális automatikus Patches-figyelés | Későbbi lehetőség; jelenleg kézi Rescan működik |
 

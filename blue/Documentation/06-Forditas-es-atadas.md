@@ -59,7 +59,7 @@ cmake --build build --config Release --target silverAudioInput_test --parallel 4
 ctest --test-dir build -C Release --output-on-failure --no-tests=error -R '^silver_audio_input_safety$'
 ```
 
-A teljes Windows/macOS CI 11 ROM nélküli tesztet választ ki, köztük a meglévő patch-, persistence/Rescan-, külsőskin- és hosszú resamplertesztet. A `silver_latency_reentry` külön lépésben fut; magán-ROM nélkül SKIP, nem sikeres firmware-es teszt. A ROM nélküli preset-/persistence-futás sem igazolja a firmware-es ágaikat.
+A #27 utáni main teljes Windows/macOS CI-je 12 ROM nélküli tesztet választ ki, köztük a meglévő patch-, persistence/Rescan-, külsőskin- és hosszú resamplertesztet. A `silver_latency_reentry` külön lépésben fut; magán-ROM nélkül SKIP, nem sikeres firmware-es teszt. A ROM nélküli preset-/persistence-futás sem igazolja a firmware-es ágaikat.
 
 Saját firmware-es latenciaellenőrzéshez a meglévő `SILVER_TEST_K_OS` és `SILVER_TEST_KS_OS` mellett `SILVER_TEST_KS_DATA` és `SILVER_TEST_KS_WAVES` is megadható. Ezek privát, helyi fájlútvonalak; elkülönített `SILVER_K_DATA` könyvtárat használj. A környezeti változók támogatása nem jelenti, hogy az adott firmware-/hangpróba már lefutott.
 
@@ -72,7 +72,7 @@ Ebben a Blue snapshot linkje a `RobCZart82/Silver-K-Blue` repository-ra mutat. A
 
 ## K-Station bemeneti diagnosztika
 
-A fejlesztési ág `silver_input_diagnostics` tesztje ROM nélkül a JSON-riport elérhetőségét/sémáját vizsgálja. A `silverInputDiagnostics_test` bináris egy saját K-Station firmware útvonalával a valódi mono bemeneti sor és a diagnosztikai Stop/Start viselkedését is ellenőrzi. Mindkét esethez elkülönített `SILVER_K_DATA` mappa szükséges; firmware-t ne tölts fel a publikus CI-be.
+A #27-tel mainbe került `silver_input_diagnostics` teszt ROM nélkül a JSON-riport elérhetőségét/sémáját vizsgálja. A `silverInputDiagnostics_test` bináris egy saját K-Station firmware útvonalával a valódi mono bemeneti sor és a diagnosztikai Stop/Start viselkedését is ellenőrzi. Mindkét esethez elkülönített `SILVER_K_DATA` mappa szükséges; firmware-t ne tölts fel a publikus CI-be.
 
 A JSON `input_overflows` értéke az adott K-Station engine létrehozása óta eldobott minták száma a host–worker és DSP input sor határán. A diagnosztikai session nem nullázza; a session `input_overflows_at_start` mezője a kezdőérték. Új engine új számlálót jelent. A `controller_backend` K-Station esetén `original-h8`; ez a Blue jelenlegi implementációját írja le.
 
@@ -80,3 +80,7 @@ Az érték csak `input_overflows_supported=true` mellett értelmezhető. KS vagy
 
 
 A privát teszt előbb normál offline mono adatúton ellenőrzi, hogy a számláló nem nő, majd szándékosan túlméretezett realtime hostblokkal eldobást idéz elő. Ez a számlálás és session-élettartam regressziója, nem a valós audio-driver realtime teljesítményének mérése.
+
+## KS indítási teszt: még nyitott #28
+
+A [#28 PR](https://github.com/RobCZart82/Silver-K-Blue/pull/28) a meglévő latenciatesztet bővíti indítás/mixer/vocoder utáni csenddel, megszólalási pozitív kontrollal és note-off ellenőrzéssel. Ez még nincs a jelenlegi mainben. A helyi Windows referencia/natív KS-próba PASS, de a nyilvános CI firmware nélkül SKIP; beragadt hang ebben az esetben nem reprodukálható. A pontos revíziókat és fennmaradó korlátokat a [napló aktuális összesítése](11-Fejlesztesi-naplo-es-publikalasi-terv.md) rögzíti.
