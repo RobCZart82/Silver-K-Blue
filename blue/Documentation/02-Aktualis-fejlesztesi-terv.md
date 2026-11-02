@@ -1,11 +1,25 @@
-> **Történeti pillanatfelvétel — 2026-10-25.** A lentebbi helyi archívumútvonalak, készültségi állítások és régi binárisleírások a korabeli csomagra vonatkoznak. A jelenlegi sorrend és állapot a [fejlesztési naplóban](11-Fejlesztesi-naplo-es-publikalasi-terv.md), a telepítés a [friss útmutatóban](01-Telepites-es-hasznalat.md) található. A grafikai eredet nyitott pontjai: [PROVENANCE](../Artwork/PROVENANCE.md).
-
 # Aktuális fejlesztési terv és megvalósítási állapot
 
-**2026-11-02:** az aktuális státusz a [központi fejlesztési napló](11-Fejlesztesi-naplo-es-publikalasi-terv.md) elején található. A nyitott [PR #24](https://github.com/RobCZart82/Silver-K-Blue/pull/24) a webes buildet, a natív SMF/SysEx-importot, a webes note-off kezelést és a forráscsomag hivatkozásait javítja; a napló külön rögzíti a helyi/CI-bizonyítékot és a nyitott használati ellenőrzéseket. Az alábbi v1.0 feljegyzés történeti alap; a későbbi javításokat és beolvasztásokat nem írja felül.
+**2026-11-02 — aktuális követelmény:** a jelenlegi Standard, Retina és Legacy GUI/skinek megőrzendők. Nincs grafikai átrendezés, új panel vagy kezelőszerv, elemek átméretezése/áthelyezése vagy megjelenésváltás. A követelmény az upstream átvételekre is érvényes.
 
+A [PR #24](https://github.com/RobCZart82/Silver-K-Blue/pull/24) már beolvadt; a dokumentációfrissítés alapja main `5c9556fcaa7072b9f6eeb9652e598ab84962ea47`. Az audit négy javítása nem új, még megvalósítandó feladat. A részletes bizonyítékot és az aktív GP-01–GP-06 tervet a [központi fejlesztési napló](11-Fejlesztesi-naplo-es-publikalasi-terv.md) tartalmazza.
 
-Állapot: Silver-K Blue v1.0, 2026-10-25. Ez váltja fel a történeti tervek aktuális státuszát. Alap: upstream v0.4.4a, commit `4baaead06e23e2358729cca32b6b511c72022318`. A „kész” itt helyben megvalósított és célzottan ellenőrzött fejlesztést jelent; nem eredeti repositoryba beolvasztott változtatást.
+| Prioritás | Tervezett munka | Jelenlegi állapot |
+|---|---|---|
+| 1 — GP-01 | Meglévő tesztek CI-lefedettsége; ROM nélküli és firmware-es eredmények különválasztása | Felmérés/implementáció előtt |
+| 2 — GP-02 | Projektmentés, visszatöltés, adatfájlok és firmware-életciklus | Van részleges tesztkód; teljes használati elfogadás nincs e tervvel igazolva |
+| 3 — GP-03 | Kis/változó hangblokkok, frekvenciaváltás és valós idejű működés | Lefedettségi felmérés, majd csak a hiányzó regressziók |
+| 4 — GP-04 | Aktuális dokumentáció, eredetadat és kiadási bizonyíték egyeztetése | Ez a frissítés a tervet rendezi; nem zár le minden történeti eltérést |
+| 5 — GP-05 | Méréssel indokolt belső teljesítményjavítás | Csak bizonyított szűk keresztmetszetre, helyességi ellenőrzéssel |
+| 6 — GP-06 | Opcionális automatikus Patches-figyelés | Későbbi lehetőség; jelenleg kézi Rescan működik |
+
+Undo/Redo, A/B összehasonlítás és új felületi vezérlők nem szerepelnek az aktív tervben. A külső audio/upstream bővítések előbb képességenkénti összevetést igényelnek; GUI-változással járó részeik kizártak. A részletes elfogadási és változatlansági szabályokat a [fordítási/átadási útmutató](06-Forditas-es-atadas.md) rögzíti.
+
+## Történeti alap — v1.0, 2026-10-25
+
+Az alábbi archívumútvonalak, grafikai tervek, készültségi állítások és binárisleírások korabeli pillanatfelvételek, nem aktív grafikai fejlesztési megbízások. A jelenlegi telepítés a [friss útmutatóban](01-Telepites-es-hasznalat.md), a grafikai eredet nyitott pontjai a [PROVENANCE](../Artwork/PROVENANCE.md) fájlban találhatók.
+
+Állapot a történeti feljegyzéskor: Silver-K Blue v1.0, 2026-10-25. Alap: upstream v0.4.4a, commit `4baaead06e23e2358729cca32b6b511c72022318`. A „kész” itt helyben megvalósított és célzottan ellenőrzött fejlesztést jelentett; nem eredeti repositoryba beolvasztott változtatást.
 
 ## Elkészült grafikai munka
 
