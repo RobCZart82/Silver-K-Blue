@@ -69,6 +69,33 @@ static void render(Processor& p,ReentrantHost& host){
  check(p.underruns()==underruns,"Offline to realtime transition dropped audio frames");
 }
 
+static void ksStartupSilence(Processor& p,ReentrantHost& host){
+ if(p.isKStation())return;
+ p.setNonRealtime(true);
+ auto set=[&](const char* id,int value){auto* parameter=p.uiParameter(id);check(parameter!=nullptr,id);parameter->setValueNotifyingHost(parameter->convertTo0to1(float(value)));};
+ // Do not send Panic/All Notes Off or a fresh program dump here: those would
+ // erase the warm-up key/sustain state this regression is intended to expose.
+ for(const char* id:{"osc2_level","osc3_level","noise_level","ring_level","external_level","delay_level","reverb_level","chorus_level","arp_on","vocoder_balance","attack","release","resonance"})set(id,0);
+ set("osc1_wave",2);set("osc1_level",127);set("sustain",127);set("cutoff",127);set("filter_env",64);set("volume",127);
+ auto capture=[&](bool noteOn=false,bool noteOff=false){
+  juce::AudioBuffer<float> audio(4,host.block);juce::MidiBuffer midi;float peak=0;
+  const int blocks=int(host.rate*.6)/host.block+1;
+  for(int n=0;n<blocks;++n){audio.clear();midi.clear();
+   if(n==0 && noteOn)midi.addEvent(juce::MidiMessage::noteOn(int(p.editorChannel())+1,60,juce::uint8(100)),0);
+   if(n==0 && noteOff)midi.addEvent(juce::MidiMessage::noteOff(int(p.editorChannel())+1,60),0);
+   p.processBlock(audio,midi);
+   for(int c=0;c<2;++c)for(int i=0;i<host.block;++i){const auto value=audio.getSample(c,i);check(std::isfinite(value),"Non-finite KS startup output");if(n>=blocks/2)peak=std::max(peak,std::abs(value));}
+  }return peak;
+ };
+ const auto dry=capture();set("vocoder_balance",127);const auto vocoder=capture();set("vocoder_balance",0);
+ set("osc1_level",0);capture();set("osc1_level",127);const auto mixer=capture();
+ const auto played=capture(true);const auto released=capture(false,true);
+ std::cout<<"KS startup peaks dry="<<dry<<" vocoder="<<vocoder<<" mixer="<<mixer<<" played="<<played<<" released="<<released<<'\n';
+ check(dry<=1e-5f && vocoder<=1e-5f && mixer<=1e-5f,"KS warm-up left audible notes after mixer/vocoder edits");
+ check(played>1e-5f,"KS startup silence fixture did not produce its positive-control note");
+ check(released<=1e-5f,"KS startup fixture retained a released note");
+ std::cout<<"PASS: KS startup silence through mixer/vocoder edits, audible positive control and note release without Panic\n";
+}
 static void exercise(const juce::File& rom){
  Processor p;ReentrantHost host(p);host.prepare(48000,256);p.setBufferProfile(0);
  // Upstream ab91ba1: private KS assets remain caller supplied, never in CI.
@@ -79,6 +106,7 @@ static void exercise(const juce::File& rom){
  juce::String error;
  check(p.loadFirmware(rom,error),error.toRawUTF8());
  check(host.notifications>0,"Firmware load did not notify host latency");
+ ksStartupSilence(p,host);
  render(p,host);
  const int loaded=host.notifications;
  host.prepare(44100,512);render(p,host);

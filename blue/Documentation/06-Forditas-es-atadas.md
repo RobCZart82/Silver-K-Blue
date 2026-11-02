@@ -63,6 +63,10 @@ A teljes Windows/macOS CI 11 ROM nélküli tesztet választ ki, köztük a megl�
 
 Saját firmware-es latenciaellenőrzéshez a meglévő `SILVER_TEST_K_OS` és `SILVER_TEST_KS_OS` mellett `SILVER_TEST_KS_DATA` és `SILVER_TEST_KS_WAVES` is megadható. Ezek privát, helyi fájlútvonalak; elkülönített `SILVER_K_DATA` könyvtárat használj. A környezeti változók támogatása nem jelenti, hogy az adott firmware-/hangpróba már lefutott.
 
+### KS indítási csend regressziós próba
+
+A `silver_latency_reentry` KS-ága firmware-betöltés után, Panic vagy új programdump előtt ellenőrzi a mixer/vocoder módosítása melletti csendet, egy megszólaltatott MIDI-hangot és annak elengedését. Ugyanazokkal a privát környezeti változókkal futtatható; `SILVER_KS_CONTROLLER=native` mellett ismételd meg a natív KS-vezérlő ellenőrzéséhez. A helyi Windows referencia/natív futás sikeres, a tesztcsatornán beragadt hang nem reprodukálható. A nullás teszthullámállomány nem igazolja a gyári minták hanghűségét. Firmware nélkül a teljes latenciateszt SKIP marad.
+
 ## Forráseredet a csomagolókban
 
 A jelenlegi Blue platform-workflow-k a `tools/package_blue_windows.py` eszközt használják Windows és macOS csomagolására; a `build-info.json` a Blue repository-t és a pontos forráscommitot rögzíti. A PR #24 proveniencia-javítása a külön, régebbi `tools/package_release.py` eszköz `SOURCES.txt` kimenetét érinti.
