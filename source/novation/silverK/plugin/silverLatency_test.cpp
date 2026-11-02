@@ -77,14 +77,15 @@ static void ksStartupSilence(Processor& p,ReentrantHost& host){
  // erase the warm-up key/sustain state this regression is intended to expose.
  for(const char* id:{"osc2_level","osc3_level","noise_level","ring_level","external_level","delay_level","reverb_level","chorus_level","arp_on","vocoder_balance","attack","release","resonance"})set(id,0);
  set("osc1_wave",2);set("osc1_level",127);set("sustain",127);set("cutoff",127);set("filter_env",64);set("volume",127);
- auto capture=[&](bool noteOn=false,bool noteOff=false){
+ auto capture=[&](bool noteOn=false,bool noteOff=false,int sustain=-1){
   juce::AudioBuffer<float> audio(4,host.block);juce::MidiBuffer midi;float peak=0;
   const int blocks=int(host.rate*.6)/host.block+1;
   for(int n=0;n<blocks;++n){audio.clear();midi.clear();
+   if(n==0 && sustain>=0)midi.addEvent(juce::MidiMessage::controllerEvent(int(p.editorChannel())+1,64,sustain),0);
    if(n==0 && noteOn)midi.addEvent(juce::MidiMessage::noteOn(int(p.editorChannel())+1,60,juce::uint8(100)),0);
    if(n==0 && noteOff)midi.addEvent(juce::MidiMessage::noteOff(int(p.editorChannel())+1,60),0);
    p.processBlock(audio,midi);
-   for(int c=0;c<2;++c)for(int i=0;i<host.block;++i){const auto value=audio.getSample(c,i);check(std::isfinite(value),"Non-finite KS startup output");if(n>=blocks/2)peak=std::max(peak,std::abs(value));}
+   for(int c=0;c<4;++c)for(int i=0;i<host.block;++i){const auto value=audio.getSample(c,i);check(std::isfinite(value),"Non-finite KS startup output");if(n>=blocks/2)peak=std::max(peak,std::abs(value));}
   }return peak;
  };
  const auto dry=capture();set("vocoder_balance",127);const auto vocoder=capture();set("vocoder_balance",0);
@@ -94,7 +95,16 @@ static void ksStartupSilence(Processor& p,ReentrantHost& host){
  check(dry<=1e-5f && vocoder<=1e-5f && mixer<=1e-5f,"KS warm-up left audible notes after mixer/vocoder edits");
  check(played>1e-5f,"KS startup silence fixture did not produce its positive-control note");
  check(released<=1e-5f,"KS startup fixture retained a released note");
- std::cout<<"PASS: KS startup silence through mixer/vocoder edits, audible positive control and note release without Panic\n";
+ // Only after the untouched startup checks above: prove CC64 ownership with
+ // an audible held note, Note Off while sustained, and pedal release. Never
+ // use Panic/CC120/CC123 to make the release assertion pass.
+ const auto pedalPlayed=capture(true,false,127);
+ const auto pedalHeld=capture(false,true);
+ const auto pedalReleased=capture(false,false,0);
+ std::cout<<"KS sustain peaks played="<<pedalPlayed<<" held="<<pedalHeld<<" released="<<pedalReleased<<'\n';
+ check(pedalPlayed>1e-5f && pedalHeld>1e-5f,"KS sustain fixture did not retain its positive-control note");
+ check(pedalReleased<=1e-5f,"KS sustain pedal release retained an audible note");
+ std::cout<<"PASS: KS startup silence on all four outputs, mixer/vocoder edits and sustain/release positive controls on the editor channel without Panic\n";
 }
 static void exercise(const juce::File& rom){
  Processor p;ReentrantHost host(p);host.prepare(48000,256);p.setBufferProfile(0);
