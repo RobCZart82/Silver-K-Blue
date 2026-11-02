@@ -71,6 +71,11 @@ static void render(Processor& p,ReentrantHost& host){
 
 static void exercise(const juce::File& rom){
  Processor p;ReentrantHost host(p);host.prepare(48000,256);p.setBufferProfile(0);
+ // Upstream ab91ba1: private KS assets remain caller supplied, never in CI.
+ const auto data=juce::SystemStats::getEnvironmentVariable("SILVER_TEST_KS_DATA",{});
+ const auto waves=juce::SystemStats::getEnvironmentVariable("SILVER_TEST_KS_WAVES",{});
+ if(data.isNotEmpty())p.flashFile=juce::File(data);
+ if(waves.isNotEmpty())p.bankFile=juce::File(waves);
  juce::String error;
  check(p.loadFirmware(rom,error),error.toRawUTF8());
  check(host.notifications>0,"Firmware load did not notify host latency");

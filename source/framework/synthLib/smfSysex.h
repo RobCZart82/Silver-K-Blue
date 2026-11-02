@@ -71,6 +71,20 @@ inline bool extractSmfSysex(const Bytes& file, std::vector<Bytes>& output)
             {
                 running=0;uint32_t size=0;
                 if(!r.vlq(size) || size>r.end-r.pos)return false;
+                // Known V-Station exporter variant: the length omits its
+                // 21-byte name. Accept only this exact, bounded Novation
+                // program/name frame, never scan arbitrarily past an event.
+                if(status==0xf0 && size==141 && r.end-r.pos>=162 &&
+                   file[r.pos]==0 && file[r.pos+1]==0x20 && file[r.pos+2]==0x29 &&
+                   file[r.pos+3]==1 && file[r.pos+4]==0x41 &&
+                   file[r.pos+6]<=1 && file[r.pos+161]==0xf7 &&
+                   std::all_of(file.begin()+r.pos,file.begin()+r.pos+161,[](uint8_t b){return b<128;}))
+                {
+                    bool validName=true;
+                    for(size_t n=140;n<161 && file[r.pos+n];++n)
+                        if(file[r.pos+n]<32 || file[r.pos+n]==127)validName=false;
+                    if(validName)size=162;
+                }
                 const auto bodyEnd=r.pos+size;
                 if(status==0xf0)
                 {
