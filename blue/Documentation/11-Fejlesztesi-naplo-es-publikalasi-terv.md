@@ -16,6 +16,15 @@ Helyi bizonyíték: az új bemeneti regresszió MSVC C++17 `/W4 /WX` fordításs
 
 Következő külön lépések maradnak: KS indítási hang/sustain tisztítás célzott reprodukciója és regressziója; háttérdiagnosztika bővítése; KS audio-bemenet és sztereó fogadás külön tervezése. Natív vezérlőcsere nincs ebben a fejlesztési egységben. Új grafikai elrendezés, kezelőszerv, tag vagy Release nem készül.
 
+### A kibővített CI első futásának eredménye és javítása
+
+A `77721f1` első Windows/macOS futása sikeresen fordult, de mindkét platformon 9/11 ROM nélküli teszt volt sikeres. Az új `silver_audio_input_safety` átment. Két korábban nem bevont regresszió feltárt eltérést:
+
+- `silver_skin_packages`: a teszt a Custom méretválasztást még három preset után kereste. A jelenlegi 50/75/100/125% menühöz négy lépés szükséges. Csak a teszt navigációja javítva; a GUI és a menü változatlan.
+- `silver_persistence_and_rescan`: a szigorúbb SMF-parser megszüntette a V-Station ismert, 21 bájtos nevet kihagyó hosszmezőjének kompatibilitását. A parser most kizárólag a pontos Novation/K-Station fejléccel, 141-es deklarált hossz mellett 162 bájtos, teljes, hétbites payloaddal, érvényes névvel és záró F7-tel rendelkező esetet fogadja el; a track határán soha nem olvas túl. Külön natív regresszió ellenőrzi az elfogadást, idegen gyártó hibás hosszának és csonkolt névnek az elutasítását.
+
+A friss SMF-regresszió helyi MSVC-fordítása és futása **PASS**. A javított teljes platformtesztek eredménye az új PR-futásokban ellenőrizendő; az első futások **FAIL** eredményét nem minősítjük át sikeresnek, és a hibázó tesztek a CI-ben maradnak.
+
 ## Aktuális kiegészítés — 2026-11-02: repository-audit javításai
 
 A [PR #24](https://github.com/RobCZart82/Silver-K-Blue/pull/24) a 2026-11-02-i célzott audit négy megállapítását javítja. Alapcommit: `3ae4505aaa1de7bb9ee2f26ee66e238c98a4d016`; javításokat tartalmazó commit: `426e59c898c795bccc0af03ac6f981cf33eef8c3`. A PR e bejegyzés készítésekor nyitott, nincs beolvasztva. A lentebbi „aktuális” szakaszok korábbi, dátumozott pillanatfelvételek; ez a kiegészítés az újabb állapot.
