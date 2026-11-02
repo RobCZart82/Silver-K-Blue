@@ -106,6 +106,56 @@ static void ksStartupSilence(Processor& p,ReentrantHost& host){
  check(pedalReleased<=1e-5f,"KS sustain pedal release retained an audible note");
  std::cout<<"PASS: KS startup silence on all four outputs, mixer/vocoder edits and sustain/release positive controls on the editor channel without Panic\n";
 }
+// A separate, explicitly requested post-restore fixture. Entering Performance
+// queues state and can clear startup owners, so this is NOT cold-start proof.
+static void ksChannelMatrix(Processor& p,ReentrantHost& host){
+ if(p.isKStation())return;
+ if(juce::SystemStats::getEnvironmentVariable("SILVER_TEST_KS_CHANNEL_MATRIX",{})!="1"){
+  std::cout<<"NOT RUN: optional KS four-part/16-channel matrix (SILVER_TEST_KS_CHANNEL_MATRIX=1)\n";return;
+ }
+ p.setNonRealtime(true);juce::String error;
+ check(p.setPerformanceMode(true,error),error.toRawUTF8());
+ auto set=[&](unsigned part,const char* id,int value){
+  auto* parameter=p.parameters.getParameter((part?"part"+juce::String(part+1)+"_":juce::String{})+id);
+  check(parameter!=nullptr,id);parameter->setValueNotifyingHost(parameter->convertTo0to1(float(value)));
+ };
+ auto capture=[&](int channel,int action){
+  juce::AudioBuffer<float> audio(4,host.block);juce::MidiBuffer midi;float peak=0;
+  const int blocks=int(host.rate*.6)/host.block+1;
+  for(int n=0;n<blocks;++n){audio.clear();midi.clear();
+   if(n==0){
+    if(action==1){midi.addEvent(juce::MidiMessage::controllerEvent(channel,64,127),0);midi.addEvent(juce::MidiMessage::noteOn(channel,60,juce::uint8(100)),0);}
+    if(action==2)midi.addEvent(juce::MidiMessage::noteOff(channel,60),0);
+    if(action==3)midi.addEvent(juce::MidiMessage::controllerEvent(channel,64,0),0);
+   }
+   p.processBlock(audio,midi);
+   for(int c=0;c<4;++c)for(int i=0;i<host.block;++i){const auto v=audio.getSample(c,i);check(std::isfinite(v),"Non-finite KS channel matrix output");if(n>=blocks/2)peak=std::max(peak,std::abs(v));}
+  }return peak;
+ };
+ for(unsigned group=0;group<4;++group){
+  for(unsigned part=0;part<4;++part){
+   set(part,"part_channel",int(group*4+part));set(part,"part_output",0);
+   set(part,"part_low",0);set(part,"part_high",127);set(part,"part_transpose",64);set(part,"part_fine",64);
+  }
+  check(capture(1,0)<=1e-5f,"KS channel assignment left an audible note");
+  // Confirm firmware state, not just the frontend parameter values.
+  juce::MemoryBlock saved;p.getStateInformation(saved);
+  auto xml=juce::AudioProcessor::getXmlFromBinary(saved.getData(),int(saved.getSize()));check(xml!=nullptr,"Matrix state XML missing");
+  juce::MemoryBlock dump;check(dump.fromBase64Encoding(xml->getStringAttribute("program"))&&dump.getSize()==1038,"Matrix Performance dump missing");
+  const auto* bytes=static_cast<const uint8_t*>(dump.getData());
+  check((bytes[13+190]&15)==15,"Matrix requires all four active parts");
+  for(unsigned part=0;part<4;++part)check((bytes[13+part*256+181]&15)==group*4+part,"Matrix channel assignment not applied by firmware");
+  for(unsigned part=0;part<4;++part){
+   const int channel=int(group*4+part)+1;
+   const auto played=capture(channel,1),held=capture(channel,2),released=capture(channel,3);
+   std::cout<<"KS matrix part="<<part+1<<" channel="<<channel<<" played="<<played<<" held="<<held<<" released="<<released<<'\n';
+   check(played>1e-5f && held>1e-5f,"KS matrix positive sustain control was silent");
+   check(released<=1e-5f,"KS matrix retained an audible note after pedal release");
+  }
+ }
+ check(p.setPerformanceMode(false,error),error.toRawUTF8());p.selectPart(0);capture(1,0);
+ std::cout<<"PASS: post-restore KS four-part sustain matrix across all 16 MIDI channels (not cold-start coverage)\n";
+}
 static void exercise(const juce::File& rom){
  Processor p;ReentrantHost host(p);host.prepare(48000,256);p.setBufferProfile(0);
  // Upstream ab91ba1: private KS assets remain caller supplied, never in CI.
@@ -117,6 +167,7 @@ static void exercise(const juce::File& rom){
  check(p.loadFirmware(rom,error),error.toRawUTF8());
  check(host.notifications>0,"Firmware load did not notify host latency");
  ksStartupSilence(p,host);
+ ksChannelMatrix(p,host);
  render(p,host);
  const int loaded=host.notifications;
  host.prepare(44100,512);render(p,host);
