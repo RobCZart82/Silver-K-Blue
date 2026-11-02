@@ -593,3 +593,9 @@ A repository áttekintésekor 16 helyi Python-teszt PASS; a mono bemeneti regres
 ## 2026-11-02 — Tételes upstream v0.5a leltár
 
 A `338c703` Blue main és az upstream `ab91ba1` v0.5a összevetése alapján nem teljes az átvétel. A [részletes leltár](12-Upstream-v05-atveteli-leltar.md) külön rögzíti a már átvett mono bemeneti/diagnosztikai javításokat, a még hiányzó sztereó/KS hangutat, host- és mikrofonengedély-teszteket, natív K/KS migrációt és kutatóeszközöket, a drum-flash fixture-t és a macOS fejlesztői indítás adatútvonal-továbbítását. A #28 teszt mainben van, a runtime CC-tisztítás nincs átvéve. A GUI és a baseline nem változik; ez dokumentációs leltár, új runtime kód vagy kiadás nélkül.
+
+## 2026-11-02 — Izolált macOS fejlesztői indítás
+
+A #30 leltár PR Windows/macOS/web ellenőrzése sikeres, beolvasztva (`5f5778a`). A következő kis fejlesztési lépcső a `script/build_and_run.sh`: az upstream megoldás alapján a LaunchServices explicit megkapja a nem üres `SILVER_K_DATA` értéket, így a fejlesztői app ugyanazt a tesztadatmappát használhatja, mint a parancssor. A korábban bent maradt eredeti app/binary/log nevek Silver-K Blue-ra javítva mindkét build-elrendezésben.
+
+Ellenőrzés: `bash -n`, `git diff --check` PASS; ideiglenes helyettesített open/cmake/pgrep parancsokkal a két elrendezés, hiányzó/üres/egyedi adatútvonal és szóközös útvonal PASS. Ez az argumentumátadást ellenőrzi, valódi LaunchServices-/appindítást nem helyettesít. GUI, motor, termékazonosítók változatlanok; nincs kiadás. PR CI eredménye még függő.
