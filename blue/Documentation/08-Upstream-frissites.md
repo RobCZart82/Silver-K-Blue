@@ -36,4 +36,6 @@ A `tools/test_sync_blue_upstream.py` ideiglenes helyi repositorykkal, GitHub-ír
 
 ## Célzott átvételek állapota — 2026-11-02
 
-A #26 és #27 mainbe került: K-Station bemeneti védelem, tesztparaméterezés és bemeneti veszteségdiagnosztika, az upstream `ab91ba112f2dd7be5ad21c1a6567290fe7ef20e6` alapján. Ez részleges, kézzel felülvizsgált átvétel, nem teljes v0.5a-integráció; a baseline-nyilvántartás nem emelhető emiatt automatikusan a teljes upstream kiadásra. A #28 indítási tesztje még nyitott, az upstream hang/sustain-tisztítás nem került át. Minden további átvételre érvényes a változatlan GUI követelménye. Bizonyítékok és hátralévő feladatok: [aktuális fejlesztési napló](11-Fejlesztesi-naplo-es-publikalasi-terv.md).
+A #26 és #27 mainbe került: K-Station bemeneti védelem, tesztparaméterezés és bemeneti veszteségdiagnosztika, az upstream `ab91ba112f2dd7be5ad21c1a6567290fe7ef20e6` alapján. Ez részleges, kézzel felülvizsgált átvétel, nem teljes v0.5a-integráció; a baseline-nyilvántartás nem emelhető emiatt automatikusan a teljes upstream kiadásra. A #28 indítási tesztje is mainbe került, az upstream hang/sustain-tisztítás nem került át. Minden további átvételre érvényes a változatlan GUI követelménye. Bizonyítékok és hátralévő feladatok: [aktuális fejlesztési napló](11-Fejlesztesi-naplo-es-publikalasi-terv.md).
+
+Tételes v0.5a forrásösszevetés, hiányok és függőségek: [átvételi leltár](12-Upstream-v05-atveteli-leltar.md). Az ellenőrzéskor (2026-11-02) az upstream main és v0.5a egyaránt `ab91ba1`; a korábbi ettől eltérő main-státusz történeti adat.
