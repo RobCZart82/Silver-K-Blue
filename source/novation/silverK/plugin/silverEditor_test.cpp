@@ -49,9 +49,14 @@ static void knobReadout(juce::Component& main,Processor& p){
 #if JUCE_MAC
  // Console JUCE tests have no NSApplication. Pump the CF source used by its
  // message queue so the production readout timer runs as it does in a host.
- const auto until=juce::Time::getMillisecondCounterHiRes()+1450;
- while(juce::Time::getMillisecondCounterHiRes()<until)CFRunLoopRunInMode(kCFRunLoopDefaultMode,.02,true);
- check(label->getText()=="Semitone","Knob did not restore its caption");
+ // The production timer is 1200 ms, but dispatch on a shared runner can be
+ // delayed or an asynchronous edit notification can rearm it. Wait for the
+ // observable result with a bounded deadline rather than a 250 ms margin.
+ const auto until=juce::Time::getMillisecondCounterHiRes()+5000;
+ while(label->getText()!="Semitone" && juce::Time::getMillisecondCounterHiRes()<until)
+  CFRunLoopRunInMode(kCFRunLoopDefaultMode,.02,true);
+ check(label->getText()=="Semitone","Knob did not restore its caption within 5 s; text="+label->getText()+", editing="+juce::String(int(label->isBeingEdited())));
+ check(int(p.uiParameter("osc1_semitone")->convertFrom0to1(p.uiParameter("osc1_semitone")->getValue()))==57,"Caption restoration changed the parameter");
 #endif
  p.uiParameter("osc1_semitone")->setValueNotifyingHost(before);
  for(const char* id:{"mod_attack","amp_attack"})check(slider(main,p,id)->getTextBoxPosition()!=juce::Slider::NoTextBox,"Envelope values must remain visible");

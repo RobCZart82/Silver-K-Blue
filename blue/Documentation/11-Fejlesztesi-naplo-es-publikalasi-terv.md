@@ -516,3 +516,10 @@ A fejlesztési egység nem módosít skint, editorgeometriát, kezelőszervet, b
 
 
 Az új diagnosztikai egység helyi MSVC C++17 buildje és ROM nélküli tesztje **PASS**. Saját K-Station 2.101 firmware-rel a valódi offline mono bemenet veszteségmentessége, majd szándékosan túlméretezett realtime hostblokkal a túlcsordulási számláló növekedése, valamint a Stop/Start alatti értékmegőrzés is ellenőrzött. A túlterhelési fixture nem realtime benchmark és nem megfigyelt hétköznapi hanghiba. A teljes Windows/macOS CI az új PR feladata; a helyi eredmény nem platform-PASS állítás.
+
+
+### K-Station diagnosztikai PR első CI-köre és macOS timer-teszt
+
+A `f7e5ba9` Windows- és webes CI-je **PASS**; a macOS build sikerült, az új `silver_input_diagnostics` teszt átment, de a meglévő `silver_native_editor` teszt a forgatógomb átmeneti értékfeliratának visszaállítására várva hibázott. A teszt 1450 ms után feltétel nélkül ellenőrzött, miközben a produkciós timer 1200 ms és a futtató üzenetsorában az aszinkron értesítések késleltethetik vagy újraindíthatják az időzítést. Ez a napló nem állít bizonyított grafikai regressziót.
+
+A macOS teszt most az elvárt Semitone feliratot figyeli az üzenetsor pumpálása közben, legfeljebb 5 másodpercig. Továbbra is hibázik, ha a felirat nem áll vissza; hiba esetén az aktuális szöveg/szerkesztési állapotot is kiírja, és ellenőrzi, hogy a paraméterérték megmarad. A produkciós 1200 ms timer, rajzolás és GUI-elrendezés változatlan. A javított fejcommit platformeredménye külön ellenőrizendő; az első macOS FAIL megmarad történeti eredményként.
