@@ -328,8 +328,17 @@ public:
         g.setColour(label.findColour(juce::Label::textColourId));
         auto area=label.getBorderSize().subtractedFrom(label.getLocalBounds());
         const int lineHeight=juce::roundToInt(label.getFont().getHeight()*1.2f);
-        for(const auto& line:juce::StringArray::fromLines(label.getText()))
-            g.drawFittedText(line,area.removeFromTop(lineHeight),juce::Justification::centredLeft,1,.7f);
+        for(const auto& line:juce::StringArray::fromLines(label.getText())){
+            auto row=area.removeFromTop(lineHeight);
+            const bool folderRow=package.id.startsWith("silver-k-blue-") &&
+                (line.startsWith("Patches:") || line.startsWith("ROMs:") || line.startsWith("Skins:"));
+            if(folderRow){
+                g.setFont(label.getFont().withStyle(juce::Font::bold));
+                g.drawText(line.upToFirstOccurrenceOf(":",false,false),row.removeFromLeft(66),juce::Justification::centredLeft);
+                g.setFont(label.getFont());
+                g.drawFittedText(": "+line.fromFirstOccurrenceOf(":",false,false).trimStart(),row,juce::Justification::centredLeft,1,.7f);
+            }else g.drawFittedText(line,row,juce::Justification::centredLeft,1,.7f);
+        }
     }
 };
 struct ControlSlider final : juce::Slider
@@ -1374,7 +1383,10 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         previousPreset.setEnabled(ready);nextPreset.setEnabled(ready);channel.setSelectedId(int(processor.editorChannel())+1,juce::dontSendNotification);
         juce::StringArray dataNames;for(const auto& file:processor.ksDataFiles())dataNames.add(file.getFileName());
         const auto missing=[](const juce::File& file){return file.existsAsFile()?file.getFileName():juce::String("Not selected / missing");};
-        help.setText((blueSetup()?juce::String():processor.dataFolder.getFullPathName()+"\n")+"ROMs | Firmware: "+missing(processor.osFile)+" | Wave ROM: "+missing(processor.bankFile)+"\nKS Data: "+(dataNames.isEmpty()?juce::String("Required: select KS All Data or its MIDI files"):dataNames.joinIntoString(", "))+"\nPatches: additional sounds | Skins: custom skins",juce::dontSendNotification);
+        const auto ksData=dataNames.isEmpty()?juce::String("Required: select KS All Data or its MIDI files"):dataNames.joinIntoString(", ");
+        help.setText(blueSetup()?
+            "Patches: Additional Sounds (A-Station, X-Station, V-Station, K-Station, KS4-KS5-KSRack)\nROMs: Firmware: "+missing(processor.osFile)+" / Wave ROM: "+missing(processor.bankFile)+" / KS Data: "+ksData+"\nSkins: Custom Skins":
+            processor.dataFolder.getFullPathName()+"\nROMs | Firmware: "+missing(processor.osFile)+" | Wave ROM: "+missing(processor.bankFile)+"\nKS Data: "+ksData+"\nPatches: additional sounds | Skins: custom skins",juce::dontSendNotification);
         help.setTooltip({});bufferSelect.setSelectedId(processor.bufferProfile()+1,juce::dontSendNotification);const auto rate=processor.getSampleRate();latency.setText(rate>0?"Plugin latency: "+juce::String(1000.*processor.getLatencySamples()/rate,1)+" ms":"",juce::dontSendNotification);
     }
     uint64_t lastFirmwareRevision=0;
