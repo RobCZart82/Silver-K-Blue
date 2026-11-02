@@ -517,6 +517,14 @@ A K-Station Main LFO négy tekerőjének pozíciója a KS nézet már megfelelő
 
 A README Main-előnézetei a felhasználó új K-Station.png és KS-Rack.png képeire cserélve, eredeti PNG-felbontásban. A képleírások a két firmware-nézetet nevezik meg, hostra vonatkozó feltételezés nélkül.
 
+## 2026-11-02 — KS indítási hangállapot célzott ellenőrzése
+
+Az upstream `ab91ba112f2dd7be5ad21c1a6567290fe7ef20e6` indítás utáni sustain/All Notes Off/All Sound Off tisztításának átvétele előtt a `silver_latency_reentry` új firmware-es próbát kapott. Panic vagy új programdump nélkül ellenőrzi a kezdeti csendet, a vocoder és oszcillátormixer módosítása utáni csendet, majd egy MIDI-hang megszólalását és elengedését. A pozitív kontroll kizárja, hogy egy végig néma hangszer téves sikernek számítson. A produkciós motor és a GUI változatlan.
+
+Helyi Windows/MSVC: KS 2.102, KS All Data és generált 129024 bájtos nullás hullámállomány mellett a referencia- és a natív KS-vezérlővel is PASS. Mindkét futásban dry/vocoder/mixer/released csúcs 0, a megszólaltatott hang csúcsa 0.0260137. A teljes KS és K-Station latencia/host-visszahívás/állapot-visszaállítás teszt is PASS (111.55 s, illetve 79.39 s). Elkülönített adatkönyvtár, privát firmware; nincs feltöltött gyártói állomány. Ez nem gyári Wave ROM-hanghűségi, macOS-, DAW- vagy fizikai MIDI-elfogadás.
+
+A feltételezett indítási beragadt hang ebben a tesztesetben nem reprodukálható, ezért az upstream tisztítás nem került át. A teszt egy aktuális szerkesztési csatornát fed le; nem igazolja az összes Performance-part és sustain-állapot hibamentességét. További motorváltoztatás előtt ilyen célzott reprodukció szükséges. A nyilvános CI firmware nélkül továbbra is SKIP-ként jelenti ezt a tesztet.
+
 ## 2026-11-01 — Setup információs sorok rendezése
 
 A Blue Files and folders információs része az útvonalak sorrendjét követi: Patches, ROMs, Skins. A három sor bal oldali neve félkövér, közös szélességű címkeoszlopban; a részletek normál betűvel jelennek meg. A ROMs sor a ténylegesen kiválasztott firmware-, Wave ROM- és KS-adatfájlneveket mutatja, nem rögzített példaneveket. Hosszú soronkénti szövegre a meglévő szélességhez igazítás érvényes. Standard/Retina közös rajzolás, Legacy szövege változatlan. Ez megjelenítési változás; importálási és keresési szabály nem módosult. Ellenőrzés: tiszta diff; platformfordítás és interaktív hosszúfájlnév-próba a CI/használati ellenőrzés feladata.
