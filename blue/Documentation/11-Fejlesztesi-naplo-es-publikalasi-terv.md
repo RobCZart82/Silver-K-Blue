@@ -1,6 +1,42 @@
 # Silver-K Blue — fejlesztési terv és munkanapló
 
-Utolsó frissítés: **2026-10-31**
+Utolsó frissítés: **2026-11-01**
+
+## Aktuális kiegészítés — 2026-11-01
+
+Ez a kiegészítés felülírja a lentebbi történeti állapotjelzéseket. PR #1–#21 beolvadt; main: `144bf20235a124dfa01dc5665e2347e5083ea20b`. A hozzá tartozó Windows (#62, run 41343709287) és macOS (#61, run 41343709273) build sikeres. A #19 Blue terméknevet és külön pluginazonosítókat, valamint használati javításokat hozott; #20 a README-logót igazította; #21 a Setup, ikon, LFO és képernyőképek javításait tartalmazza. A korábbi „nyitott PR / nincs automatikus merge” megjegyzések az akkori munkafázist írják le. A 0.5 Alpha nincs integrálva. A CI sikere nem teljes hanghűségi vagy minden DAW-ra kiterjedő elfogadás.
+
+### Külső hibajelentés értékelése
+
+A felhasználótól kapott `silver-k-blue-bug-list.txt` statikus jelentését célzott forrásolvasással ellenőriztük. A súlyossági címkék nem jelentenek bizonyított hibát.
+
+| Pont | Forrás alapján megállapított állapot |
+|---|---|
+| macOS include | A MacOSDefaults.cmake belső CMAKE_HOST_APPLE feltétele védi a beállításokat. Nem igazolt platformhiba. |
+| Pufferek / 256 minta | A min(256,count-offset) kezeli a rövid utolsó blokkot. Nyers mutatóból nem állapítható meg a tömb kapacitása; konkrét hibás hívást nem mutat a jelentés. |
+| Mintavételi frekvencia | A prepareAudio elutasítja a nem véges/nem pozitív host-frekvenciát; a készülék frekvenciája pozitív konstans. A feltételezett nullával osztás nem igazolt. |
+| Minimum 64 | Belső előkészítési méret, nem a host pufferhosszának átírása. Kis blokkokkal ellenőrizendő. |
+| Status szálkezelése | Az olvasás zárolt; a részlet önmagában nem bizonyít adatversenyt. |
+| Konstruktor kivétele | A rebuildK elkapja és státuszba írja; engine nélkül a processBlock némít. |
+| Offline előkészítés | Publikálás előtt történik; stopEngines megvárja az aktív audiohívásokat. Konkrét párhuzamos hibafolyamat nincs igazolva. |
+| Függőségek | Konkrét hibás CMake-függőség vagy linkerhiba nincs megnevezve. Platform-CI megtartandó. |
+
+### Felvett tesztelési feladatok — még nem végrehajtva
+
+- [ ] Előbb a meglévő határérték-, életciklus- és latenciatesztek lefedettségének ellenőrzése; csak a hiányzó esetek hozzáadása.
+- [ ] 1, 32, 63, 64, 255, 256 és 257 mintás blokkok: rövid utolsó blokk, kimeneti tartományok és memóriabiztonság.
+- [ ] Host-frekvencia és pufferméret váltása: állapotmegőrzés, engine újraépítése, véges és ésszerű latencia; hibás frekvencia elutasítása.
+- [ ] K-Station/KS firmware-váltás lejátszás közben: nincs összeomlás, beragadt hang vagy tartós Loading állapot. Hiányzó/hibás firmware esetén értelmes hiba és néma kimenet.
+
+Ezek tervezett regressziós ellenőrzések, nem bizonyított HIGH hibák. A jelentés alapján audio- vagy GUI-kódot nem írtunk át. Javítás reprodukálható eltérés vagy konkrét forrásbizonyíték alapján indokolt.
+
+### Upstream 0.5 Alpha — megvizsgált jelölt
+
+A [v0.5a](https://github.com/temaniak/Silver-K/releases/tag/v0.5a), forráscommit `ab91ba112f2dd7be5ad21c1a6567290fe7ef20e6`, új natív K/KS C++ vezérlőket, külső mono/sztereó audio-bemenetet és kapcsolódó MSVC/tesztfüggőségi javításokat tartalmaz. Az upstream main a vizsgálatkor `722f65c`, amely a korábbi alaphoz képest csak .gitignore-változást hozott. A kiadási tageket is figyelni kell.
+
+Állapot: összehasonlítva, átvételre érdemes jelölt, de nincs integrálva és Blue-kompatibilitásra elfogadva. Külön integrációs lépcső, platform-, firmware-, hostállapot- és audio-bemeneti ellenőrzés szükséges. A Linux PR #3 külön nyitott upstream javaslat.
+
+Felhasználói korlát: a Blue GUI meglévő lapjai és elrendezése, saját termékneve és pluginazonosítói megőrzendők. Esetleg szükséges GUI-módosítás előtt külön egyeztetés kell. Ez a naplófrissítés nem valósít meg új funkciót, upstream-integrációt vagy Release-t.
 
 ## Aktuális összefoglaló — 2026-10-31
 
