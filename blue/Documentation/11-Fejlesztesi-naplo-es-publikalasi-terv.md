@@ -623,3 +623,11 @@ Helyi macOS arm64 Release fordítás a #33 aktuális forrásából sikeres. A Pe
 Az új forrást újrafordítva, explicit H8 (`controller_mode=0`) és native (`controller_mode=1`) választással a teljes `silverLatency_test` kétszer sikeres, exit 0. Mindkét futás mind a 16 part/csatorna-sustain esetet, az indulási csendet, a pedálpróbát és a teljes K/KS latency/buffer/rate/state/async életciklust teljesítette. A mátrixban a hallható/kitartott csúcsok kb. 0,026, minden pedáleengedés utáni csúcs 0. Firmware: K-Station 2.1.01 és KS 2.1.02, helyi `KS All Data.MID`, zero Wave ROM. Ez nem igazol valódi sampled-wave/drum-hanghűséget vagy teljes hidegindítási 16 csatornás lefedettséget. Privát adat és nyers log nem került a repositoryba.
 
 A privát tesztfeltétel teljesült, a PR készre jelölhető; beolvasztás csak az új javított commit összes kötelező CI-ellenőrzésének sikere után. A korábbi macOS újrafutások közül egy a csomagfeltöltés GitHub-időtúllépésén, mások szabad hosted ARM gép hiányán álltak meg; ezek nem firmware-es teszthibák.
+
+## 2026-11-02 — Sztereó bemeneti adapter előkészítése
+
+A #33 javított fejének Windows/macOS/web ellenőrzése sikeres, beolvasztva (`db11f24`). A következő kis lépcső a meglévő mono bemeneti pufferadapter opcionális sztereó változata, az upstream `ab91ba1` KEngine szabályával: a két csatornán külön NaN/Inf → 0, majd 0,5 L + 0,5 R. A teljes 256 mintás részblokk másolása a kimenetre írás előtt történik. A meglévő mono hívások kompatibilis wrapperen át ugyanazt a viselkedést tartják meg.
+
+Ez még nem sztereó busz vagy KS ADC integráció: a host/engine sztereó bekötése külön lépcső. GUI, vezérlő és felhasználói routing nem változik. A helper előkészítése lehetővé teszi, hogy a sztereó bekötés később már ellenőrzött keverést használjon.
+
+Helyi ellenőrzés: önálló C++17 teszt `-Wall -Wextra -Werror`, AddressSanitizer és UndefinedBehaviorSanitizer mellett PASS. Régi mono esetek megmaradtak; új sztereó esetek mindkét csatorna kimenettel közös puffereit (fordított bekötéssel is), nem véges mintákat, 0/1/255/256/257/511/1024 mintás határokat, őrzőértékeket, maximális véges amplitúdót és hiányzó elsődleges bemenetet vizsgálnak. `git diff --check` PASS. CI és integráció függő.
