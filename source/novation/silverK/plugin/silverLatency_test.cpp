@@ -132,6 +132,9 @@ static void ksChannelMatrix(Processor& p,ReentrantHost& host){
    for(int c=0;c<4;++c)for(int i=0;i<host.block;++i){const auto v=audio.getSample(c,i);check(std::isfinite(v),"Non-finite KS channel matrix output");if(n>=blocks/2)peak=std::max(peak,std::abs(v));}
   }return peak;
  };
+ // Apply the queued mode dump before editing per-part parameters.
+ capture(1,0);p.refreshControls();
+ check(p.performanceMode(),"Matrix Performance mode did not reach firmware");
  for(unsigned group=0;group<4;++group){
   for(unsigned part=0;part<4;++part){
    set(part,"part_channel",int(group*4+part));set(part,"part_output",0);
@@ -153,7 +156,7 @@ static void ksChannelMatrix(Processor& p,ReentrantHost& host){
    check(released<=1e-5f,"KS matrix retained an audible note after pedal release");
   }
  }
- check(p.setPerformanceMode(false,error),error.toRawUTF8());p.selectPart(0);capture(1,0);
+ check(p.setPerformanceMode(false,error),error.toRawUTF8());p.selectPart(0);capture(1,0);p.refreshControls();
  std::cout<<"PASS: post-restore KS four-part sustain matrix across all 16 MIDI channels (not cold-start coverage)\n";
 }
 static void exercise(const juce::File& rom){
@@ -166,6 +169,7 @@ static void exercise(const juce::File& rom){
  juce::String error;
  check(p.loadFirmware(rom,error),error.toRawUTF8());
  check(host.notifications>0,"Firmware load did not notify host latency");
+ if(!p.isKStation())std::cout<<"KS fixture controller_mode="<<p.ksControllerMode()<<'\n';
  ksStartupSilence(p,host);
  ksChannelMatrix(p,host);
  render(p,host);
