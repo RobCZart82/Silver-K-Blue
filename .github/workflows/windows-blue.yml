@@ -27,11 +27,11 @@ jobs:
       - name: Configure Windows x64 Release
         run: cmake -S . -B build -A x64
       - name: Build VST3, Standalone and ROM-free checks
-        run: cmake --build build --config Release --target silverK_VST3 silverK_Standalone silver_check silverClock_test silverLatency_test silverEditor_test silverPerformance_test silverEmbeddedSkin_test silverFramework_test silverAudioInput_test silverWorkflow_test silverPersistence_test silverSkin_test silverResamplerRealtime_test --parallel 4
+        run: cmake --build build --config Release --target silverK_VST3 silverK_Standalone silver_check silverClock_test silverLatency_test silverEditor_test silverPerformance_test silverEmbeddedSkin_test silverFramework_test silverInputDiagnostics_test silverAudioInput_test silverWorkflow_test silverPersistence_test silverSkin_test silverResamplerRealtime_test --parallel 4
       - name: Run ROM-free checks
         env:
           SILVER_K_DATA: ${{ runner.temp }}/silver-blue-tests
-        run: ctest --test-dir build -C Release --output-on-failure --no-tests=error -R '^(silver_conversion|silver_host_clock|silver_audio_input_safety|silver_native_editor|silver_performance_editor|silver_embedded_blue|silver_framework_safety|silver_patch_workflow|silver_persistence_and_rescan|silver_skin_packages|silver_resampler_realtime)$'
+        run: ctest --test-dir build -C Release --output-on-failure --no-tests=error -R '^(silver_conversion|silver_host_clock|silver_audio_input_safety|silver_native_editor|silver_performance_editor|silver_embedded_blue|silver_framework_safety|silver_input_diagnostics|silver_patch_workflow|silver_persistence_and_rescan|silver_skin_packages|silver_resampler_realtime)$'
       - name: Report firmware-required latency check (SKIP without private ROMs)
         env:
           SILVER_K_DATA: ${{ runner.temp }}/silver-blue-tests

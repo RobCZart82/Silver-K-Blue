@@ -72,3 +72,15 @@ A `silver_latency_reentry` KS-ága firmware-betöltés után, Panic vagy új pro
 A jelenlegi Blue platform-workflow-k a `tools/package_blue_windows.py` eszközt használják Windows és macOS csomagolására; a `build-info.json` a Blue repository-t és a pontos forráscommitot rögzíti. A PR #24 proveniencia-javítása a külön, régebbi `tools/package_release.py` eszköz `SOURCES.txt` kimenetét érinti.
 
 Ebben a Blue snapshot linkje a `RobCZart82/Silver-K-Blue` repository-ra mutat. Az upstream baseline repository-ja és commitja a `blue/upstream-state.json` külön adataiból származik, nem a Blue HEAD SHA-jából. A metadata a generikus forrássnapshot része. A snapshot hash-e, alapcommitja és a helyi módosítások jelölése továbbra is külön szerepel. A forráslinkek javítása önmagában nem új bináris kiadás vagy upstream-integráció.
+
+
+## K-Station bemeneti diagnosztika
+
+A fejlesztési ág `silver_input_diagnostics` tesztje ROM nélkül a JSON-riport elérhetőségét/sémáját vizsgálja. A `silverInputDiagnostics_test` bináris egy saját K-Station firmware útvonalával a valódi mono bemeneti sor és a diagnosztikai Stop/Start viselkedését is ellenőrzi. Mindkét esethez elkülönített `SILVER_K_DATA` mappa szükséges; firmware-t ne tölts fel a publikus CI-be.
+
+A JSON `input_overflows` értéke az adott K-Station engine létrehozása óta eldobott minták száma a host–worker és DSP input sor határán. A diagnosztikai session nem nullázza; a session `input_overflows_at_start` mezője a kezdőérték. Új engine új számlálót jelent. A `controller_backend` K-Station esetén `original-h8`; ez a Blue jelenlegi implementációját írja le.
+
+Az érték csak `input_overflows_supported=true` mellett értelmezhető. KS vagy engine nélküli állapotban a támogatottság hamis, a scope `not-applicable`; a nulla ilyenkor nem sikeres KS bemeneti mérés. A riport kiegészítése nem hoz új GUI-elemet, és a meglévő audio-routingot nem változtatja.
+
+
+A privát teszt előbb normál offline mono adatúton ellenőrzi, hogy a számláló nem nő, majd szándékosan túlméretezett realtime hostblokkal eldobást idéz elő. Ez a számlálás és session-élettartam regressziója, nem a valós audio-driver realtime teljesítményének mérése.

@@ -30,6 +30,8 @@ namespace kstation
 
         uint64_t getUnderrunCount() const;
         uint64_t getMidiOverflowCount() const;
+        uint64_t getInputOverflowCount() const;
+        const char* controllerBackend() const { return "original-h8"; }
         const char* workerWaitBackend() const;
         void setBufferFloor(unsigned nativeFrames);
         void setAudioBuffer(uint32_t hostBlock,float hostRate,unsigned nativeFloor);

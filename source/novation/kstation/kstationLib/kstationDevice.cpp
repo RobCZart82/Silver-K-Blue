@@ -60,6 +60,9 @@ namespace kstation
         std::atomic<unsigned> realtimeBlock{256};
         std::atomic<uint8_t> snapshotBank{1},snapshotProgram{0};
         std::atomic<uint64_t> consumed{0}, underruns{0}, midiOverflows{0};
+        // Upstream ab91ba1: count drops at both input queue boundaries.
+        // Diagnostic sessions do not reset this engine-lifetime counter.
+        std::atomic<uint64_t> inputOverflows{0};
         std::atomic<bool> stop{false}, valid{false}, pauseRequested{false}, paused{false};
         std::atomic<bool> nonRealtime{false};
         std::mutex coldMutex, startMutex;
@@ -224,7 +227,8 @@ namespace kstation
                 InputSample sample{};
                 while (input.peek(sample) && sample.due <= produced)
                 {
-                    hardware->dsp().pushAudioInput(sample.value);
+                    if (!hardware->dsp().pushAudioInput(sample.value))
+                        inputOverflows.fetch_add(1, std::memory_order_relaxed);
                     input.pop(sample);
                 }
                 const auto frame = hardware->renderSample();
@@ -316,6 +320,7 @@ namespace kstation
         for(unsigned attempt=0;attempt<4 && lead<needed;++attempt)if(m_impl->leadFrames.compare_exchange_weak(lead,needed)){m_impl->realtimeBlock.store(unsigned(std::max(size_t(64),burst)));break;}
     }
     uint64_t Device::getMidiOverflowCount() const { return m_impl->midiOverflows.load(); }
+    uint64_t Device::getInputOverflowCount() const { return m_impl->inputOverflows.load(std::memory_order_relaxed); }
     const char* Device::workerWaitBackend() const {return m_impl->wakeup.backend();}
     void Device::setNonRealtime(bool enabled) noexcept { m_impl->nonRealtime.store(enabled, std::memory_order_release); }
 
@@ -404,7 +409,8 @@ namespace kstation
         const auto lead = m_impl->leadFrames.load(std::memory_order_relaxed);
         for (size_t i = 0; i < samples; ++i)
         {
-            if (inputs[0]) m_impl->input.push(InputSample{consumed + lead, inputWord(inputs[0][i])});
+            if (inputs[0] && !m_impl->input.push(InputSample{consumed + lead, inputWord(inputs[0][i])}))
+                m_impl->inputOverflows.fetch_add(1, std::memory_order_relaxed);
             DSP::AudioFrame frame{};
             bool available = m_impl->popAudioAt(consumed, frame);
             if (!available && offline)
