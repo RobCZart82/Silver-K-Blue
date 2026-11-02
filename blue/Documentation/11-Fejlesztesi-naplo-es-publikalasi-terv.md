@@ -599,3 +599,11 @@ A `338c703` Blue main és az upstream `ab91ba1` v0.5a összevetése alapján nem
 A #30 leltár PR Windows/macOS/web ellenőrzése sikeres, beolvasztva (`5f5778a`). A következő kis fejlesztési lépcső a `script/build_and_run.sh`: az upstream megoldás alapján a LaunchServices explicit megkapja a nem üres `SILVER_K_DATA` értéket, így a fejlesztői app ugyanazt a tesztadatmappát használhatja, mint a parancssor. A korábban bent maradt eredeti app/binary/log nevek Silver-K Blue-ra javítva mindkét build-elrendezésben.
 
 Ellenőrzés: `bash -n`, `git diff --check` PASS; ideiglenes helyettesített open/cmake/pgrep parancsokkal a két elrendezés, hiányzó/üres/egyedi adatútvonal és szóközös útvonal PASS. Ez az argumentumátadást ellenőrzi, valódi LaunchServices-/appindítást nem helyettesít. GUI, motor, termékazonosítók változatlanok; nincs kiadás. PR CI eredménye még függő.
+
+## 2026-11-02 — KS indulási regresszió: sustain és minden hangkimenet
+
+A #31 Windows/macOS/web ellenőrzése sikeres, beolvasztva (`88e1a2a`). Következő tesztlépcső: a meglévő KS indulási próba immár mind a négy hangkimeneten ellenőrzi a véges mintákat és a csendet. Az érintetlen indulási/mixer/vocoder ellenőrzések után külön pozitív kontroll vizsgálja a CC64 sustain bekapcsolását, a Note Off utáni kitartást és a pedál elengedése utáni csendet, Panic/CC120/CC123 nélkül.
+
+Ez a lépcső továbbra is az aktuális szerkesztői MIDI-csatornát vizsgálja; nem állít teljes 16 csatornás vagy négypartos indulási lefedettséget. A következő bővítésnek a partok aktiválását és csatornakiosztását is kontrollált fixture-rel kell biztosítania. A motor CC-tisztítása továbbra sincs átvéve, GUI/runtime változás nincs.
+
+Helyi ellenőrzés: Universal 2 két architektúrájának C++ szintaxisvizsgálata és diff-ellenőrzés; a firmware-es sustain próba tényleges futtatása még hátravan. A publikus CI firmware nélkül ezt az ágat SKIP-pel zárja, ami nem bizonyítja a hangviselkedést. Az új teszteset eredménye ezért nem kezelhető privát firmware-es PASS-ként.
