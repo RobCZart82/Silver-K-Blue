@@ -33,3 +33,7 @@ Az upstream új verziója új ütközéseket vagy teszthibákat hozhat. A folyam
 A frissítési job csak repository-tartalomírást kér a saját javaslati ágához. A repository azonosítása megmarad, de privát és nyilvános láthatósággal is működik. A bot nem nyit, hagy jóvá vagy merge-el PR-t, és nem publikál kiadást. Nincs személyes token vagy firmware a workflow-ban.
 
 A `tools/test_sync_blue_upstream.py` ideiglenes helyi repositorykkal, GitHub-írás nélkül ellenőrzi a frissítés nélküli, tiszta merge, ütközés és release-only eseteket privát és nyilvános repositoryval, valamint az idegen repository elutasítását. A workflow minden ellenőrzés előtt lefuttatja ezt.
+
+## Célzott átvételek állapota — 2026-11-02
+
+A #26 és #27 mainbe került: K-Station bemeneti védelem, tesztparaméterezés és bemeneti veszteségdiagnosztika, az upstream `ab91ba112f2dd7be5ad21c1a6567290fe7ef20e6` alapján. Ez részleges, kézzel felülvizsgált átvétel, nem teljes v0.5a-integráció; a baseline-nyilvántartás nem emelhető emiatt automatikusan a teljes upstream kiadásra. A #28 indítási tesztje még nyitott, az upstream hang/sustain-tisztítás nem került át. Minden további átvételre érvényes a változatlan GUI követelménye. Bizonyítékok és hátralévő feladatok: [aktuális fejlesztési napló](11-Fejlesztesi-naplo-es-publikalasi-terv.md).
