@@ -589,3 +589,7 @@ A #26 közben mainbe olvadt (`8e14518`). A #27 fejlesztési ágának összevezet
 ## 2026-11-02 — Áttekintés utáni dokumentációs egyeztetés
 
 A repository áttekintésekor 16 helyi Python-teszt PASS; a mono bemeneti regresszió Clang C++17, AddressSanitizer és UndefinedBehaviorSanitizer mellett PASS. Teljes helyi pluginfordítás és privát firmware-es próba ebben a körben nem futott. A webes helyi teszt Node/npm hiánya miatt nem futott; a main web CI-je PASS. A #28 zöld, friss mainre épülő fejét beolvasztottuk; a #29 a dokumentációt ehhez igazítja. A RELEASE.json korábbi közös identitásra utaló értéke javítva; a régi csomagkiadási dátum történeti jelölést kapott. Nem készült új Release vagy GUI-módosítás.
+
+## 2026-11-02 — Tételes upstream v0.5a leltár
+
+A `338c703` Blue main és az upstream `ab91ba1` v0.5a összevetése alapján nem teljes az átvétel. A [részletes leltár](12-Upstream-v05-atveteli-leltar.md) külön rögzíti a már átvett mono bemeneti/diagnosztikai javításokat, a még hiányzó sztereó/KS hangutat, host- és mikrofonengedély-teszteket, natív K/KS migrációt és kutatóeszközöket, a drum-flash fixture-t és a macOS fejlesztői indítás adatútvonal-továbbítását. A #28 teszt mainben van, a runtime CC-tisztítás nincs átvéve. A GUI és a baseline nem változik; ez dokumentációs leltár, új runtime kód vagy kiadás nélkül.
