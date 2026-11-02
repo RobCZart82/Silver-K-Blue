@@ -77,4 +77,4 @@ The ROM-free `silver_resampler_realtime` test streams five minutes of synthetic 
 
 After PR #27, the Windows/macOS workflows explicitly build and select 12 ROM-free tests, including `silver_audio_input_safety` and `silver_input_diagnostics`. The workflow target lists and filters are authoritative; the short developer examples above do not build every test selected by `^silver_`. Build the corresponding test targets before running a broader filter. `silver_latency_reentry` runs separately and reports SKIP without private K/KS firmware. ROM-free persistence and diagnostics success does not validate their firmware-dependent branches.
 
-The KS startup-silence extension is currently proposed in PR #28, not merged main. See the [development log](../blue/Documentation/11-Fejlesztesi-naplo-es-publikalasi-terv.md) for exact revisions, CI links, private Windows results and remaining acceptance limits.
+The KS startup-silence extension was merged in PR #28 (main 538de73). See the [development log](../blue/Documentation/11-Fejlesztesi-naplo-es-publikalasi-terv.md) for exact revisions, CI links, private Windows results and remaining acceptance limits.

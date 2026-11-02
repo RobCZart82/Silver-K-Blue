@@ -2,7 +2,7 @@
 
 **2026-11-02 — aktuális követelmény:** a jelenlegi Standard, Retina és Legacy GUI/skinek megőrzendők. Nincs grafikai átrendezés, új panel vagy kezelőszerv, elemek átméretezése/áthelyezése vagy megjelenésváltás. A követelmény az upstream átvételekre is érvényes.
 
-A [PR #24](https://github.com/RobCZart82/Silver-K-Blue/pull/24) már beolvadt; az aktuális egyeztetés alapja main `72531ed0750cb25c51c2ef355ad2e7b9397f0df3` (#26 és #27 is beolvadt; #28 még nyitott). Az audit négy javítása nem új, még megvalósítandó feladat. A részletes bizonyítékot és az aktív GP-01–GP-06 tervet a [központi fejlesztési napló](11-Fejlesztesi-naplo-es-publikalasi-terv.md) tartalmazza.
+A [PR #24](https://github.com/RobCZart82/Silver-K-Blue/pull/24) már beolvadt; az aktuális egyeztetés alapja main `538de73` (#26, #27 és #28 is beolvadt). Az audit négy javítása nem új, még megvalósítandó feladat. A részletes bizonyítékot és az aktív GP-01–GP-06 tervet a [központi fejlesztési napló](11-Fejlesztesi-naplo-es-publikalasi-terv.md) tartalmazza.
 
 | Prioritás | Tervezett munka | Jelenlegi állapot |
 |---|---|---|

@@ -18,13 +18,14 @@
   ],
   "upstreamTag": "v0.4.4a",
   "upstreamCommit": "4baaead06e23e2358729cca32b6b511c72022318",
-  "pluginBuild": "local unofficial Universal 2, tooltip fix included",
-  "pluginIdentity": "unchanged Silver-K identity",
+  "pluginBuild": "Windows x64 and macOS Universal 2; embedded Blue Standard and Retina skins",
+  "pluginIdentity": "Silver-K Blue: com.robczart.silverkblue; plugin code/AU subtype SkBl; manufacturer TusP",
   "history": {
     "snapshotCount": 32,
     "fileEntries": 1456,
     "logicalBytes": 1960334103,
     "uniqueObjects": 462,
     "uniqueObjectBytes": 851989794
-  }
+  },
+  "releaseMetadataScope": "releaseVersion and releaseDate describe the original 2026-10-25 skin package, not a newly published plugin release"
 }

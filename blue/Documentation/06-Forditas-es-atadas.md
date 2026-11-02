@@ -85,6 +85,6 @@ Az érték csak `input_overflows_supported=true` mellett értelmezhető. KS vagy
 
 A privát teszt előbb normál offline mono adatúton ellenőrzi, hogy a számláló nem nő, majd szándékosan túlméretezett realtime hostblokkal eldobást idéz elő. Ez a számlálás és session-élettartam regressziója, nem a valós audio-driver realtime teljesítményének mérése.
 
-## KS indítási teszt: még nyitott #28
+## KS indítási teszt: #28 beolvasztva
 
-A [#28 PR](https://github.com/RobCZart82/Silver-K-Blue/pull/28) a meglévő latenciatesztet bővíti indítás/mixer/vocoder utáni csenddel, megszólalási pozitív kontrollal és note-off ellenőrzéssel. Ez még nincs a jelenlegi mainben. A helyi Windows referencia/natív KS-próba PASS, de a nyilvános CI firmware nélkül SKIP; beragadt hang ebben az esetben nem reprodukálható. A pontos revíziókat és fennmaradó korlátokat a [napló aktuális összesítése](11-Fejlesztesi-naplo-es-publikalasi-terv.md) rögzíti.
+A [#28 PR](https://github.com/RobCZart82/Silver-K-Blue/pull/28) a meglévő latenciatesztet bővíti indítás/mixer/vocoder utáni csenddel, megszólalási pozitív kontrollal és note-off ellenőrzéssel. Ez a mainben van a #28 beolvasztása óta. A helyi Windows referencia/natív KS-próba PASS, de a nyilvános CI firmware nélkül SKIP; beragadt hang ebben az esetben nem reprodukálható. A pontos revíziókat és fennmaradó korlátokat a [napló aktuális összesítése](11-Fejlesztesi-naplo-es-publikalasi-terv.md) rögzíti.

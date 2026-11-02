@@ -4,22 +4,22 @@ Utolsó frissítés: **2026-11-02**
 
 ## Aktuális összesítés — 2026-11-02
 
-Ellenőrzött main: `72531ed0750cb25c51c2ef355ad2e7b9397f0df3`. Az alábbi összesítés az aktuális státusz; a későbbi dátumozott munkabejegyzések a fejlesztés közbeni állapotot őrzik, a bennük szereplő „fejlesztési ág”, „ellenőrizendő” vagy „nem futott” nem írja felül ezt a táblát.
+Ellenőrzött main: `538de73` (#28 beolvasztása után). Az alábbi összesítés az aktuális státusz; a későbbi dátumozott munkabejegyzések a fejlesztés közbeni állapotot őrzik, a bennük szereplő „fejlesztési ág”, „ellenőrizendő” vagy „nem futott” nem írja felül ezt a táblát.
 
 | Egység | Integráció | Ellenőrzés és határ |
 |---|---|---|
 | #24 audit, #25 dokumentáció | Mainben | Import-, webes billentyűzet-, forráseredet-javítások és GUI-megőrzési elvek |
 | [#26](https://github.com/RobCZart82/Silver-K-Blue/pull/26) bemeneti védelem, SMF-kompatibilitás, tesztbővítés | Main `8e145188799bca5a9cb9b48429bc541bfaa0743c` | Javított PR-fej `23a5d40`: Windows/macOS/web PASS; 11 ROM nélküli teszt. Privát Windows persistence/latencia referencia- és natív KS-vezérlővel PASS |
 | [#27](https://github.com/RobCZart82/Silver-K-Blue/pull/27) K-Station bemeneti diagnosztika | Main `72531ed0750cb25c51c2ef355ad2e7b9397f0df3` | Összevezetett PR-fej `db8672716ff5f0c8faa611ae98c7fbb58b64c7cd`: [Windows](https://github.com/RobCZart82/Silver-K-Blue/actions/runs/41436917239), [macOS](https://github.com/RobCZart82/Silver-K-Blue/actions/runs/41436917263), [web](https://github.com/RobCZart82/Silver-K-Blue/actions/runs/41436917230) PASS. A workflow már 12 ROM nélküli tesztet választ ki; privát K-Station számláló-/session-próba helyben PASS |
-| [#28](https://github.com/RobCZart82/Silver-K-Blue/pull/28) KS indítási hangállapot-teszt | Nyitott PR, még nincs mainben | Fej `2090ce984789a92e82642d7014186266e7f46e85`: [Windows](https://github.com/RobCZart82/Silver-K-Blue/actions/runs/41438387114), [macOS](https://github.com/RobCZart82/Silver-K-Blue/actions/runs/41438387161), [web](https://github.com/RobCZart82/Silver-K-Blue/actions/runs/41438387014) PASS. A firmware-es ág CI-ben SKIP; helyi Windows referencia/natív próba PASS |
+| [#28](https://github.com/RobCZart82/Silver-K-Blue/pull/28) KS indítási hangállapot-teszt | Mainben, #28 beolvasztva | Összevezetett fej `e075d353757053bfc4d0e4d5f3af872f03f97857`: [Windows](https://github.com/RobCZart82/Silver-K-Blue/actions/runs/41444798083), [macOS](https://github.com/RobCZart82/Silver-K-Blue/actions/runs/41444797963), [web](https://github.com/RobCZart82/Silver-K-Blue/actions/runs/41444798082) PASS. A firmware-es ág CI-ben SKIP; helyi Windows referencia/natív próba PASS |
 
-A main beolvasztás utáni új ellenőrzése külön bizonyíték: e frissítés ellenőrzésekor a [Windows](https://github.com/RobCZart82/Silver-K-Blue/actions/runs/41443754456) futott, a [macOS](https://github.com/RobCZart82/Silver-K-Blue/actions/runs/41443754232) várakozott, a [web](https://github.com/RobCZart82/Silver-K-Blue/actions/runs/41443754303) PASS volt. A PR-fej eredménye nem helyettesíti a main pontos revíziójának eredményét.
+A #27 utáni main `72531ed` Windows (41443754456), macOS (41443754232) és web (41443754303) futása PASS. A #28 összevezetett fejének mindhárom ellenőrzése PASS; ezért a PR beolvadt (`538de73`). Az új main külön futásait ez nem minősíti automatikusan sikeresnek.
 
 ### Következő lépések és megmaradt korlátok
 
 - GP-01 részben kész: a felsorolt tesztek már CI-ben vannak; a teljes lefedettségi felmérés nyitott.
 - GP-02/GP-03 részben igazolt: izolált Windows firmware-es mentés/indulás/latencia és natív KS-ismétlés sikeres. A teljes többpéldányos, DAW-os, fizikai MIDI- és macOS firmware-es elfogadás nincs lezárva.
-- #28-at a #27 utáni mainnel össze kell vezetni, majd az új fej CI-jét ellenőrizni. A teszt a jelenlegi szerkesztési csatornát fedi le, nem minden Performance-partot/sustain-állapotot. A beragadt induló hang a vizsgált esetben nem reprodukálható; upstream CC64/123/120 tisztítás nem került át, motorhiba-javítás nem állítható.
+- #28 a #27 utáni mainnel összevezetve és zöld CI után beolvasztva. A teszt a jelenlegi szerkesztési csatornát fedi le, nem minden Performance-partot/sustain-állapotot. A beragadt induló hang a vizsgált esetben nem reprodukálható; upstream CC64/123/120 tisztítás nem került át, motorhiba-javítás nem állítható.
 - GP-04: ez az egyeztetés frissíti az aktív státuszokat; a történeti kiadási és grafikai feljegyzéseket megőrzi.
 - GP-05 méréssel igazolt szűk keresztmetszetre vár; GP-06 automatikus Patches-figyelés továbbra is opcionális terv. KS audio-bemenet/sztereó fogadás külön képességvizsgálatot igényel.
 
@@ -584,3 +584,8 @@ A macOS teszt most az elvárt Semitone feliratot figyeli az üzenetsor pumpálá
 A #27 javított `0c1cbf16bcba817e554bcdacffa9b2c00b26d583` commitján a [Windows](https://github.com/RobCZart82/Silver-K-Blue/actions/runs/41428949293), [macOS](https://github.com/RobCZart82/Silver-K-Blue/actions/runs/41428949502) és [web](https://github.com/RobCZart82/Silver-K-Blue/actions/runs/41428949315) futás **PASS**. A produkciós GUI változatlan maradt.
 
 A #26 közben mainbe olvadt (`8e14518`). A #27 fejlesztési ágának összevezetése megőrzi annak teljes tesztlistáját és a külön firmware-es latencialépést, és hozzáadja a diagnosztikai tesztet: 12 ROM nélküli teszt, továbbra is külön firmware-es eredménnyel. Az összevezetett fejcommit új CI-eredménye külön ellenőrizendő; a korábbi PASS nem automatikus igazolása az új revíziónak.
+
+
+## 2026-11-02 — Áttekintés utáni dokumentációs egyeztetés
+
+A repository áttekintésekor 16 helyi Python-teszt PASS; a mono bemeneti regresszió Clang C++17, AddressSanitizer és UndefinedBehaviorSanitizer mellett PASS. Teljes helyi pluginfordítás és privát firmware-es próba ebben a körben nem futott. A webes helyi teszt Node/npm hiánya miatt nem futott; a main web CI-je PASS. A #28 zöld, friss mainre épülő fejét beolvasztottuk; a #29 a dokumentációt ehhez igazítja. A RELEASE.json korábbi közös identitásra utaló értéke javítva; a régi csomagkiadási dátum történeti jelölést kapott. Nem készült új Release vagy GUI-módosítás.
