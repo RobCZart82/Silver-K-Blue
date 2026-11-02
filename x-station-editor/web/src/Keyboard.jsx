@@ -1,15 +1,15 @@
 import {useEffect,useState} from 'react';
 import {CircleAlert} from 'lucide-react';
+import {createKeyboardInput} from './keyboard-input.js';
 
-const letters='zsxdcvgbhnjm,l.;/';
 export function Keyboard({midi,connected,onError}) {
   const [active,setActive]=useState(new Set());
   function on(note){try{midi.noteOn(note);setActive(prev=>new Set(prev).add(note));}catch(e){onError(e.message);}}
   function off(note){try{midi.noteOff(note);}catch(e){onError(e.message);}setActive(prev=>{const next=new Set(prev);next.delete(note);return next;});}
   useEffect(()=>{
-    const up=e=>{const i=letters.indexOf(e.key);if(i>=0&&e.key.length===1)off(48+i);};
-    const down=e=>{if(!connected||e.repeat||e.ctrlKey||e.metaKey||e.altKey||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;const i=letters.indexOf(e.key);if(i>=0&&e.key.length===1){e.preventDefault();on(48+i);}};
-    const blur=()=>{midi.panic();setActive(new Set());};
+    const input=createKeyboardInput(on,off);
+    const up=e=>input.up(e),down=e=>input.down(e,connected);
+    const blur=()=>{input.reset();midi.panic();setActive(new Set());};
     window.addEventListener('keydown',down);window.addEventListener('keyup',up);window.addEventListener('blur',blur);
     const hide=()=>{if(document.hidden)blur();};document.addEventListener('visibilitychange',hide);
     return()=>{window.removeEventListener('keydown',down);window.removeEventListener('keyup',up);window.removeEventListener('blur',blur);document.removeEventListener('visibilitychange',hide);midi.panic();};

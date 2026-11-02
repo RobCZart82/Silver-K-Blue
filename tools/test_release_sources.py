@@ -3,12 +3,13 @@
 from pathlib import Path
 import tempfile
 import unittest
-from package_release import source_snapshot_files
+from package_release import source_snapshot_files, source_links
 
 
 class SourceSnapshotTests(unittest.TestCase):
     def test_runtime_blue_resources_are_included_and_design_masters_are_excluded(self):
         included = ['CMakeLists.txt', 'tools/embed_blue_skins.py',
+                    'blue/upstream-state.json',
                     'source/novation/silverK/plugin/CMakeLists.txt',
                     'blue/Artwork/Silver-K-Blue-icon.png',
                     'blue/Skins/Silver-K Blue Standard v1.0/skin.json',
@@ -30,6 +31,15 @@ class SourceSnapshotTests(unittest.TestCase):
             (root / 'assets/firmware.bin').write_bytes(b'test')
             with self.assertRaises(RuntimeError):
                 list(source_snapshot_files(root, ['assets/firmware.bin']))
+
+    def test_blue_snapshot_and_upstream_baseline_have_separate_revisions(self):
+        commit = 'a' * 40
+        baseline = 'b' * 40
+        links = source_links(commit, {'upstreamRepository': 'temaniak/Silver-K', 'upstreamCommit': baseline})
+        self.assertIn(f'RobCZart82/Silver-K-Blue/tree/{commit}', links)
+        self.assertIn(f'RobCZart82/Silver-K-Blue/archive/{commit}.tar.gz', links)
+        self.assertIn(f'temaniak/Silver-K/tree/{baseline}', links)
+        self.assertNotIn(f'temaniak/Silver-K/tree/{commit}', links)
 
 
 if __name__ == '__main__':

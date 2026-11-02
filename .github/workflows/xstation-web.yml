@@ -1,0 +1,26 @@
+name: X-Station web editor
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: x-station-editor/web/package-lock.json
+      - run: npm ci
+        working-directory: x-station-editor/web
+      - run: npm test
+        working-directory: x-station-editor/web
+      - run: npm run build
+        working-directory: x-station-editor/web
+      - name: Verify the checked-in portable editor is current
+        run: git diff --exit-code -- x-station-editor/dist/XStationEditor.html

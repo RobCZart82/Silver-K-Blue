@@ -8,8 +8,6 @@ import {TemplatePanel} from './TemplatePanel.jsx';
 import {Keyboard} from './Keyboard.jsx';
 import {Dialog} from './Dialog.jsx';
 import {unzipSync} from 'fflate';
-import demoSounds from './data/demo-sounds.syx?base64';
-import demoTemplate from './data/demo-template.syx?base64';
 
 const initialMidi={connected:false,inputs:[],outputs:[],inputId:'',outputId:''};
 const defaults=Object.fromEntries(parameters.map(p=>[p.id,p.default]));
@@ -38,12 +36,6 @@ export default function App(){
       }
     }catch(e){assembler.current.reset();notify(e.message,true);}
   }
-  useEffect(()=>{
-    try{
-      const [sounds,templates]=[demoSounds,demoTemplate].map(data=>parseSysEx(Uint8Array.from(atob(data),c=>c.charCodeAt(0))).map(d=>entry(d,'Novation demo')));
-      setEntries([...sounds,...templates]);setSelected(sounds[0].id);
-    }catch(e){notify(e.message,true);}
-  },[]);
   useEffect(()=>{midi.setChannel(channel);},[midi,channel]);
   useEffect(()=>{const unload=e=>{midi.panic();if(entries.some(d=>d.dirty)){e.preventDefault();e.returnValue='';}};window.addEventListener('beforeunload',unload);return()=>window.removeEventListener('beforeunload',unload);},[midi,entries]);
   useEffect(()=>()=>{void Promise.resolve(midi.close()).catch(()=>{});},[midi]);

@@ -2,7 +2,7 @@
 
 # Aktuális fejlesztési terv és megvalósítási állapot
 
-**2026-10-31:** az aktuális státusz és az elfogadott Setup-koncepció a [központi fejlesztési napló](11-Fejlesztesi-naplo-es-publikalasi-terv.md) elején és végén található. Az alábbi v1.0 feljegyzés történeti alap; a későbbi beolvasztásokat nem írja felül.
+**2026-11-02:** az aktuális státusz a [központi fejlesztési napló](11-Fejlesztesi-naplo-es-publikalasi-terv.md) elején található. A nyitott [PR #24](https://github.com/RobCZart82/Silver-K-Blue/pull/24) a webes buildet, a natív SMF/SysEx-importot, a webes note-off kezelést és a forráscsomag hivatkozásait javítja; a napló külön rögzíti a helyi/CI-bizonyítékot és a nyitott használati ellenőrzéseket. Az alábbi v1.0 feljegyzés történeti alap; a későbbi javításokat és beolvasztásokat nem írja felül.
 
 
 Állapot: Silver-K Blue v1.0, 2026-10-25. Ez váltja fel a történeti tervek aktuális státuszát. Alap: upstream v0.4.4a, commit `4baaead06e23e2358729cca32b6b511c72022318`. A „kész” itt helyben megvalósított és célzottan ellenőrzött fejlesztést jelent; nem eredeti repositoryba beolvasztott változtatást.

@@ -26,6 +26,7 @@ set(SOURCES
 	midiRateLimiter.cpp midiRateLimiter.h
 	midiRoutingMatrix.cpp midiRoutingMatrix.h
 	midiToSysex.cpp midiToSysex.h
+	smfSysex.h
 	midiTranslator.cpp midiTranslator.h
 	midiTypes.h
 	os.cpp os.h
