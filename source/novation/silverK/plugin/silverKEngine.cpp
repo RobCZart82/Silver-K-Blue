@@ -1,4 +1,5 @@
 #include "silverKEngine.h"
+#include "silverAudioInput.h"
 #include <array>
 namespace silverK {
 namespace {synthLib::DeviceCreateParams params(const std::vector<uint8_t>& rom){synthLib::DeviceCreateParams p;p.romData=rom;return p;}}
@@ -14,7 +15,10 @@ KEngine::KEngine(const std::vector<uint8_t>& rom,double hostRate,int block,const
 }
 void KEngine::process(float* left,float* right,int count,bool offline,const float* input){
  device.setNonRealtime(offline);
- for(int offset=0;offset<count;offset+=256){synthLib::TAudioOutputs out{};out[0]=left+offset;out[1]=right+offset;synthLib::TAudioInputs in{};in[0]=input?input+offset:silence.data();resampler.process(in,out,emptyMidi,outputMidi,uint32_t(std::min(256,count-offset)),render);}
+ processMonoInputChunks(left,right,count,input,[&](float* l,float* r,const float* mono,int size){
+  synthLib::TAudioOutputs out{};out[0]=l;out[1]=r;synthLib::TAudioInputs in{};in[0]=mono;
+  resampler.process(in,out,emptyMidi,outputMidi,uint32_t(size),render);
+ });
 }
 unsigned KEngine::latency()const{return unsigned(std::ceil((device.getInternalLatencyMidiToOutput()+resampler.getOutputLatency())*rate/device.getSamplerate()));}
 }

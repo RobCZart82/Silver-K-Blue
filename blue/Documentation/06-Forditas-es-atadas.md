@@ -37,7 +37,20 @@ npm run build
 
 A könyvtár kezdetben üres; saját kompatibilis SYX/ZIP fájlokat kell importálni. A build nem igényel és nem csomagol gyártói demódumpot. A `build/` a webes kimenet, a követett `x-station-editor/dist/XStationEditor.html` a hordozható változat. Webes forrásmódosítás után ezt is újra kell generálni; a külön `xstation-web.yml` workflow eltérés esetén hibázik. A hardveres MIDI-próbát a mockolt tesztek nem helyettesítik.
 
-## Forráscommit és upstream eredet
+## Első célzott upstream átvétel ellenőrzése
+
+Az új ROM nélküli bemeneti adapterteszt külön is fordítható/futtatható a konfigurált natív buildben:
+
+```powershell
+cmake --build build --config Release --target silverAudioInput_test --parallel 4
+ctest --test-dir build -C Release --output-on-failure --no-tests=error -R '^silver_audio_input_safety$'
+```
+
+A teljes Windows/macOS CI 11 ROM nélküli tesztet választ ki, köztük a meglévő patch-, persistence/Rescan-, külsőskin- és hosszú resamplertesztet. A `silver_latency_reentry` külön lépésben fut; magán-ROM nélkül SKIP, nem sikeres firmware-es teszt. A ROM nélküli preset-/persistence-futás sem igazolja a firmware-es ágaikat.
+
+Saját firmware-es latenciaellenőrzéshez a meglévő `SILVER_TEST_K_OS` és `SILVER_TEST_KS_OS` mellett `SILVER_TEST_KS_DATA` és `SILVER_TEST_KS_WAVES` is megadható. Ezek privát, helyi fájlútvonalak; elkülönített `SILVER_K_DATA` könyvtárat használj. A környezeti változók támogatása nem jelenti, hogy az adott firmware-/hangpróba már lefutott.
+
+## Forráseredet a csomagolókban
 
 A jelenlegi Blue platform-workflow-k a `tools/package_blue_windows.py` eszközt használják Windows és macOS csomagolására; a `build-info.json` a Blue repository-t és a pontos forráscommitot rögzíti. A PR #24 proveniencia-javítása a külön, régebbi `tools/package_release.py` eszköz `SOURCES.txt` kimenetét érinti.
 
