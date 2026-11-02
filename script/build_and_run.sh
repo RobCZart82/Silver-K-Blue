@@ -12,19 +12,24 @@ esac
 if [[ ! -f "$silver_build/CMakeCache.txt" ]]; then
   cmake -S "$silver_root" -B "$silver_build" -DCMAKE_BUILD_TYPE=Release
 fi
-silver_app="$silver_build/source/novation/silverK/buildStandalone/silverPlugin/silverK_artefacts/Release/Standalone/Silver-K.app"
+silver_app="$silver_build/source/novation/silverK/buildStandalone/silverPlugin/silverK_artefacts/Release/Standalone/Silver-K Blue.app"
 if [[ -d "$silver_build/silverPlugin" ]]; then
-  silver_app="$silver_build/silverPlugin/silverK_artefacts/Release/Standalone/Silver-K.app"
+  silver_app="$silver_build/silverPlugin/silverK_artefacts/Release/Standalone/Silver-K Blue.app"
 fi
-silver_binary="$silver_app/Contents/MacOS/Silver-K"
+silver_binary="$silver_app/Contents/MacOS/Silver-K Blue"
 # Match the exact development executable, never a DAW or another installed app.
 while IFS= read -r silver_pid; do
   [[ -z "$silver_pid" ]] || kill -TERM "$silver_pid"
 done < <(pgrep -f "^${silver_binary}$" || true)
 cmake --build "$silver_build" --config Release --target silverK_Standalone -j "${SILVER_K_BUILD_JOBS:-6}"
 if [[ "$silver_mode" == --debug ]]; then exec lldb -- "$silver_binary"; fi
-open -n "$silver_app"
+silver_open_args=(-n)
+if [[ -n "${SILVER_K_DATA:-}" ]]; then
+  # LaunchServices does not inherit the shell environment.
+  silver_open_args+=(--env "SILVER_K_DATA=$SILVER_K_DATA")
+fi
+open "${silver_open_args[@]}" "$silver_app"
 case "$silver_mode" in
   --verify) sleep 2; pgrep -f "^${silver_binary}$" >/dev/null ;;
-  --logs|--telemetry) exec /usr/bin/log stream --info --style compact --predicate 'process == "Silver-K"' ;;
+  --logs|--telemetry) exec /usr/bin/log stream --info --style compact --predicate 'process == "Silver-K Blue"' ;;
 esac
