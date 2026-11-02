@@ -25,7 +25,41 @@ A `77721f1` első Windows/macOS futása sikeresen fordult, de mindkét platformo
 
 A friss SMF-regresszió helyi MSVC-fordítása és futása **PASS**. A javított teljes platformtesztek eredménye az új PR-futásokban ellenőrizendő; az első futások **FAIL** eredményét nem minősítjük át sikeresnek, és a hibázó tesztek a CI-ben maradnak.
 
-## Aktuális kiegészítés — 2026-11-02: repository-audit javításai
+## Aktuális fejlesztési döntés — 2026-11-02: a GUI megőrzése
+
+**Felhasználói követelmény:** a jelenlegi skinek és grafikai felület megőrzendők. A további terv nem tartalmazhat grafikai átrendezést, új panelt vagy kezelőszervet, illetve a meglévő elemek helyének, méretének, megjelenésének és az oldalak elrendezésének módosítását. A követelmény a Standard, Retina és Legacy nézetre egyaránt vonatkozik. A jelenlegi méretválasztás és működő kezelési módok megmaradnak.
+
+A dokumentációfrissítés alapja: main `5c9556fcaa7072b9f6eeb9652e598ab84962ea47`. A [PR #24](https://github.com/RobCZart82/Silver-K-Blue/pull/24) már beolvadt; az alábbi auditbejegyzés nyitott PR-ra vonatkozó mondata a korabeli állapotot őrzi. Ez a szakasz felülírja a korábbi fejlesztési javaslatokat, ahol azok a GUI megváltoztatását feltételezték. A korábbi grafikai munkák történetét megőrizzük.
+
+### Aktív terv és lezárási feltételek
+
+Az alábbi feladatok **tervezettek**, e dokumentációs változtatás nem valósítja meg őket. A sorrend előbb a meglévő működés igazolását, utána a célzott háttérfejlesztést követi.
+
+| ID / sorrend | Feladat | Lezárási feltétel | GUI-korlát |
+|---|---|---|---|
+| GP-01 / 1 | A már meglévő regressziós tesztek és a CI szűrőinek összevetése; a firmware nélkül futtatható preset-, állapotmentési/Rescan-, külsőskin- és resamplertesztek bevonása | Windows/macOS futási lista és pontos PASS/FAIL/SKIP eredmény; a firmware-es tesztrészek külön felsorolva | Kizárólag teszt/build/workflow; nincs felületi változtatás |
+| GP-02 / 2 | Mentés/visszatöltés és életciklus ellenőrzése: K/KS projekt, több példány, hiányzó/áthelyezett adatok, firmware-váltás | Izolált adatmappás automatikus eredmények, majd a szükséges saját firmware-rel és DAW/Standalone környezetben rögzített elfogadás | Meglévő vezérlők és állapotformátum kompatibilitásának megőrzése |
+| GP-03 / 3 | Kis/változó hangblokkok és frekvenciaváltás: előbb a meglévő lefedettség vizsgálata, majd a hiányzó 1/32/63/64/255/256/257 mintás esetek | Célzott memóriabiztonsági, végeskimeneti és állapotmegőrzési ellenőrzés; az alkalmazhatatlan kombinációk indoklása | Audio-/MIDI-belső javítás; nincs új beállítási felület |
+| GP-04 / 4 | Dokumentáció és eredetadatok egyeztetése a tényleges kóddal, kiadási folyamatokkal és tesztekkel | Egyértelmű aktuális állapottábla; történeti szakaszok jelölése; Blue/upstream revíziók és tesztbizonyíték külön | Csak dokumentáció; nincs grafikai erőforráscsere |
+| GP-05 / 5 | Teljesítményjavítás csak kimért szűk keresztmetszet esetén | Azonos bemenettel előtte/utána mérés, helyességi és hangkimeneti regresszió; host callback blokkolásának/allokációjának vizsgálata | Meglévő diagnosztika használata, új panel/gomb nélkül |
+| GP-06 / 6 | Opcionális Patches-változásfigyelés a meglévő Rescan mellett | Háttérben összevont feldolgozás; kiválasztás, szándékosan leválasztott források és nagy könyvtár kezelése; nincs audio-/UI-megakadás | A meglévő böngésző elrendezése és vezérlői változatlanok; ha ez nem tartható, nem része a tervnek |
+
+### Ellenőrzési hiányok és fejlesztések külön kezelése
+
+A `silverLatency_test.cpp` firmware hiányában 77-es SKIP kóddal tér vissza. Például a [426e59c Windows-futásában](https://github.com/RobCZart82/Silver-K-Blue/actions/runs/41395891478) hét kiválasztott tesztből hat futott sikeresen, a `silver_latency_reentry` kimaradt. A sikeres workflow ezért nem zárja le a firmware-es latencia- és életciklus-elfogadást. Már létező teszt esetén előbb annak futtatását/lefedettségét kell rendezni, nem azonos célú új tesztet írni.
+
+Minden aktív feladatnál külön rögzítendő: megvalósítás (tervezett/PR/main), automatizált ellenőrzés (commit és futáslink, PASS/FAIL/SKIP), valamint használati elfogadás (platform/host/firmware és eredmény, vagy NEM FUTOTT). E három állapot egyike sem helyettesíti a másikat.
+
+### Kivett és feltételes javaslatok
+
+- A natív Undo/Redo, A/B összehasonlítás, új oldalak, panelek, gombok, dekorációk és skinátrendezések nem részei az aktív tervnek.
+- Külső audio-bemenet bővítése vagy upstream átvétel csak a jelenlegi GUI megtartásával kerülhet külön tervbe. Előbb képességenkénti eltéréslista szükséges: a kódban már van KS natív vezérlő és mono külső bemeneti út; a „0.5 nincs integrálva” történeti mondat nem jelenti minden ilyen képesség hiányát. Ez nem igazolja a teljes upstream kiadás átvételét.
+- Nem kerül be automatikus, teljes upstream-merge. Új paramétert, módosult kezelőszervet vagy elrendezést igénylő upstream változás nem vehető át ezen terv részeként.
+- Az X-Station webes alkalmazás külön munkafolyamat. További protokoll-/hardverellenőrzése nem jelent felhatalmazást a natív Silver-K Blue GUI megváltoztatására.
+
+A következő első implementációs egység GP-01; GP-02 és GP-03 lefedettségi felmérése erre épülhet. Ez a dokumentációs commit nem indít implementációt, beolvasztást vagy kiadást.
+
+## Korábbi kiegészítés — 2026-11-02: repository-audit javításai
 
 A [PR #24](https://github.com/RobCZart82/Silver-K-Blue/pull/24) a 2026-11-02-i célzott audit négy megállapítását javítja. Alapcommit: `3ae4505aaa1de7bb9ee2f26ee66e238c98a4d016`; javításokat tartalmazó commit: `426e59c898c795bccc0af03ac6f981cf33eef8c3`. A PR e bejegyzés készítésekor nyitott, nincs beolvasztva. A lentebbi „aktuális” szakaszok korábbi, dátumozott pillanatfelvételek; ez a kiegészítés az újabb állapot.
 
