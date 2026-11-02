@@ -2,6 +2,29 @@
 
 Utolsó frissítés: **2026-11-02**
 
+## Upstream átvétel — első fejlesztési egység, 2026-11-02
+
+Alap: Blue main `5c9556fcaa7072b9f6eeb9652e598ab84962ea47`; célzott upstream forrás: temaniak/Silver-K `ab91ba112f2dd7be5ad21c1a6567290fe7ef20e6` (v0.5a). A felhasználóval elfogadott, változatlan GUI-t megkövetelő terv alapján ez az első, korlátozott implementációs lépés; nem a teljes 0.5 Alpha átvétele.
+
+- **Megvalósítva a fejlesztési ágon:** a K-Station meglévő mono bemenete legfeljebb 256 mintás, stacken tárolt blokkba másolódik a resampler meghívása előtt. Az upstream bemeneti védelméből átvett elv megőrzi az inputot közös host input/output puffer esetén, a NaN/Inf mintákat nullára cseréli. A buszelrendezés, controller, paraméterek, skinek és GUI változatlanok.
+- **Új ROM nélküli regresszió:** `silver_audio_input_safety`, külön és bal/jobb kimenettel közös bemeneti pufferrel, leválasztott bemenettel, NaN/Inf értékekkel, kimeneti őrmintákkal és 0/1/32/63/64/255/256/257/511/1024 mintás blokkokkal. Ez a bemeneti adapter tesztje, nem teljes firmware-es audio-elfogadás.
+- **GP-01 részleges megvalósítás:** a Windows/macOS CI a korábbi hat végrehajtott ROM nélküli teszt mellé bevonja az új bemeneti tesztet és négy meglévő tesztet: `silver_patch_workflow`, `silver_persistence_and_rescan`, `silver_skin_packages`, `silver_resampler_realtime`. Így 11 ROM nélküli teszt szerepel a kiválasztásban. A teljes tesztlefedettségi felmérés ettől még nem lezárt.
+- **Külön firmware-es eredmény:** a `silver_latency_reentry` önálló, kifejezetten firmware-t igénylő CI-lépésben szerepel, magán-ROM nélkül várható SKIP eredménnyel. A preset-/persistence-tesztek CI-ben csak a ROM nélküli ágaikat igazolják; privát firmware-es részeik nem válnak ettől elfogadottá.
+- **Upstream tesztparaméterezés:** a latenciateszt átveszi a `SILVER_TEST_KS_DATA` és `SILVER_TEST_KS_WAVES` környezeti változók kezelését. A saját firmware és adatok nem kerülnek a repository-ba vagy a publikus CI-be.
+
+Helyi bizonyíték: az új bemeneti regresszió MSVC C++17 `/W4 /WX` fordítással és futtatással **PASS**. Whitespace-ellenőrzés **PASS**. A teljes platformfordítás és a kibővített tesztlista eredménye a fejlesztési PR CI-jében ellenőrizendő; e bejegyzés még nem állít platform-PASS-t. GUI-/hangteszt saját firmware-rel: **NEM FUTOTT**.
+
+Következő külön lépések maradnak: KS indítási hang/sustain tisztítás célzott reprodukciója és regressziója; háttérdiagnosztika bővítése; KS audio-bemenet és sztereó fogadás külön tervezése. Natív vezérlőcsere nincs ebben a fejlesztési egységben. Új grafikai elrendezés, kezelőszerv, tag vagy Release nem készül.
+
+### A kibővített CI első futásának eredménye és javítása
+
+A `77721f1` első Windows/macOS futása sikeresen fordult, de mindkét platformon 9/11 ROM nélküli teszt volt sikeres. Az új `silver_audio_input_safety` átment. Két korábban nem bevont regresszió feltárt eltérést:
+
+- `silver_skin_packages`: a teszt a Custom méretválasztást még három preset után kereste. A jelenlegi 50/75/100/125% menühöz négy lépés szükséges. Csak a teszt navigációja javítva; a GUI és a menü változatlan.
+- `silver_persistence_and_rescan`: a szigorúbb SMF-parser megszüntette a V-Station ismert, 21 bájtos nevet kihagyó hosszmezőjének kompatibilitását. A parser most kizárólag a pontos Novation/K-Station fejléccel, 141-es deklarált hossz mellett 162 bájtos, teljes, hétbites payloaddal, érvényes névvel és záró F7-tel rendelkező esetet fogadja el; a track határán soha nem olvas túl. Külön natív regresszió ellenőrzi az elfogadást, idegen gyártó hibás hosszának és csonkolt névnek az elutasítását.
+
+A friss SMF-regresszió helyi MSVC-fordítása és futása **PASS**. A javított teljes platformtesztek eredménye az új PR-futásokban ellenőrizendő; az első futások **FAIL** eredményét nem minősítjük át sikeresnek, és a hibázó tesztek a CI-ben maradnak.
+
 ## Aktuális fejlesztési döntés — 2026-11-02: a GUI megőrzése
 
 **Felhasználói követelmény:** a jelenlegi skinek és grafikai felület megőrzendők. A további terv nem tartalmazhat grafikai átrendezést, új panelt vagy kezelőszervet, illetve a meglévő elemek helyének, méretének, megjelenésének és az oldalak elrendezésének módosítását. A követelmény a Standard, Retina és Legacy nézetre egyaránt vonatkozik. A jelenlegi méretválasztás és működő kezelési módok megmaradnak.

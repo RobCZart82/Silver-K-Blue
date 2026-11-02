@@ -132,6 +132,14 @@ void smfImports()
     messages.clear();require(!synthLib::MidiToSysex::extractSysexFromData(messages,file(track)),"Channel message inside unfinished SysEx accepted");
     track={0,0xf0,0x81,0x80,0x80,0x80,0};
     messages.clear();require(!synthLib::MidiToSysex::extractSysexFromData(messages,file(track)),"Overlong VLQ accepted");
+    // Preserve the documented V-Station exporter compatibility while keeping
+    // malformed lengths for other manufacturers and incomplete names rejected.
+    Bytes named(163,0);const uint8_t header[]{0xf0,0,0x20,0x29,1,0x41,0x7f,1,0,8,9,0,0};
+    std::copy(std::begin(header),std::end(header),named.begin());named[141]='V';named.back()=0xf7;
+    track={0,0xf0,0x81,0x0d};track.insert(track.end(),named.begin()+1,named.end());track.insert(track.end(),{0,0xff,0x2f,0});
+    messages.clear();require(synthLib::MidiToSysex::extractSysexFromData(messages,file(track)) && messages==synthLib::SysexBufferList{named},"Legacy V-Station name length rejected");
+    auto foreign=track;foreign[6]=0x21;messages.clear();require(!synthLib::MidiToSysex::extractSysexFromData(messages,file(foreign)),"Foreign malformed length accepted");
+    auto truncatedName=track;truncatedName.erase(truncatedName.begin()+150,truncatedName.begin()+155);messages.clear();require(!synthLib::MidiToSysex::extractSysexFromData(messages,file(truncatedName)),"Truncated V-Station name accepted");
     messages.clear();require(synthLib::MidiToSysex::extractSysexFromData(messages,dump) && messages==synthLib::SysexBufferList{dump},"Raw SYX import regressed");
 }
 void exports()

@@ -267,9 +267,9 @@ public:
         if(index<2){
             juce::PopupMenu::dismissAllActiveMenus();
         }else{
-            // Three presets, a separator, then Custom. Activate the actual item
+            // Four presets (50/75/100/125), a separator, then Custom. Activate the actual item
             // so the asynchronous menu callback and size dialog are exercised.
-            for(int n=0;n<3;++n)submenu->keyPressed(juce::KeyPress(juce::KeyPress::downKey));
+            for(int n=0;n<4;++n)submenu->keyPressed(juce::KeyPress(juce::KeyPress::downKey));
             submenu->keyPressed(juce::KeyPress(juce::KeyPress::returnKey));
         }
     }catch(const std::exception& e){fail(e.what());}}
