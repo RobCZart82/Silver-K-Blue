@@ -497,3 +497,22 @@ A README Main-előnézetei a felhasználó új K-Station.png és KS-Rack.png ké
 ## 2026-11-01 — Setup információs sorok rendezése
 
 A Blue Files and folders információs része az útvonalak sorrendjét követi: Patches, ROMs, Skins. A három sor bal oldali neve félkövér, közös szélességű címkeoszlopban; a részletek normál betűvel jelennek meg. A ROMs sor a ténylegesen kiválasztott firmware-, Wave ROM- és KS-adatfájlneveket mutatja, nem rögzített példaneveket. Hosszú soronkénti szövegre a meglévő szélességhez igazítás érvényes. Standard/Retina közös rajzolás, Legacy szövege változatlan. Ez megjelenítési változás; importálási és keresési szabály nem módosult. Ellenőrzés: tiszta diff; platformfordítás és interaktív hosszúfájlnév-próba a CI/használati ellenőrzés feladata.
+
+
+## 2026-11-02 — Ellenőrzött upstream első kör és K-Station bemeneti diagnosztika
+
+A #26 PR javított fejcommitja `23a5d401f7a79e443e36fda987c8fff58a1b40b3`: [Windows](https://github.com/RobCZart82/Silver-K-Blue/actions/runs/41416475564), [macOS Universal 2](https://github.com/RobCZart82/Silver-K-Blue/actions/runs/41416475465) és [web](https://github.com/RobCZart82/Silver-K-Blue/actions/runs/41416475462) ellenőrzése **PASS**. Mindkét natív platformon mind a 11 ROM nélküli teszt átment; a külön firmware-es latenciateszt a publikus CI-ben **SKIP**. A korábbi `77721f1` hibás futásait ez nem minősíti át.
+
+Ugyanezen kód helyi Windows-ellenőrzése saját K-Station 2.101 és KS 2.102 firmware-rel, KS All Data fájllal és kifejezetten **szintetikus nulla hullámbankkal** is megtörtént. A persistence/automatikus indulás/hostállapot/hiányzó adatok és a latencia/host-visszahívás/frekvencia-/pufferváltás/állapot-visszatöltés/offline–realtime átmenet vizsgálata **PASS**; a persistence és latencia kör `SILVER_KS_CONTROLLER=native` ismétlése is **PASS**. A felhasználó archívumai csak olvasva voltak, a kinyert privát adatok és runtime profilok elkülönítve maradtak, nem kerültek Gitbe. Ez nem eredeti mintahullám-hűségi, DAW-, fizikai MIDI- vagy macOS firmware-es elfogadás.
+
+A következő kis fejlesztési egység a Blue main `2e933fb48c4f17132d6e708515991d9ef3656a07` alapján, a #26-tól függetlenül készül. Upstream forrás: temaniak/Silver-K `ab91ba112f2dd7be5ad21c1a6567290fe7ef20e6`, K-Station input drop accounting és controller diagnosztika. Megvalósítás a fejlesztési ágon:
+
+- A K-Station eszköz számlálja a host–worker bemeneti sor és a DSP bemeneti puffer elutasított mintáit. A meglévő eldobási/routing működés változatlan; csak a visszautasított minták száma válik megfigyelhetővé. Az atomikus számláló az engine élettartamához tartozik, nem nullázódik diagnosztikai Stop/Start hatására.
+- A meglévő JSON-riport K-Station esetén tényleges `original-h8` controller-backendet ad a korábbi `not-applicable` helyett. Ez nem új vezérlőmotor és nem K-Station natív C++ migráció.
+- Új JSON-mezők: `input_overflows`, `input_overflows_supported`, `input_overflows_scope`; a sessionben `input_overflows_at_start` és támogatottság. KS/engine nélküli állapotban a támogatottság hamis: a nulla érték ott nem a KS bemeneti sor veszteségmentességének bizonyítéka.
+- A `silver_input_diagnostics` ROM nélküli része a séma/elérhetőség viselkedését ellenőrzi. Egy saját K-Station firmware argumentummal a valódi mono bemeneti út, backend, session-kezdőérték és Stop/Start alatti monoton számláló is vizsgálható. A ROM nélküli PASS nem a privát rész elfogadása.
+
+A fejlesztési egység nem módosít skint, editorgeometriát, kezelőszervet, buszelrendezést vagy pluginazonosítót. A célzott új teszt és a platform-CI eredményét a fejlesztési PR rögzíti; a fenti #26 eredmények nem az új diagnosztikai kódra vonatkoznak.
+
+
+Az új diagnosztikai egység helyi MSVC C++17 buildje és ROM nélküli tesztje **PASS**. Saját K-Station 2.101 firmware-rel a valódi offline mono bemenet veszteségmentessége, majd szándékosan túlméretezett realtime hostblokkal a túlcsordulási számláló növekedése, valamint a Stop/Start alatti értékmegőrzés is ellenőrzött. A túlterhelési fixture nem realtime benchmark és nem megfigyelt hétköznapi hanghiba. A teljes Windows/macOS CI az új PR feladata; a helyi eredmény nem platform-PASS állítás.
