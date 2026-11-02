@@ -607,3 +607,19 @@ A #31 Windows/macOS/web ellenőrzése sikeres, beolvasztva (`88e1a2a`). Követke
 Ez a lépcső továbbra is az aktuális szerkesztői MIDI-csatornát vizsgálja; nem állít teljes 16 csatornás vagy négypartos indulási lefedettséget. A következő bővítésnek a partok aktiválását és csatornakiosztását is kontrollált fixture-rel kell biztosítania. A motor CC-tisztítása továbbra sincs átvéve, GUI/runtime változás nincs.
 
 Helyi ellenőrzés: Universal 2 két architektúrájának C++ szintaxisvizsgálata és diff-ellenőrzés; a firmware-es sustain próba tényleges futtatása még hátravan. A publikus CI firmware nélkül ezt az ágat SKIP-pel zárja, ami nem bizonyítja a hangviselkedést. Az új teszteset eredménye ezért nem kezelhető privát firmware-es PASS-ként.
+
+## 2026-11-02 — Elkülönített KS part/csatorna sustain-mátrix (fejlesztés)
+
+A #32 Windows/macOS/web ellenőrzése sikeres, beolvasztva (`15a6a97`). Új, opcionális firmware-es teszt készült: `SILVER_TEST_KS_CHANNEL_MATRIX=1` esetén a latency teszt az érintetlen indulási ellenőrzés UTÁN lép Performance módba. Négy egymást követő kiosztásban a négy part együtt lefedi mind a 16 MIDI-csatornát. A firmware-ből mentett Performance dumpban ellenőrzi az aktív maszkot és a kiosztást, majd minden part/csatorna esetén hallható Note On → sustain alatti Note Off → pedálfelengedés utáni csend pozitív kontrollt végez, mind a négy kimenetet figyelve.
+
+Ez visszatöltés UTÁNI MIDI/sustain teszt, nem hidegindítási bizonyíték: a Performance mód váltása állapotot tölt vissza. Nem helyettesíti az induláskori 16 csatornás tulajdonosvizsgálatot. A GUI és a motor változatlan, a CC64/123/120 indulási takarítás nincs átvéve.
+
+Validáció első körben: arm64/x86_64 szintaxis és diff ellenőrzés PASS. A PR kezdetben draftként készült a még hiányzó privát firmware-es próba miatt; ennek későbbi eredményét az alábbi bejegyzés rögzíti. Firmware nélkül a meglévő teszt SKIP, az opcionális kapcsoló nélkül külön NOT RUN sor jelzi a mátrix kimaradását. Privát futtatáskor a `silverLatency_test` programot közvetlenül kell indítani a szokásos K/KS firmware/data/wave környezeti változókkal és az új kapcsolóval; a hosszabb mátrixot nem kötöttük automatikusan a meglévő 180 másodperces CTest-keretbe.
+
+### #33 privát firmware-es elfogadás és sorrendjavítás
+
+Helyi macOS arm64 Release fordítás a #33 aktuális forrásából sikeres. A Performance módváltás után külön feldolgozási/szinkronizálási lépés került a tesztbe a partparaméterek írása ELŐTT, mert a módváltás csak sorba állítja a state dumpot. A teszt naplózza a tényleges KS vezérlőmódot is.
+
+Az új forrást újrafordítva, explicit H8 (`controller_mode=0`) és native (`controller_mode=1`) választással a teljes `silverLatency_test` kétszer sikeres, exit 0. Mindkét futás mind a 16 part/csatorna-sustain esetet, az indulási csendet, a pedálpróbát és a teljes K/KS latency/buffer/rate/state/async életciklust teljesítette. A mátrixban a hallható/kitartott csúcsok kb. 0,026, minden pedáleengedés utáni csúcs 0. Firmware: K-Station 2.1.01 és KS 2.1.02, helyi `KS All Data.MID`, zero Wave ROM. Ez nem igazol valódi sampled-wave/drum-hanghűséget vagy teljes hidegindítási 16 csatornás lefedettséget. Privát adat és nyers log nem került a repositoryba.
+
+A privát tesztfeltétel teljesült, a PR készre jelölhető; beolvasztás csak az új javított commit összes kötelező CI-ellenőrzésének sikere után. A korábbi macOS újrafutások közül egy a csomagfeltöltés GitHub-időtúllépésén, mások szabad hosted ARM gép hiányán álltak meg; ezek nem firmware-es teszthibák.
