@@ -237,3 +237,8 @@ target_link_libraries(ksResetVector_test PRIVATE ksLib)
 target_include_directories(ksResetVector_test PRIVATE "${ROOT}/source/cpu")
 add_test(NAME ks_reset_vector COMMAND ksResetVector_test)
 set_tests_properties(ks_reset_vector PROPERTIES TIMEOUT 90)
+
+add_executable(ksDeviceInput_test "${ROOT}/source/novation/ks/ksLib/ksDeviceInput_test.cpp")
+target_link_libraries(ksDeviceInput_test PRIVATE ksLib)
+add_test(NAME ks_device_input COMMAND ksDeviceInput_test)
+set_tests_properties(ks_device_input PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 180)
