@@ -189,6 +189,22 @@ static void hostInput(Processor& p,ReentrantHost& host){
  check(bool(report.getProperty("input_overflows_supported",false)),"KS input diagnostics unsupported");
  check(report.getProperty("input_overflows_scope",{}).toString()==(p.isKStation()?"kstation-host-and-dsp-input-queues":"ks-host-input-queue"),"Wrong input diagnostics scope");
  check(int(report.getProperty("input_overflows",-1))==0,"KS host input queue overflow");
+ if(juce::SystemStats::getEnvironmentVariable("SILVER_TEST_INPUT_FILTER",{})=="1"){
+  layout.inputBuses.set(0,juce::AudioChannelSet::mono());check(p.setBusesLayout(layout),"Filter mono layout");
+  set("external_to_fx",0);set("external_trigger",0);
+set(p.isKStation()?"amp_attack":"attack",0);set(p.isKStation()?"amp_decay":"decay",0);
+  set(p.isKStation()?"amp_sustain":"sustain",127);set(p.isKStation()?"amp_release":"release",0);
+  set("cutoff",127);set("resonance",0);set("filter_env",64);set("filter_keytrack",0);capture(false);
+  auto note=[&](bool on){juce::AudioBuffer<float> audio(4,host.block);audio.clear();juce::MidiBuffer midi;
+   midi.addEvent(on?juce::MidiMessage::noteOn(int(p.editorChannel())+1,60,juce::uint8(100)):juce::MidiMessage::noteOff(int(p.editorChannel())+1,60),0);p.processBlock(audio,midi);};
+  note(true);const auto filtered=capture(true);
+  note(false);const auto released=capture(true);
+  if(!p.isKStation()){juce::MemoryBlock state;p.getStateInformation(state);auto xml=juce::AudioProcessor::getXmlFromBinary(state.getData(),int(state.getSize()));juce::MemoryBlock program;
+   check(xml && program.fromBase64Encoding(xml->getStringAttribute("program")),"Filter fixture state");const auto* values=static_cast<const uint8_t*>(program.getData())+13;
+   std::cout<<"Filter actual";for(unsigned offset:{37,42,46,47,62,63,64,65,89,123,179,180,181})std::cout<<' '<<offset<<'='<<unsigned(values[offset]);std::cout<<'\n';}
+  std::cout<<(p.isKStation()?"K-Station":"KS")<<" input filtered="<<filtered<<" released="<<released<<'\n';
+  check(filtered>.0001f && released<filtered*.001f,"Input filter/envelope positive control failed");
+ }
  layout.inputBuses.set(0,juce::AudioChannelSet::disabled());check(p.setBusesLayout(layout),"Input disable failed");
  set("external_level",0);set("external_to_fx",0);set("osc1_level",127);
  capture(false); // Drain restored MIDI controls before prepareToPlay rebuilds the engine.
@@ -256,5 +272,6 @@ int main(int argc,char** argv){std::cout<<std::unitbuf;try{
  setenv("SILVER_K_DATA",root.getFullPathName().toRawUTF8(),1);
 #endif
  juce::ScopedJuceInitialiser_GUI gui;
- exercise(juce::File(ks));exercise(juce::File(k));return 0;
+ if(juce::SystemStats::getEnvironmentVariable("SILVER_TEST_INPUT_FILTER",{})=="1"){exercise(juce::File(k));exercise(juce::File(ks));}
+ else{exercise(juce::File(ks));exercise(juce::File(k));}return 0;
 }catch(const std::exception& error){std::cerr<<error.what()<<'\n';return 1;}}
