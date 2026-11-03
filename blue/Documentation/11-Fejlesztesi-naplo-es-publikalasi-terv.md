@@ -675,3 +675,9 @@ Az opcionális privát `SILVER_TEST_HOST_INPUT=1` teszt mindkét firmware-modell
 A #39 minden Windows/macOS/web ellenőrzése sikeres, beolvasztva (`d1ddc3e`). Az upstream v0.5a következő kis lépcsője a mono bemeneti busz engedélyezése csak standalone példánynál; AU/VST3 alapértelmezés továbbra is kikapcsolt. A CMake mikrofonhasználati leírása a Blue terméknevet használja, a bundle/plugin azonosítók változatlanok.
 
 Helyi CMake konfiguráció PASS; a generált standalone Info.plist tartalmazza az `NSMicrophoneUsageDescription` kulcsot és a Blue nevű magyarázatot. A használt JUCE standalone kód a bemenetigény alapján kéri a recordAudio engedélyt, és a bemenet némítása alapból aktív (`muteInput=true`); az alkalmazás nem kezd automatikusan hallható mikrofon-visszacsatolásba. Ez forrásellenőrzés, nem helyettesíti a valódi macOS engedélyezési és visszautasítási próbát. A fizikai bemenet kiválasztása, némítás ki/be, engedély elfogadása/elutasítása és újraindítás utáni viselkedés kézi kiadás előtti teszt marad. GUI változatlan.
+
+## 2026-11-03 — Firmware nélküli bemeneti buszregresszió
+
+A #40 kötelező Windows/macOS/web ellenőrzései sikeresek, beolvasztva (`b29e308`). A már mindkét platform CI-jében futó `silver_input_diagnostics` teszt most a tényleges Processor buszszerződését is vizsgálja: kikapcsolt/mono/sztereó bemenet elfogadása és beállítása; háromcsatornás bemenet elutasítása; eredeti kiosztás visszaállítása. Firmware nélkül nem nulla mintákkal feltöltött összes kimeneti csatorna a feldolgozás után néma kell legyen. Ez különösen a közös bemeneti/kimeneti puffer miatti közvetlen bemeneti átszivárgást védi.
+
+Helyi arm64 Release fordítás és ROM nélküli futás PASS. A teszt meglévő privát K-Station ága változatlan; annak kihagyása nem minősül firmware-es PASS-nak. Nincs új felhasználói funkció, GUI vagy kiadás. A valódi AU/VST3/Standalone input-/engedély-/realtime ellenőrzések még hátravannak.
