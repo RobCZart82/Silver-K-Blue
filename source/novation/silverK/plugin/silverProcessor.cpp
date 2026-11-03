@@ -165,7 +165,7 @@ void Processor::processBlock(juce::AudioBuffer<float>& audio,juce::MidiBuffer& m
  if(wrapperType==wrapperType_Standalone && getMainBusNumOutputChannels()==4){channels[2]=audio.getWritePointer(2);channels[3]=audio.getWritePointer(3);}
  else if(getBusCount(false)>1 && getBus(false,1)->isEnabled()){auto aux=getBusBuffer(audio,false,1);channels[2]=aux.getWritePointer(0);channels[3]=aux.getWritePointer(1);}
  controlTiming.finish();Scope renderTiming(&performanceDiagnostics,Metric::AudioRender,uint64_t(audio.getNumSamples()));
- d->process(channels,audio.getNumSamples(),isNonRealtime());midi.clear();
+ d->process(channels,audio.getNumSamples(),isNonRealtime(),getTotalNumInputChannels()?audio.getReadPointer(0):nullptr);midi.clear();
 }
 juce::String Processor::status()const{if(isFirmwareLoading())return "Loading firmware...";std::lock_guard guard(controlMutex);return message;}
 uint64_t Processor::underruns()const{std::lock_guard guard(controlMutex);return ownedK?ownedK->device.getUnderrunCount():ownedDevice?ownedDevice->underruns():0;}
