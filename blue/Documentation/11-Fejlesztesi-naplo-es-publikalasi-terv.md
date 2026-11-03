@@ -639,3 +639,11 @@ A #34 Windows/macOS/web ellenőrzése sikeres, beolvasztva (`5e9da90`). A követ
 A host busz továbbra is mono; a Processor sztereó bekötését nem engedélyeztük egyoldalúan. A KS-ben még külön ADC-konverzió, időzített bemeneti sor és mindkét DSP RX0 táplálása szükséges. A globális busz sztereóra bővítését ezért csak a KS út és firmware-váltási teszt elkészülte után szabad engedélyezni, különben a KS mód látszólag elfogadhatna olyan bemenetet, amelyet nem dolgoz fel. A K natív vezérlő migrációja ettől külön feladat, nem történt meg.
 
 Validáció: a mono/sztereó pufferadapter összes regressziós esete ASan/UBSan és szigorú figyelmeztetések mellett PASS; az aktuális forrás `silverKEngine.cpp` és `silverProcessor.cpp` arm64 és x86_64 szintaxisellenőrzése PASS; diff-ellenőrzés PASS. Ez nem hoston át végzett sztereó hangpróba. GUI, meglévő routing, terméknév/azonosítók változatlanok. CI és integráció függő.
+
+## 2026-11-03 — KS ADC-konverter célzott átvétele
+
+A #35 Windows/macOS/web ellenőrzése sikeres, beolvasztva (`5ecce5b`). A következő lépcső az upstream `ab91ba1` két változatlan fájlja: `ksAudioInput.h` és `ksAudioInput_test.cpp`. A konverter a host mintáit szűrt, 24 bites KS ADC mintákká alakítja; 64 tap/256 fázis, 31 hostmintás bemeneti késleltetés. Az együtthatók előkészítése konstrukciókor történik; a majdani hangfeldolgozási út nem ott készíti őket.
+
+Az önálló `ks_audio_input` CTest bekerült a Windows/macOS Blue ROM nélküli céljai közé (a kiválasztás 12-ről 13-ra bővült). A tisztán konverteres teszthez nem kapcsolunk H8 referenciaobjektumokat. Helyi C++17 szigorú warning + ASan/UBSan próba PASS: csend, DC, NaN/Inf, 24 bites telítés, sztereó kioltás, 44,1/48/96/192 kHz átvitel és magas frekvenciás alias-elnyomás. Diff-ellenőrzés PASS.
+
+A konverter még nincs bekötve a KS workerbe vagy DSP-kbe; önmagában nem engedélyez külső KS hangbemenetet. Következő függő lépcső a DSP RX0 bemenet és sorainak tesztelése, majd a Device időzítés és hostbekötés. GUI, jelenlegi hangút és vezérlők változatlanok. CI és integráció függő.
