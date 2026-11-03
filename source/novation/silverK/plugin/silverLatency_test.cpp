@@ -159,27 +159,32 @@ static void ksChannelMatrix(Processor& p,ReentrantHost& host){
  check(p.setPerformanceMode(false,error),error.toRawUTF8());p.selectPart(0);capture(1,0);p.refreshControls();
  std::cout<<"PASS: post-restore KS four-part sustain matrix across all 16 MIDI channels (not cold-start coverage)\n";
 }
-static void ksHostInput(Processor& p,ReentrantHost& host){
- if(p.isKStation() || juce::SystemStats::getEnvironmentVariable("SILVER_TEST_HOST_INPUT",{})!="1")return;
+static void hostInput(Processor& p,ReentrantHost& host){
+ if(juce::SystemStats::getEnvironmentVariable("SILVER_TEST_HOST_INPUT",{})!="1")return;
  auto layout=p.getBusesLayout();layout.inputBuses.set(0,juce::AudioChannelSet::mono());
  check(p.setBusesLayout(layout),"Mono host input layout rejected");p.setNonRealtime(true);
  auto set=[&](const char* id,int value){auto* parameter=p.uiParameter(id);check(parameter!=nullptr,id);parameter->setValueNotifyingHost(parameter->convertTo0to1(float(value)));};
  for(const char* id:{"osc1_level","osc2_level","osc3_level","noise_level","ring_level","delay_level","reverb_level","chorus_level","vocoder_balance","arp_on"})set(id,0);
  set("external_level",127);set("external_to_fx",1);set("volume",127);
- auto capture=[&](bool signal){float peak=0;juce::AudioBuffer<float> audio(4,host.block);juce::MidiBuffer midi;
+ auto capture=[&](bool signal,int stereoMode=0){float peak=0;juce::AudioBuffer<float> audio(4,host.block);juce::MidiBuffer midi;
   for(int block=0;block<375;++block){audio.clear();for(int i=0;i<host.block;++i)audio.setSample(0,i,signal?float(.1*std::sin(6.283185307179586*440*(block*host.block+i)/host.rate)):0);
+   if(stereoMode)for(int i=0;i<host.block;++i)audio.setSample(1,i,audio.getSample(0,i)*(stereoMode==2?-1.f:1.f));
    p.processBlock(audio,midi);for(int c=0;c<4;++c)for(int i=0;i<host.block;++i){const auto v=audio.getSample(c,i);check(std::isfinite(v),"Host input produced nonfinite output");if(block>187)peak=std::max(peak,std::abs(v));}
   }return peak;};
  const auto quiet=capture(false),tone=capture(true),tail=capture(false);
- std::cout<<"KS host mono input quiet="<<quiet<<" tone="<<tone<<" tail="<<tail<<'\n';
+ std::cout<<(p.isKStation()?"K-Station":"KS")<<" host mono input quiet="<<quiet<<" tone="<<tone<<" tail="<<tail<<'\n';
  check(tone>.0001f && quiet<tone*.001f && tail<tone*.001f,"KS host mono input positive control failed");
+ layout.inputBuses.set(0,juce::AudioChannelSet::stereo());check(p.setBusesLayout(layout),"Stereo host input rejected");
+ const auto stereo=capture(true,1),cancel=capture(true,2);
+ std::cout<<(p.isKStation()?"K-Station":"KS")<<" host stereo="<<stereo<<" cancel="<<cancel<<'\n';
+ check(std::abs(stereo-tone)<tone*.01f && cancel<tone*.001f,"KS stereo host mixing failed");
  const auto report=juce::JSON::parse(p.performanceReport());
  check(bool(report.getProperty("input_overflows_supported",false)),"KS input diagnostics unsupported");
- check(report.getProperty("input_overflows_scope",{}).toString()=="ks-host-input-queue","Wrong KS diagnostics scope");
+ check(report.getProperty("input_overflows_scope",{}).toString()==(p.isKStation()?"kstation-host-and-dsp-input-queues":"ks-host-input-queue"),"Wrong input diagnostics scope");
  check(int(report.getProperty("input_overflows",-1))==0,"KS host input queue overflow");
  layout.inputBuses.set(0,juce::AudioChannelSet::disabled());check(p.setBusesLayout(layout),"Input disable failed");
  set("external_level",0);set("external_to_fx",0);set("osc1_level",127);
- std::cout<<"PASS: KS Processor mono input and scoped queue diagnostics\n";
+ std::cout<<"PASS: Processor mono/stereo input and scoped queue diagnostics\n";
 }
 static void exercise(const juce::File& rom){
  Processor p;ReentrantHost host(p);host.prepare(48000,256);p.setBufferProfile(0);
@@ -194,7 +199,7 @@ static void exercise(const juce::File& rom){
  if(!p.isKStation())std::cout<<"KS fixture controller_mode="<<p.ksControllerMode()<<'\n';
  ksStartupSilence(p,host);
  ksChannelMatrix(p,host);
- ksHostInput(p,host);
+ hostInput(p,host);
  render(p,host);
  const int loaded=host.notifications;
  host.prepare(44100,512);render(p,host);
