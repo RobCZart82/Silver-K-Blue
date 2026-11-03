@@ -203,6 +203,12 @@ set(p.isKStation()?"amp_attack":"attack",0);set(p.isKStation()?"amp_decay":"deca
    check(xml && program.fromBase64Encoding(xml->getStringAttribute("program")),"Filter fixture state");const auto* values=static_cast<const uint8_t*>(program.getData())+13;
    std::cout<<"Filter actual";for(unsigned offset:{37,42,46,47,62,63,64,65,89,123,179,180,181})std::cout<<' '<<offset<<'='<<unsigned(values[offset]);std::cout<<'\n';}
   std::cout<<(p.isKStation()?"K-Station":"KS")<<" input filtered="<<filtered<<" released="<<released<<'\n';
+  if(filtered<=.0001f){
+   set("external_level",0);set("osc1_wave",2);set("osc1_level",127);capture(false);
+   note(true);const auto internal=capture(false);note(false);capture(false);
+   std::cout<<"Filter fixture internal oscillator control="<<internal<<'\n';
+   check(internal>.0001f,"Filter fixture could not play internal oscillator either");
+  }
   check(filtered>.0001f && released<filtered*.001f,"Input filter/envelope positive control failed");
  }
  layout.inputBuses.set(0,juce::AudioChannelSet::disabled());check(p.setBusesLayout(layout),"Input disable failed");
