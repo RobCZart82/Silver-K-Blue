@@ -681,3 +681,11 @@ Helyi CMake konfiguráció PASS; a generált standalone Info.plist tartalmazza a
 A #40 kötelező Windows/macOS/web ellenőrzései sikeresek, beolvasztva (`b29e308`). A már mindkét platform CI-jében futó `silver_input_diagnostics` teszt most a tényleges Processor buszszerződését is vizsgálja: kikapcsolt/mono/sztereó bemenet elfogadása és beállítása; háromcsatornás bemenet elutasítása; eredeti kiosztás visszaállítása. Firmware nélkül nem nulla mintákkal feltöltött összes kimeneti csatorna a feldolgozás után néma kell legyen. Ez különösen a közös bemeneti/kimeneti puffer miatti közvetlen bemeneti átszivárgást védi.
 
 Helyi arm64 Release fordítás és ROM nélküli futás PASS. A teszt meglévő privát K-Station ága változatlan; annak kihagyása nem minősül firmware-es PASS-nak. Nincs új felhasználói funkció, GUI vagy kiadás. A valódi AU/VST3/Standalone input-/engedély-/realtime ellenőrzések még hátravannak.
+
+## 2026-11-03 — Bemeneti mintavételváltási regresszió
+
+A #41 Windows/macOS/web ellenőrzése sikeres, beolvasztva (`020fbd3`). A privát latency-próba új `SILVER_TEST_INPUT_RATES=1` kapcsolója a meglévő 48 kHz/256 mintás pozitív kontroll után 44,1 és 96 kHz/512 mintás motor-újraépítéssel ismétli a mono/sztereó/ellenfázis/csend és input-diagnosztikai próbát, majd visszatér a teljes belső hangforrás-/latencia-/állapotregresszióhoz. A kapcsoló a `SILVER_TEST_HOST_INPUT=1` mellett értelmes.
+
+Az első tesztbővítésnél a visszaállított mixerüzenetek feldolgozása előtt történt újraépítés, ezért az utána következő belső hangpróba néma lett. A fixture most külön feldolgozási szakasszal megvárja a visszaállított MIDI vezérlők érvényesülését. Ez tesztsorrendi javítás; nem bizonyítja, hogy felhasználói vezérlőváltoztatással pontosan egy időben végzett host-újraépítés minden versenyhelyzetét lefedtük. A kezdeti hibát nem pusztán a teszt áthelyezésével kerültük meg: az eredeti sorrendben is sikeres a teljes futás.
+
+Helyi arm64 Release és natív KS/K-Station teljes futás PASS. Mindkét modell három mintavételen hallható külső jelet adott, sztereó/mono eltérés 1% alatt; ellenfázisú kimenet és jel nélküli szakasz 0, input overflow 0. A további belső hangszerhang, state restore, offline/realtime átmenet is PASS. Privát firmware nem került be a repository-ba; ez nem valódi DAW vagy fizikai mikrofon teszt. GUI és runtime kód változatlan.

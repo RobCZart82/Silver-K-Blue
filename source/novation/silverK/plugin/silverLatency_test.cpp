@@ -172,7 +172,7 @@ static void hostInput(Processor& p,ReentrantHost& host){
    p.processBlock(audio,midi);for(int c=0;c<4;++c)for(int i=0;i<host.block;++i){const auto v=audio.getSample(c,i);check(std::isfinite(v),"Host input produced nonfinite output");if(block>187)peak=std::max(peak,std::abs(v));}
   }return peak;};
  const auto quiet=capture(false),tone=capture(true),tail=capture(false);
- std::cout<<(p.isKStation()?"K-Station":"KS")<<" host mono input quiet="<<quiet<<" tone="<<tone<<" tail="<<tail<<'\n';
+ std::cout<<(p.isKStation()?"K-Station":"KS")<<" host rate="<<host.rate<<" block="<<host.block<<" mono input quiet="<<quiet<<" tone="<<tone<<" tail="<<tail<<'\n';
  check(tone>.0001f && quiet<tone*.001f && tail<tone*.001f,"KS host mono input positive control failed");
  layout.inputBuses.set(0,juce::AudioChannelSet::stereo());check(p.setBusesLayout(layout),"Stereo host input rejected");
  const auto stereo=capture(true,1),cancel=capture(true,2);
@@ -184,6 +184,7 @@ static void hostInput(Processor& p,ReentrantHost& host){
  check(int(report.getProperty("input_overflows",-1))==0,"KS host input queue overflow");
  layout.inputBuses.set(0,juce::AudioChannelSet::disabled());check(p.setBusesLayout(layout),"Input disable failed");
  set("external_level",0);set("external_to_fx",0);set("osc1_level",127);
+ capture(false); // Drain restored MIDI controls before prepareToPlay rebuilds the engine.
  std::cout<<"PASS: Processor mono/stereo input and scoped queue diagnostics\n";
 }
 static void exercise(const juce::File& rom){
@@ -200,6 +201,13 @@ static void exercise(const juce::File& rom){
  ksStartupSilence(p,host);
  ksChannelMatrix(p,host);
  hostInput(p,host);
+
+ if(juce::SystemStats::getEnvironmentVariable("SILVER_TEST_INPUT_RATES",{})=="1"){
+  // Rebuild the converters at each host rate, then repeat actual signal controls.
+  for(const auto rate:{44100.,96000.}){host.prepare(rate,512);hostInput(p,host);}
+  host.prepare(48000,256);
+ }
+
  render(p,host);
  const int loaded=host.notifications;
  host.prepare(44100,512);render(p,host);
