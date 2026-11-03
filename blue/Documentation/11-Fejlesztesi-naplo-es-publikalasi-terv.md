@@ -631,3 +631,11 @@ A #33 javított fejének Windows/macOS/web ellenőrzése sikeres, beolvasztva (`
 Ez még nem sztereó busz vagy KS ADC integráció: a host/engine sztereó bekötése külön lépcső. GUI, vezérlő és felhasználói routing nem változik. A helper előkészítése lehetővé teszi, hogy a sztereó bekötés később már ellenőrzött keverést használjon.
 
 Helyi ellenőrzés: önálló C++17 teszt `-Wall -Wextra -Werror`, AddressSanitizer és UndefinedBehaviorSanitizer mellett PASS. Régi mono esetek megmaradtak; új sztereó esetek mindkét csatorna kimenettel közös puffereit (fordított bekötéssel is), nem véges mintákat, 0/1/255/256/257/511/1024 mintás határokat, őrzőértékeket, maximális véges amplitúdót és hiányzó elsődleges bemenetet vizsgálnak. `git diff --check` PASS. CI és integráció függő.
+
+## 2026-11-03 — K-Station belső sztereó bemeneti interfész
+
+A #34 Windows/macOS/web ellenőrzése sikeres, beolvasztva (`5e9da90`). A következő kis lépcső a `KEngine::process` opcionális jobb bemeneti mutatója és a már tesztelt közös sztereó pufferadapter használata, az upstream v0.5a interfészével összhangban. A régi hívások változatlanul fordulnak, a hiányzó jobb bemenet a korábbi mono működést tartja meg.
+
+A host busz továbbra is mono; a Processor sztereó bekötését nem engedélyeztük egyoldalúan. A KS-ben még külön ADC-konverzió, időzített bemeneti sor és mindkét DSP RX0 táplálása szükséges. A globális busz sztereóra bővítését ezért csak a KS út és firmware-váltási teszt elkészülte után szabad engedélyezni, különben a KS mód látszólag elfogadhatna olyan bemenetet, amelyet nem dolgoz fel. A K natív vezérlő migrációja ettől külön feladat, nem történt meg.
+
+Validáció: a mono/sztereó pufferadapter összes regressziós esete ASan/UBSan és szigorú figyelmeztetések mellett PASS; az aktuális forrás `silverKEngine.cpp` és `silverProcessor.cpp` arm64 és x86_64 szintaxisellenőrzése PASS; diff-ellenőrzés PASS. Ez nem hoston át végzett sztereó hangpróba. GUI, meglévő routing, terméknév/azonosítók változatlanok. CI és integráció függő.

@@ -13,9 +13,9 @@ KEngine::KEngine(const std::vector<uint8_t>& rom,double hostRate,int block,const
  resampler.setSamplerates(float(rate),device.getSamplerate());
  device.setNonRealtime(true);std::array<float,256> left{},right{};process(left.data(),right.data(),256,true);device.setNonRealtime(false);
 }
-void KEngine::process(float* left,float* right,int count,bool offline,const float* input){
+void KEngine::process(float* left,float* right,int count,bool offline,const float* input,const float* inputRight){
  device.setNonRealtime(offline);
- processMonoInputChunks(left,right,count,input,[&](float* l,float* r,const float* mono,int size){
+ processInputChunks(left,right,count,input,inputRight,[&](float* l,float* r,const float* mono,int size){
   synthLib::TAudioOutputs out{};out[0]=l;out[1]=r;synthLib::TAudioInputs in{};in[0]=mono;
   resampler.process(in,out,emptyMidi,outputMidi,uint32_t(size),render);
  });
