@@ -20,6 +20,18 @@ int main(int argc,char** argv){try{
  setenv("SILVER_K_DATA",root.getFullPathName().toRawUTF8(),1);
 #endif
  silverK::Processor p;
+ // Exercise the actual Processor layout contract in ROM-free platform CI.
+ const auto original=p.getBusesLayout();
+ for(const auto input:{juce::AudioChannelSet::disabled(),juce::AudioChannelSet::mono(),juce::AudioChannelSet::stereo()}){
+  auto layout=original;layout.inputBuses.set(0,input);
+  check(p.isBusesLayoutSupported(layout) && p.setBusesLayout(layout),"Supported input layout rejected");
+  p.prepareToPlay(48000,256);juce::AudioBuffer<float> audio(4,256);juce::MidiBuffer midi;
+  for(int c=0;c<4;++c)for(int n=0;n<256;++n)audio.setSample(c,n,.1f);
+  p.processBlock(audio,midi);check(audio.getMagnitude(0,256)==0,"No-firmware input leaked into outputs");
+ }
+ auto invalid=original;invalid.inputBuses.set(0,juce::AudioChannelSet::discreteChannels(3));
+ check(!p.isBusesLayoutSupported(invalid),"Unsupported three-channel input accepted");
+ check(p.setBusesLayout(original),"Original input layout restore failed");
  auto empty=report(p);
  check(empty.hasProperty("input_overflows") && !bool(empty["input_overflows_supported"]) && drops(empty)==0,"Unavailable input counter reported as supported");
  check(empty["input_overflows_scope"].toString()=="not-applicable","Unavailable input scope");
