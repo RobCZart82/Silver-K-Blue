@@ -171,6 +171,13 @@ static void hostInput(Processor& p,ReentrantHost& host){
    if(stereoMode)for(int i=0;i<host.block;++i)audio.setSample(1,i,audio.getSample(0,i)*(stereoMode==2?-1.f:1.f));
    p.processBlock(audio,midi);for(int c=0;c<4;++c)for(int i=0;i<host.block;++i){const auto v=audio.getSample(c,i);check(std::isfinite(v),"Host input produced nonfinite output");if(block>187)peak=std::max(peak,std::abs(v));}
   }return peak;};
+ // Optional local wrapper fixture: contains private asset paths, never publish it.
+ const auto stateFolder=juce::SystemStats::getEnvironmentVariable("SILVER_TEST_EXPORT_INPUT_STATE",{});
+ if(stateFolder.isNotEmpty()){
+  capture(false); // Apply MIDI-backed controls before serializing the firmware state.
+  juce::MemoryBlock state;p.getStateInformation(state);
+  check(juce::File(stateFolder).getChildFile(p.isKStation()?"kstation-input.state":"ks-input.state").replaceWithData(state.getData(),state.getSize()),"Cannot write private wrapper fixture");
+ }
  const auto quiet=capture(false),tone=capture(true),tail=capture(false);
  std::cout<<(p.isKStation()?"K-Station":"KS")<<" host rate="<<host.rate<<" block="<<host.block<<" mono input quiet="<<quiet<<" tone="<<tone<<" tail="<<tail<<'\n';
  check(tone>.0001f && quiet<tone*.001f && tail<tone*.001f,"KS host mono input positive control failed");
