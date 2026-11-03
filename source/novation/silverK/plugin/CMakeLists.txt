@@ -242,3 +242,12 @@ add_executable(ksDeviceInput_test "${ROOT}/source/novation/ks/ksLib/ksDeviceInpu
 target_link_libraries(ksDeviceInput_test PRIVATE ksLib)
 add_test(NAME ks_device_input COMMAND ksDeviceInput_test)
 set_tests_properties(ks_device_input PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 180)
+
+# Optional real wrapper check, requires a locally prepared private Processor state.
+add_executable(silver_external_host_check EXCLUDE_FROM_ALL external_input_host_check.cpp)
+target_compile_features(silver_external_host_check PRIVATE cxx_std_17)
+target_compile_definitions(silver_external_host_check PRIVATE JUCE_PLUGINHOST_VST3=1 JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
+target_link_libraries(silver_external_host_check PRIVATE juce::juce_audio_utils)
+if(APPLE)
+ target_link_libraries(silver_external_host_check PRIVATE "-framework AudioToolbox")
+endif()
