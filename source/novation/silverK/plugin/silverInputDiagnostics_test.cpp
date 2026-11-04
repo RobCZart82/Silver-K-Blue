@@ -5,6 +5,11 @@
 #include <stdexcept>
 
 namespace {
+#ifdef SILVER_K_NATIVE_CONTROLLER
+constexpr const char* expectedKBackend="native-cpp-semantic";
+#else
+constexpr const char* expectedKBackend="original-h8";
+#endif
 void check(bool ok,const char* why){if(!ok)throw std::runtime_error(why);}
 juce::var report(silverK::Processor& p){return juce::JSON::parse(p.performanceReport());}
 int64_t drops(const juce::var& r){return r["input_overflows"].toString().getLargeIntValue();}
@@ -43,9 +48,9 @@ int main(int argc,char** argv){try{
  auto buses=p.getBusesLayout();buses.inputBuses.set(0,juce::AudioChannelSet::mono());check(p.setBusesLayout(buses),"Mono input layout rejected");
  check(p.setPerformanceDiagnostics(1),"Recording did not start");
  const auto start=report(p);const auto first=drops(start);
- check(bool(start["input_overflows_supported"]) && start["controller_backend"].toString()=="original-h8","K controller/counter unavailable");
+ check(bool(start["input_overflows_supported"]) && start["controller_backend"].toString()==expectedKBackend,"K controller/counter unavailable");
  check(start["input_overflows_scope"].toString()=="kstation-host-and-dsp-input-queues","Wrong counter scope");
- check(start["session"]["controller_backend"].toString()=="original-h8" && bool(start["session"]["input_overflows_supported"]),"Session backend/counter metadata missing");
+ check(start["session"]["controller_backend"].toString()==expectedKBackend && bool(start["session"]["input_overflows_supported"]),"Session backend/counter metadata missing");
  check(start["session"]["input_overflows_at_start"].toString().getLargeIntValue()==first,"Session baseline differs from engine counter");
  juce::AudioBuffer<float> audio(4,256);juce::MidiBuffer midi;
  for(int block=0;block<200;++block){audio.clear();for(int n=0;n<256;++n)audio.setSample(0,n,.1f*std::sin(float(block*256+n)*.03f));p.processBlock(audio,midi);}

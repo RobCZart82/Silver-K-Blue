@@ -24,7 +24,7 @@ namespace kstation
         constexpr size_t LeadMarginFrames = 128;
         constexpr uint8_t StateHeader[]{'K','S','T','S','T',1,0,0};
         constexpr size_t UserFlashStart = 0x1fc00;
-        constexpr size_t UserFlashSize = H8::FlashSize - UserFlashStart;
+        constexpr size_t UserFlashSize = ControllerFlashSize - UserFlashStart;
         constexpr size_t StateSize = sizeof(StateHeader) + UserFlashSize + 128 + 16 * 128;
         constexpr uint8_t ProgramHeader[]{0xf0,0,0x20,0x29,1,0x41,0x7f,0,0,0x11,1,0,0};
         struct MidiByte { uint64_t due; uint8_t value; bool first; };
@@ -40,6 +40,7 @@ namespace kstation
     struct Device::Impl
     {
         baseLib::performance::Diagnostics* performance;
+        ControllerMode controllerMode;
         baseLib::WorkerWakeup wakeup;
         uint64_t diagnosticStale=0; // audio-thread only
         std::unique_ptr<Hardware> hardware;
@@ -60,8 +61,7 @@ namespace kstation
         std::atomic<unsigned> realtimeBlock{256};
         std::atomic<uint8_t> snapshotBank{1},snapshotProgram{0};
         std::atomic<uint64_t> consumed{0}, underruns{0}, midiOverflows{0};
-        // Upstream ab91ba1: count drops at both input queue boundaries.
-        // Diagnostic sessions do not reset this engine-lifetime counter.
+        // Count drops at both input queue boundaries; engine-lifetime counter.
         std::atomic<uint64_t> inputOverflows{0};
         std::atomic<bool> stop{false}, valid{false}, pauseRequested{false}, paused{false};
         std::atomic<bool> nonRealtime{false};
@@ -72,8 +72,8 @@ namespace kstation
         std::thread worker;
         uint64_t produced = 0;
 
-        explicit Impl(const Rom& rom,baseLib::performance::Diagnostics* diagnostics)
-            :performance(diagnostics)
+        explicit Impl(const Rom& rom,baseLib::performance::Diagnostics* diagnostics,ControllerMode controller)
+            :performance(diagnostics),controllerMode(controller)
         {
             for (auto& cc : controllers) cc.store(0xff, std::memory_order_relaxed);
             if (!rom.isValid()) { failure = rom.error(); return; }
@@ -83,7 +83,7 @@ namespace kstation
                 dsp56k::ThreadTools::setCurrentThreadPriority(dsp56k::ThreadPriority::High);
                 try
                 {
-                    hardware = std::make_unique<Hardware>(image);
+                    hardware = std::make_unique<Hardware>(image,std::vector<uint8_t>{},controllerMode);
                     if (!hardware->boot())
                     {
                         const auto debug = hardware->controller().debugState();
@@ -290,10 +290,10 @@ namespace kstation
         }
     };
 
-    Device::Device(const synthLib::DeviceCreateParams& params,baseLib::performance::Diagnostics* performance) : synthLib::Device(params)
+    Device::Device(const synthLib::DeviceCreateParams& params,baseLib::performance::Diagnostics* performance,ControllerMode controller) : synthLib::Device(params)
     {
         const auto rom = params.romData.empty() ? RomLoader::findROM() : Rom(params.romData, params.romName);
-        m_impl = std::make_unique<Impl>(rom,performance);
+        m_impl = std::make_unique<Impl>(rom,performance,controller);
     }
     Device::~Device() = default;
     bool Device::isValid() const { return m_impl->valid.load(std::memory_order_acquire); }
@@ -322,6 +322,7 @@ namespace kstation
     uint64_t Device::getMidiOverflowCount() const { return m_impl->midiOverflows.load(); }
     uint64_t Device::getInputOverflowCount() const { return m_impl->inputOverflows.load(std::memory_order_relaxed); }
     const char* Device::workerWaitBackend() const {return m_impl->wakeup.backend();}
+    const char* Device::controllerBackend() const {return m_impl->controllerMode==ControllerMode::Native?"native-cpp-semantic":"original-h8";}
     void Device::setNonRealtime(bool enabled) noexcept { m_impl->nonRealtime.store(enabled, std::memory_order_release); }
 
     bool Device::prepareAudio(uint32_t maxHostBlock, float hostSamplerate)
@@ -409,8 +410,7 @@ namespace kstation
         const auto lead = m_impl->leadFrames.load(std::memory_order_relaxed);
         for (size_t i = 0; i < samples; ++i)
         {
-            if (inputs[0] && !m_impl->input.push(InputSample{consumed + lead, inputWord(inputs[0][i])}))
-                m_impl->inputOverflows.fetch_add(1, std::memory_order_relaxed);
+            if (inputs[0] && !m_impl->input.push(InputSample{consumed + lead, inputWord(inputs[0][i])}))m_impl->inputOverflows.fetch_add(1, std::memory_order_relaxed);
             DSP::AudioFrame frame{};
             bool available = m_impl->popAudioAt(consumed, frame);
             if (!available && offline)
@@ -554,7 +554,7 @@ namespace kstation
             const auto rom = getDeviceCreateParams().romData.empty() ? RomLoader::findROM()
                 : Rom(getDeviceCreateParams().romData, getDeviceCreateParams().romName);
             if (!rom.isValid()) { m_impl->resume(); return false; }
-            std::vector<uint8_t> flash(H8::FlashSize, 0xff);
+            std::vector<uint8_t> flash(ControllerFlashSize, 0xff);
             std::copy(state.begin() + sizeof(StateHeader), state.begin() + patchOffset,
                       flash.begin() + UserFlashStart);
             // Before 0.3.2 the editor exposed delay ratio as 0..127, although
@@ -571,7 +571,10 @@ namespace kstation
             const auto bank = flash[0x1ff00], program = flash[0x1ff01];
             if (bank >= 1 && bank <= 4 && program < 100)
                 repairRatio(0x26400 + ((size_t(bank) - 1) * 100 + program) * 128);
-            auto replacement = std::make_unique<Hardware>(rom.data(), flash);
+            auto replacement = std::make_unique<Hardware>(rom.data(), flash, m_impl->controllerMode);
+            // Verify the actual replacement, not the cached diagnostic label.
+            if (replacement->controller().isNative() != (m_impl->controllerMode == ControllerMode::Native))
+                throw std::runtime_error("K-Station state restore changed controller backend");
             if (!replacement->boot()) { m_impl->resume(); return false; }
             std::vector<uint8_t> restore(std::begin(ProgramHeader), std::end(ProgramHeader));
             restore.insert(restore.end(), state.begin() + patchOffset, state.begin() + patchOffset + 128);
