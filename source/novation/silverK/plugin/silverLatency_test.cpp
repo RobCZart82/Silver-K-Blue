@@ -210,6 +210,13 @@ set(p.isKStation()?"amp_attack":"attack",0);set(p.isKStation()?"amp_decay":"deca
    check(internal>.0001f,"Filter fixture could not play internal oscillator either");
   }
   check(filtered>.0001f && released<filtered*.001f,"Input filter/envelope positive control failed");
+  // A carrier must become silent when the external modulator is removed.
+  set("osc1_wave",2);set("osc1_level",127);set("vocoder_balance",64);capture(false);
+  note(true);const auto vocoder=capture(true),vocoderMuted=capture(false);note(false);capture(false);
+  std::cout<<(p.isKStation()?"K-Station":"KS")<<" input vocoder="<<vocoder<<" muted="<<vocoderMuted<<'\n';
+  check(vocoder>.0001f && vocoderMuted<vocoder*.1f,"External vocoder modulator mute failed");
+  set("vocoder_balance",0);
+
  }
  layout.inputBuses.set(0,juce::AudioChannelSet::disabled());check(p.setBusesLayout(layout),"Input disable failed");
  set("external_level",0);set("external_to_fx",0);set("osc1_level",127);

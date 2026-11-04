@@ -725,3 +725,7 @@ A KS DSP B soros olvasási callbackje az ADC által kitöltött RX0 bemenetet fe
 ## 2026-11-04 — KS ADC javítás ellenőrzése
 
 A #44 javított `a5d3b22` commitjának Windows/macOS/web ellenőrzései sikeresek. A privát arm64 H8 ellenpróba is teljes PASS (controller_mode=0, KS filtered peak 0.00267446, released 0, teljes latency/rate/buffer/state/offline→realtime regresszió exit 0), egyezően a korábbi natív eredménnyel. A javítás így nem függ a nagy v0.5a natív migrációtól. A nyitott vizsgálat konkrét szűrőút-okát ez lezárja; a külön vocoder és tényleges realtime/DAW validáció nem tekinthető ettől késznek. A leltár frissítve; beolvasztás csak a végső head kötelező ellenőrzései után.
+
+## 2026-11-04 — Külső vocoder pozitív és némítási kontroll
+
+A #44 minden végső head ellenőrzése sikeres, beolvasztva: `b91c3cc`. Friss mainből a meglévő opcionális SILVER_TEST_INPUT_FILTER próba a vocoder hordozóját is ellenőrzi: külső modulátorral hallható jel, majd a modulátor eltávolítása után legalább tízszeres csillapítás. Privát arm64 natív teljes futás PASS: K-Station peak 0.0598646 / muted 3.14492e-06; KS peak 0.0119195 / muted 8.49364e-07. A további teljes latency regresszió is PASS. Runtime és GUI változtatás nincs. H8 ellenpróba, platform CI és tényleges realtime/DAW teszt külön hátravan.
