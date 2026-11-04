@@ -571,7 +571,10 @@ namespace kstation
             const auto bank = flash[0x1ff00], program = flash[0x1ff01];
             if (bank >= 1 && bank <= 4 && program < 100)
                 repairRatio(0x26400 + ((size_t(bank) - 1) * 100 + program) * 128);
-            auto replacement = std::make_unique<Hardware>(rom.data(), flash);
+            auto replacement = std::make_unique<Hardware>(rom.data(), flash, m_impl->controllerMode);
+            // Verify the actual replacement, not the cached diagnostic label.
+            if (replacement->controller().isNative() != (m_impl->controllerMode == ControllerMode::Native))
+                throw std::runtime_error("K-Station state restore changed controller backend");
             if (!replacement->boot()) { m_impl->resume(); return false; }
             std::vector<uint8_t> restore(std::begin(ProgramHeader), std::end(ProgramHeader));
             restore.insert(restore.end(), state.begin() + patchOffset, state.begin() + patchOffset + 128);

@@ -257,4 +257,5 @@ option(SILVER_K_NATIVE_CONTROLLER "Use native K-Station controller for migration
 if(SILVER_K_NATIVE_CONTROLLER)
     target_compile_definitions(silverK PRIVATE SILVER_K_NATIVE_CONTROLLER=1)
     target_compile_definitions(silverInputDiagnostics_test PRIVATE SILVER_K_NATIVE_CONTROLLER=1)
+    target_compile_definitions(kstationDeviceState_test PRIVATE PRIVATE_STATE_NATIVE=1)
 endif()
