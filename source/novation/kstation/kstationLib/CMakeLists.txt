@@ -13,6 +13,10 @@ target_link_libraries(kstationLib PUBLIC synthLib dsp56kEmu h8s)
 target_include_directories(kstationLib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
 set_property(TARGET kstationLib PROPERTY FOLDER "Gearmulator")
 
+# Explicit private-fixture tool; never run by public CTest or packaged.
+add_executable(kstationDeviceState_test EXCLUDE_FROM_ALL kstationDeviceState_test.cpp)
+target_link_libraries(kstationDeviceState_test PRIVATE kstationLib)
+
 if(BUILD_TESTING)
     add_executable(kstationRomLoader_test kstationRomLoader_test.cpp)
     target_link_libraries(kstationRomLoader_test PRIVATE kstationLib)
