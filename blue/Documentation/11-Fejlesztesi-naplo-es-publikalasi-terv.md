@@ -749,3 +749,11 @@ An earlier strict run stopped on 1222 missing K-Station frames at 48 kHz/256, de
 A #48 minden kötelező ellenőrzés után mainbe került (`0079460`). A következő migráció előtt izolált upstream clean/observer és original/native mérések készültek; részletes eljárás, eredmény és korlát az [átvételi leltárban](12-Upstream-v05-atveteli-leltar.md#2026-11-04--k-station-natív-migráció-elővizsgálata).
 
 Hat alap referencia-forgatókönyv pontos egyezést adott. Az opcionális program-forgatókönyv riport- és nyers egyezése mellett a tesztscript közös beállítási kapuja hibát jelzett, ezt megőriztük; teljes suite PASS nincs. A külön 24 futásos CPU-sorozat funkcionális riportkapuja sikeres, de a hosszabb megerősítő mérés nem mutat általános natív CPU-előnyt. Nem történik automatikus backendváltás. Következő munka a Blue eredeti H8 elleni szélesebb paritás, majd célzott migrációs döntés a bizonyítékok alapján. A termék forrása, GUI és Blue azonosítók nem módosultak; kiadás nem készült. Privát firmware, PCM, RAM/flash és nyers riport nem kerül a repository-ba.
+
+## 2026-11-04 — Blue H8 / upstream H8 / natív paritás futtató
+
+A #49 mainben (`27b6df3`). Új, csak fejlesztői `tools/kstationParity/compare.py` futtató rögzített helyi probe binárisokat hasonlít össze; nem tölti le vagy váltja át a termék vezérlőjét. A közös upstream harness Blue-kompatibilitási típusguardját és az izolált fordítás feltételeit a mellékelt README rögzíti.
+
+Privát macOS arm64 Release ellenőrzés: mind a 12 forgatókönyv PASS a Blue eredeti H8, upstream H8 és upstream native között (idle, held1, held8, notes, sweep, arp, program, sustain, clockburst, expression, sysexpatch, programstress). Mind a 36 futás exit 0, dropped_frames 0; PCM/flash/MIDI teljes SHA-256 egyezés, patch/program/clock riportegyezés; native értelmezett H8 lépésszám 0. Két másodperc warmup + két másodperc offline capture, 256 minta. Bináris- és firmware-hash ellenőrzött. A korábbi observer script program-beállítási kapuhibája ettől külön, megőrzött eredmény.
+
+Ez nem teljes RAM-paritás, Processor/device state-save/restore, GUI-, külső bemeneti, DAW-, Windows/Intel- vagy CPU-bizonyíték. A natív migráció és az alapértelmezett backend nem változott. A nyers firmware-eredetű állományok privát kimeneti könyvtárban maradnak. Helyi help/szintaxis és diff ellenőrzés PASS; termék-CI a PR végső commitján szükséges.
