@@ -251,3 +251,10 @@ target_link_libraries(silver_external_host_check PRIVATE juce::juce_audio_utils)
 if(APPLE)
  target_link_libraries(silver_external_host_check PRIVATE "-framework AudioToolbox")
 endif()
+
+# Opt-in migration validation; preserve original H8 production default.
+option(SILVER_K_NATIVE_CONTROLLER "Use native K-Station controller for migration validation" OFF)
+if(SILVER_K_NATIVE_CONTROLLER)
+    target_compile_definitions(silverK PRIVATE SILVER_K_NATIVE_CONTROLLER=1)
+    target_compile_definitions(silverInputDiagnostics_test PRIVATE SILVER_K_NATIVE_CONTROLLER=1)
+endif()

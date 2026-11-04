@@ -5,6 +5,7 @@ add_library(kstationLib STATIC
     kstationDevice.cpp kstationDevice.h
     kstationDSP.cpp kstationDSP.h
     kstationH8.cpp kstationH8.h
+    kstationNativeController.cpp kstationNativeController.h
     kstationHardware.cpp kstationHardware.h
     kstationQueue.h
     kstationRomLoader.cpp kstationRomLoader.h)
@@ -16,6 +17,10 @@ set_property(TARGET kstationLib PROPERTY FOLDER "Gearmulator")
 # Explicit private-fixture tool; never run by public CTest or packaged.
 add_executable(kstationDeviceState_test EXCLUDE_FROM_ALL kstationDeviceState_test.cpp)
 target_link_libraries(kstationDeviceState_test PRIVATE kstationLib)
+
+add_executable(kstationControllerDeviceState_test kstationControllerDeviceState_test.cpp)
+target_link_libraries(kstationControllerDeviceState_test PRIVATE kstationLib)
+add_test(NAME kstationControllerDeviceState COMMAND kstationControllerDeviceState_test)
 
 if(BUILD_TESTING)
     add_executable(kstationRomLoader_test kstationRomLoader_test.cpp)
