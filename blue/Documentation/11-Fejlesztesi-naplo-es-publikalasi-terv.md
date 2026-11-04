@@ -733,3 +733,7 @@ A #44 minden végső head ellenőrzése sikeres, beolvasztva: `b91c3cc`. Friss m
 ## 2026-11-04 — Vocoder tesztlépcső lezárása
 
 A #45 `231ea54` headjén Windows/macOS/web PASS és beolvasztható állapot igazolva; a privát arm64 H8 futás is teljes PASS (controller_mode=0, KS vocoder/muted peak 0.0119195 / 8.49364e-07). Beolvasztva: `8c71d94`. A leltár a #43 hosteszköz, #44 ADC javítás és #45 vocoder teszt main státuszát követi. További kézi validáció: valódi DAW/realtime bemenet, Windows/Intel futtatás, fizikai bemenet és macOS engedély elfogadás/elutasítás. Ezekre a helyi offline arm64 és a ROM nélküli CI nem szolgál bizonyítékkal. Új kiadás nem készült.
+
+## 2026-11-04 - Paced realtime input test
+
+Optional SILVER_TEST_INPUT_REALTIME=1 (with SILVER_TEST_HOST_INPUT=1) tests wall-clock paced 48 kHz/256-sample realtime Processor input on Balanced profile. Checks finite four-channel output, signal and silence; reports missing sample frames. SILVER_TEST_INPUT_REALTIME_STRICT=1 additionally requires zero missing frames. Local arm64 KS native peak 0.0227428 and K-Station peak 0.0931327, silence and missing frames both zero; full regression PASS. Preliminary Low latency K-Station run had 916 missing frames, so no universal capacity claim. Physical input, actual DAW, H8 and platform validation remain separate. No runtime or GUI change.

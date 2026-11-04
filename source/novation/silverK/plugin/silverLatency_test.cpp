@@ -1,5 +1,6 @@
 #include "silverProcessor.h"
 #include <cmath>
+#include <chrono>
 #include <cstdlib>
 #include <iostream>
 #include <stdexcept>
@@ -217,6 +218,27 @@ set(p.isKStation()?"amp_attack":"attack",0);set(p.isKStation()?"amp_decay":"deca
   check(vocoder>.0001f && vocoderMuted<vocoder*.1f,"External vocoder modulator mute failed");
   set("vocoder_balance",0);
 
+ }
+ if(juce::SystemStats::getEnvironmentVariable("SILVER_TEST_INPUT_REALTIME",{})=="1"){
+  layout.inputBuses.set(0,juce::AudioChannelSet::mono());check(p.setBusesLayout(layout),"Realtime input layout");
+  set("osc1_level",0);set("external_level",127);set("external_to_fx",1);set("vocoder_balance",0);capture(false);
+  p.setBufferProfile(1);capture(false);p.setNonRealtime(false);
+  auto paced=[&](bool signal){
+   juce::AudioBuffer<float> audio(4,host.block);juce::MidiBuffer midi;float peak=0;
+   const int blocks=int(host.rate*1.5/host.block)+1;const auto start=std::chrono::steady_clock::now();
+   for(int n=0;n<blocks;++n){
+    audio.clear();for(int i=0;i<host.block;++i)audio.setSample(0,i,signal?float(.1*std::sin(6.283185307179586*440*(n*host.block+i)/host.rate)):0);
+    p.processBlock(audio,midi);
+    for(int c=0;c<4;++c)for(int i=0;i<host.block;++i){const auto v=audio.getSample(c,i);check(std::isfinite(v),"Nonfinite realtime input output");if(n>blocks/2)peak=std::max(peak,std::abs(v));}
+    std::this_thread::sleep_until(start+std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>((n+1)*host.block/host.rate)));
+   }return peak;
+  };
+  const auto before=p.underruns();const auto signal=paced(true),quiet=paced(false);
+  std::cout<<(p.isKStation()?"K-Station":"KS")<<" paced realtime profile="<<p.bufferProfile()<<" input="<<signal<<" quiet="<<quiet<<" underruns="<<p.underruns()-before<<'\n';
+  check(signal>.0001f && quiet<signal*.001f,"Paced realtime input signal/mute failed");
+  // Deadline capacity depends on the machine; retain the count without hiding it.
+  if(juce::SystemStats::getEnvironmentVariable("SILVER_TEST_INPUT_REALTIME_STRICT",{})=="1")check(p.underruns()==before,"Paced realtime input underrun");
+  p.setNonRealtime(true);
  }
  layout.inputBuses.set(0,juce::AudioChannelSet::disabled());check(p.setBusesLayout(layout),"Input disable failed");
  set("external_level",0);set("external_to_fx",0);set("osc1_level",127);
