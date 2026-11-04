@@ -721,3 +721,7 @@ Közvetlen tesztazonosítás: az upstream `silverExternalInput_test` teszttörzs
 ### Igazolt ok és célzott javítás
 
 A KS DSP B soros olvasási callbackje az ADC által kitöltött RX0 bemenetet felülírta a DSP A TX1 segéd-DAC jelével. Az upstream megfelelő javítását célzottan átvettük: az A→B ütemezett keretet továbbra is ürítjük és számoljuk, de B RX0 értékét az ADC callback számára megőrizzük. Ezzel a helyi natív firmware-es teljes silverLatency_test PASS (exit 0): KS filtered peak 0.00267446, released 0; K-Station filtered peak 0.0107882, released 0. A teljes további latency/rate/buffer/state regresszió is sikeres. A GUI és Blue azonosítók nem módosultak. H8 ellenpróba és a javított head platformellenőrzése még szükséges; a PR egyelőre draft marad.
+
+## 2026-11-04 — KS ADC javítás ellenőrzése
+
+A #44 javított `a5d3b22` commitjának Windows/macOS/web ellenőrzései sikeresek. A privát arm64 H8 ellenpróba is teljes PASS (controller_mode=0, KS filtered peak 0.00267446, released 0, teljes latency/rate/buffer/state/offline→realtime regresszió exit 0), egyezően a korábbi natív eredménnyel. A javítás így nem függ a nagy v0.5a natív migrációtól. A nyitott vizsgálat konkrét szűrőút-okát ez lezárja; a külön vocoder és tényleges realtime/DAW validáció nem tekinthető ettől késznek. A leltár frissítve; beolvasztás csak a végső head kötelező ellenőrzései után.
