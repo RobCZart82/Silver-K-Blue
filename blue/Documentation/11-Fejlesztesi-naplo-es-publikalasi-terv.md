@@ -729,3 +729,7 @@ A #44 javított `a5d3b22` commitjának Windows/macOS/web ellenőrzései sikerese
 ## 2026-11-04 — Külső vocoder pozitív és némítási kontroll
 
 A #44 minden végső head ellenőrzése sikeres, beolvasztva: `b91c3cc`. Friss mainből a meglévő opcionális SILVER_TEST_INPUT_FILTER próba a vocoder hordozóját is ellenőrzi: külső modulátorral hallható jel, majd a modulátor eltávolítása után legalább tízszeres csillapítás. Privát arm64 natív teljes futás PASS: K-Station peak 0.0598646 / muted 3.14492e-06; KS peak 0.0119195 / muted 8.49364e-07. A további teljes latency regresszió is PASS. Runtime és GUI változtatás nincs. H8 ellenpróba, platform CI és tényleges realtime/DAW teszt külön hátravan.
+
+## 2026-11-04 — Vocoder tesztlépcső lezárása
+
+A #45 `231ea54` headjén Windows/macOS/web PASS és beolvasztható állapot igazolva; a privát arm64 H8 futás is teljes PASS (controller_mode=0, KS vocoder/muted peak 0.0119195 / 8.49364e-07). Beolvasztva: `8c71d94`. A leltár a #43 hosteszköz, #44 ADC javítás és #45 vocoder teszt main státuszát követi. További kézi validáció: valódi DAW/realtime bemenet, Windows/Intel futtatás, fizikai bemenet és macOS engedély elfogadás/elutasítás. Ezekre a helyi offline arm64 és a ROM nélküli CI nem szolgál bizonyítékkal. Új kiadás nem készült.
