@@ -737,3 +737,9 @@ A #45 `231ea54` headjén Windows/macOS/web PASS és beolvasztható állapot igaz
 ## 2026-11-04 - Paced realtime input test
 
 Optional SILVER_TEST_INPUT_REALTIME=1 (with SILVER_TEST_HOST_INPUT=1) tests wall-clock paced 48 kHz/256-sample realtime Processor input on Balanced profile. Checks finite four-channel output, signal and silence; reports missing sample frames. SILVER_TEST_INPUT_REALTIME_STRICT=1 additionally requires zero missing frames. Local arm64 KS native peak 0.0227428 and K-Station peak 0.0931327, silence and missing frames both zero; full regression PASS. Preliminary Low latency K-Station run had 916 missing frames, so no universal capacity claim. Physical input, actual DAW, H8 and platform validation remain separate. No runtime or GUI change.
+
+## 2026-11-04 - Realtime rate coverage and diagnostic context
+
+#47 merged as afd9ca4 after Windows/macOS/web checks and a strict arm64 H8 run passed. Combined SILVER_TEST_INPUT_RATES=1 and SILVER_TEST_INPUT_REALTIME=1 now reports the sample rate and block size on every paced measurement. Local native KS and K-Station signal/mute measurements completed at 48 kHz/256, 44.1 kHz/512 and 96 kHz/512: signal peaks approximately 0.022743 (KS) and 0.09313 (K), quiet 0, missing sample frames 0 in the completed reporting run; full regression PASS.
+
+An earlier strict run stopped on 1222 missing K-Station frames at 48 kHz/256, despite passing signal/mute. The subsequent zero-frame result does not erase that failure or establish guaranteed realtime capacity. Treat this as machine/scheduling-sensitive evidence; physical input, DAW and Windows/Intel runtime checks remain open. The only test code change adds rate/block labels. No runtime or GUI change.
