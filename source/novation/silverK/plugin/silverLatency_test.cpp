@@ -234,7 +234,7 @@ set(p.isKStation()?"amp_attack":"attack",0);set(p.isKStation()?"amp_decay":"deca
    }return peak;
   };
   const auto before=p.underruns();const auto signal=paced(true),quiet=paced(false);
-  std::cout<<(p.isKStation()?"K-Station":"KS")<<" paced realtime profile="<<p.bufferProfile()<<" input="<<signal<<" quiet="<<quiet<<" underruns="<<p.underruns()-before<<'\n';
+  std::cout<<(p.isKStation()?"K-Station":"KS")<<" paced realtime rate="<<host.rate<<" block="<<host.block<<" profile="<<p.bufferProfile()<<" input="<<signal<<" quiet="<<quiet<<" underruns="<<p.underruns()-before<<'\n';
   check(signal>.0001f && quiet<signal*.001f,"Paced realtime input signal/mute failed");
   // Deadline capacity depends on the machine; retain the count without hiding it.
   if(juce::SystemStats::getEnvironmentVariable("SILVER_TEST_INPUT_REALTIME_STRICT",{})=="1")check(p.underruns()==before,"Paced realtime input underrun");
