@@ -1,0 +1,11 @@
+# Opt-in KS semantic integration
+
+`SILVER_KS_SEMANTIC_CONTROLLER=ON` selects the frozen upstream `ab91ba112f2dd7be5ad21c1a6567290fe7ef20e6` semantic controller source unit under `source/novation/ksNative/ksLib`. It is OFF by default. The original Blue `source/novation/ks/ksLib` files are unchanged, preserving the normal build and its existing hybrid engine. Both source units expose the same `ksLib` include namespace; CMake selects one coherent include/source set, never mixes their controller definitions.
+
+The upstream source partition separates the semantic production library from retained H8/comparison implementations. Its comparison factory is not registered in the semantic product. A small availability-name adapter preserves Blue's existing GUI API; no GUI layout, new selector, Blue identity, version or release change is included. Opt-in production uses semantic Native even for legacy controller preferences; this is a validation build, not a promise of legacy H8 switching.
+
+The coherent imported source unit includes upstream domain services, phase tasks and comparison/proof helpers. Their presence does not mean every upstream test has been executed. The explicit `ksSemanticController_test` checks ROM-free production admission, immutable guards, CPU-free physical state and absence of a comparison factory. Separate Windows/macOS native jobs build/run this guard, without publishing experimental packages. Normal platform jobs keep the option OFF.
+
+Local arm64 opt-in integrated Processor checks passed private startup, four-output silence/sustain controls, mono/stereo input, filter/envelope, vocoder, 44.1/48/96 kHz, buffer/latency, state restore and offline/realtime transitions. Earlier common Board single/four-part captures matched the shipping hybrid. These are bounded proofs: no general CPU benefit, complete bank/arp equivalence, sampled-wave fidelity, physical-driver/DAW behavior, or Windows/Intel private-firmware runtime claim. User fixtures, Flash, PCM and raw logs remain private. Further validation is required before any default-backend decision or release.
+
+Import adjustments are limited to the Blue availability-name adapter, retaining the existing Blue private `ksDeviceInput_test.cpp` helper, and trailing-space cleanup in seven upstream test helpers.

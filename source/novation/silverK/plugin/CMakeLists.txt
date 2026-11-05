@@ -263,3 +263,9 @@ endif()
 # Explicit private-fixture comparison tool; never packaged or run by public CTest.
 add_executable(ksBoardParity_probe EXCLUDE_FROM_ALL "${ROOT}/tools/ksParity/probe.cpp")
 target_link_libraries(ksBoardParity_probe PRIVATE ksLib)
+
+if(SILVER_KS_SEMANTIC_CONTROLLER)
+ add_executable(ksSemanticController_test "${ROOT}/source/novation/ksNative/ksLib/ksProductionController_test.cpp")
+ target_link_libraries(ksSemanticController_test PRIVATE ksLib)
+ add_test(NAME ks_semantic_controller COMMAND ksSemanticController_test)
+endif()
