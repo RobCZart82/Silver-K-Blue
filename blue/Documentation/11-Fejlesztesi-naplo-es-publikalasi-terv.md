@@ -817,3 +817,11 @@ A tesztforrások most a kiválasztott implementáció könyvtárából származn
 Helyi bizonyíték: tényleges ON generált fordítóparancsok szerint Device/Board/H8-reference tesztforrások a natív könyvtárból, OFF esetben a hybrid könyvtárból származnak (PASS). A natív Device input és Drum edit fogyasztói objektum MSVC-vel lefordult (PASS). Három forráscsomag-választási teszt és whitespace-ellenőrzés PASS. Teljes linkelt platformbuild/firmware-es újrafuttatás helyben nem történt; a végleges PR CI-je külön szükséges. GUI, pluginazonosítók, verzió, alapértelmezett motor és kiadás változatlan.
 
 A CMake-védelmi blokk külön, minimális generálási próbában a hybrid helyi fejlécet használó fogyasztót elutasítja, a natív forrást elfogadja (negatív és pozitív kontroll PASS).
+
+## 2026-11-05 — Javított KS natív konfiguráció firmware-es elfogadási lépcsője
+
+Vizsgálati alap a #55–56 javításokat tartalmazó main 6ed41b5, friss arm64 Release ON fordításból. A teljes privát Processor latency/reentry/buffer/rate/state/offline→realtime regresszió exit 0 PASS, mindkét modell mono/sztereó bemeneti, filter/envelope, vocoder és 44,1/48/96 kHz kontrolljaival. A ROM nélküli szemantikus produkciós guard PASS. Ez a javított include/source páros külön újrafuttatása, felülírja a korábbi, ABI-javítás előtti ON eredmény koherencia-következtetését.
+
+Az ON ksBoardParity_probe cél most explicit KS_SEMANTIC_PROBE definíciót kap, így tényleges native owner és nulla értelmezett H8 lépés a futás feltétele. A generált függőségi fájl natív ksBoard.h útvonalat igazol. A single és fourpart próba exit 0 PASS, rendre peak 1568304 és 883066. A teljes PCM/state/Flash a korábbi Blue hybrid referenciaállományokkal byte-azonos, mindkét esetben 3932160 PCM és 263168 Flash bájt, 270 illetve 1038 state bájt. MIDI kimenet mindkét oldalon üres. A privát zero-wave fixture a mintahang-hűség vizsgálatát nem fedi le. Teljes bank/arp, CPU, fizikai DAW és Windows/Intel firmware-es futtatás továbbra is nyitott. A privát fixture-ek és nyers eredmények helyben maradnak.
+
+Az átvételi leltár követi a #55–56 beolvasztását és ezt a javított futást. Az új probe guard végső PR-commitjához platform-CI szükséges.
