@@ -64,6 +64,6 @@ jobs:
       - name: Configure opt-in KS semantic validation
         run: cmake -S . -B native-build -A x64 -DSILVER_KS_SEMANTIC_CONTROLLER=ON
       - name: Build semantic production guard
-        run: cmake --build native-build --config Release --target ksSemanticController_test --parallel 4
+        run: cmake --build native-build --config Release --target ksSemanticController_test ksDeviceInput_test ksDrumEdit_test --parallel 4
       - name: Run ROM-free semantic production guard
         run: ctest --test-dir native-build -C Release --output-on-failure --no-tests=error -R '^ks_semantic_controller$'
