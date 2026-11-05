@@ -1,5 +1,6 @@
 #include "ksLib/ksBoard.h"
 #include "ksLib/ksRom.h"
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <iterator>
@@ -10,8 +11,76 @@
 void check(bool x,const char*m){if(!x)throw std::runtime_error(m);}
 std::vector<uint8_t> read(const char*p){std::ifstream f(p,std::ios::binary);check(bool(f),"fixture missing");return {std::istreambuf_iterator<char>(f),{}};}
 void save(const std::string&p,const std::vector<uint8_t>&v){std::ofstream f(p,std::ios::binary);f.write((const char*)v.data(),v.size());check(bool(f),"write failed");}
-int main(int argc,char**argv){try{check(argc==5 || argc==6,"OS FLASH WAVE PREFIX [single|fourpart]");const std::string scenario=argc==6?argv[5]:"single";check(scenario=="single" || scenario=="fourpart","unknown scenario");ks::Rom rom(argv[1]);check(rom.isValid(),"invalid OS");auto flash=read(argv[2]),wave=read(argv[3]);
+// Start each group from stored Performance data, before sending any host MIDI.
+void coldChannels(const std::vector<uint8_t>& os, const std::vector<uint8_t>& wave,
+                  const std::vector<uint8_t>& originalFlash)
+{
+ constexpr unsigned performanceOffset = 0x45800;
+ for (unsigned group = 0; group < 4; ++group) {
+  auto flash = originalFlash;
+  flash[0x1ff01] = 0;
+  flash[0x1ff04] = 1;
+  for (unsigned part = 0; part < 4; ++part) {
+   auto* program = flash.data() + performanceOffset + part * 256;
+   std::copy_n(originalFlash.data() + 0x2c800, 256, program);
+   for (unsigned index : {38, 39, 40, 41, 62, 65, 100, 107, 110})
+    program[index] = 0;
+   program[37] = program[179] = 127;
+   program[128] = 0; // Saw wave works with a zero Wave ROM.
+   program[180] = 0;
+   program[181] = uint8_t(group * 4 + part);
+   program[182] = 0;
+   program[183] = 127;
+   program[184] = program[185] = 64;
+  }
+  flash[performanceOffset + 189] = 1;
+  flash[performanceOffset + 190] = 15;
+  auto board = std::make_unique<ks::Board>(os, wave, flash, true, false);
+  check(board->boot(), "cold Performance boot failed");
+#ifdef KS_SEMANTIC_PROBE
+  check(board->nativeOwnerState() && board->h8InterpretedSteps() == 0,
+        "cold Performance did not use the semantic owner");
+#endif
+  const auto startup = board->state();
+  check(startup.performance && startup.activeMask == 15, "cold Performance parts not active");
+  auto send = [&](std::initializer_list<uint8_t> data) {
+   check(board->enqueueMidi(data.begin(), data.size()), "cold Performance MIDI overflow");
+  };
+  auto peak = [&](unsigned frames, unsigned skip = 0) {
+   int64_t result = 0;
+   for (unsigned n = 0; n < frames; ++n) {
+    const auto frame = board->renderSample();
+    if (n >= skip)
+     for (unsigned c = 0; c < 4; ++c)
+      result = std::max(result, std::abs(int64_t(frame[c])));
+   }
+   return result;
+  };
+  check(peak(8192) == 0, "cold Performance produced audio before host MIDI");
+  for (unsigned part = 0; part < 4; ++part) {
+   const auto channel = uint8_t(group * 4 + part);
+   check((startup.parts[part][181] & 15) == channel, "cold Performance channel mismatch");
+   const auto cc = uint8_t(0xb0 | channel);
+   send({cc, 64, 127, uint8_t(0x90 | channel), 60, 100});
+   const auto played = peak(16384, 8192);
+   send({uint8_t(0x80 | channel), 60, 0});
+   const auto held = peak(16384, 8192);
+   send({cc, 64, 0});
+   const auto released = peak(32768, 24576);
+   std::cout << "cold part=" << part + 1 << " channel=" << int(channel) + 1
+             << " played=" << played << " held=" << held << " released=" << released << '\n';
+   check(played > 1000 && held > 1000, "cold Performance sustain control was silent");
+   check(released == 0, "cold Performance retained audio after pedal release");
+  }
+#ifdef KS_SEMANTIC_PROBE
+  check(board->h8InterpretedSteps() == 0, "cold Performance interpreted H8");
+#endif
+ }
+ std::cout << "PASS: cold Performance across four parts and 16 MIDI channels\n";
+}
+int main(int argc,char**argv){try{check(argc==5 || argc==6,"OS FLASH WAVE PREFIX [single|fourpart|cold-channels]");const std::string scenario=argc==6?argv[5]:"single";check(scenario=="single" || scenario=="fourpart" || scenario=="cold-channels","unknown scenario");ks::Rom rom(argv[1]);check(rom.isValid(),"invalid OS");auto flash=read(argv[2]),wave=read(argv[3]);
 check(flash.size()==0x80000 && wave.size()==ks::Board::WaveSize,"invalid fixture sizes");
+if(scenario=="cold-channels"){coldChannels(rom.data(),wave,flash);return 0;}
 for(const auto* suffix:{".pcm",".state",".flash",".midi"})check(!std::filesystem::exists(std::string(argv[4])+suffix),"output exists; use a new private prefix");auto board=std::make_unique<ks::Board>(rom.data(),wave,flash,true,false);check(board->boot(),"boot failed");
 #ifdef KS_SEMANTIC_PROBE
 check(board->nativeOwnerState() && board->h8InterpretedSteps()==0,"not semantic native");

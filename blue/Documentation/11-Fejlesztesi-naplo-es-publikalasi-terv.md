@@ -825,3 +825,10 @@ Vizsgálati alap a #55–56 javításokat tartalmazó main 6ed41b5, friss arm64 
 Az ON ksBoardParity_probe cél most explicit KS_SEMANTIC_PROBE definíciót kap, így tényleges native owner és nulla értelmezett H8 lépés a futás feltétele. A generált függőségi fájl natív ksBoard.h útvonalat igazol. A single és fourpart próba exit 0 PASS, rendre peak 1568304 és 883066. A teljes PCM/state/Flash a korábbi Blue hybrid referenciaállományokkal byte-azonos, mindkét esetben 3932160 PCM és 263168 Flash bájt, 270 illetve 1038 state bájt. MIDI kimenet mindkét oldalon üres. A privát zero-wave fixture a mintahang-hűség vizsgálatát nem fedi le. Teljes bank/arp, CPU, fizikai DAW és Windows/Intel firmware-es futtatás továbbra is nyitott. A privát fixture-ek és nyers eredmények helyben maradnak.
 
 Az átvételi leltár követi a #55–56 beolvasztását és ezt a javított futást. Az új probe guard végső PR-commitjához platform-CI szükséges.
+
+
+## 2026-11-05 — KS hidegindítás tárolt Performance-ból
+
+Az 57-es PR beolvadt (4e875f3). A privát Board probe új cold-channels próbája négy friss példányt indít a Flash-ben előre beállított Performance-ból. A négy példány együtt lefedi mind a 16 MIDI-csatornát. Mindegyik indulás ellenőrzi az aktív részek maszkját és a tárolt csatornakiosztást, majd az első host MIDI előtt mind a négy DAC-kimeneten pontos nullát követel. A részeket egyenként ellenőrzi hallható note-on és kitartott note-off kontrollal, majd pedálfelengedés utáni pontos nullával.
+
+Helyi macOS arm64 Release, privát KS firmware és zero-wave fixture. A Blue hybrid és a szemantikus natív build is teljesítette mind a 16 próbát. A natív próba a tényleges natív tulajdonost és a nulla értelmezett H8 lépést is ellenőrizte. A próba Board szinten indul tárolt Performance-ból. A Processor vagy a DAW indulását és az upstream külön CC-tisztításának hatását nem méri közvetlenül.
