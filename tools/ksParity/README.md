@@ -13,3 +13,12 @@ This bounded single-program Board passage does not prove all banks, four-part be
 Optional final argument `fourpart` selects a separate bounded performance passage (`single` is the unchanged default). It selects performance bank/program, supplies the performance flags/mask in the actual SysEx program bytes, clones the known single program into four MIDI-channel parts, renders notes and all-sounds-off on channels 1–4, then verifies performance mode and active mask 15. Merely setting the C++ State.activeMask field is insufficient: stateMessage serializes the program bytes.
 
 Local fourpart comparison: all 24 PCM streams (3932160 bytes), performance state (1038 bytes) and user Flash (263168 bytes) match exactly; both peaks 883066. Both MIDI outputs remain empty. This proves bounded aggregate output/state parity, not an independent audible-positive control for every part, all channel mappings or arbitrary performance programs. The initial fixture setup that omitted performance-selection/mask bytes failed the active-mask assertion; it was corrected without changing the runtime.
+
+Use the final argument `cold-channels` to boot four fresh Boards from stored
+Performance 0, with channel groups 1–4, 5–8, 9–12 and 13–16. Supply a placeholder
+for PREFIX because this mode writes no captures. Each boot checks the stored
+part mask and channel mapping and requires exact silence on the four DAC
+outputs before host MIDI. Each part then needs audible note-on and sustained
+note-off output, followed by exact silence after pedal release. The test sends
+no host program changes, state restores, or all-sounds-off messages. A semantic
+build also checks native ownership and zero interpreted H8 steps.
