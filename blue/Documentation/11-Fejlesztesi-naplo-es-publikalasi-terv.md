@@ -1,6 +1,6 @@
 # Silver-K Blue — fejlesztési terv és munkanapló
 
-Utolsó frissítés: **2026-11-02**
+Utolsó frissítés: **2026-11-05**
 
 ## Aktuális összesítés — 2026-11-02
 
@@ -793,3 +793,17 @@ A probe alapértelmezett buildből, CTestből és kiadási csomagból ki van hag
 A #53 mainben (`77ad9c2`). A privát Board probe opcionális fourpart szakasza a valódi performance bank/program és SysEx flag/mask bájtokkal állítja be a négy részt, 1–4 MIDI-csatornán küld note/all-sounds-off eseményeket, és ellenőrzi a performance módot/15 aktív maszkot. Az első, hiányos fixture-beállítás maszkellenőrzése megbukott; a javítás a teszt helyes MIDI/SysEx előkészítése, nem runtime módosítás.
 
 Blue hybrid és upstream szemantikus natív arm64 Release: 40960 frame, peak 883066 mindkettőnél; teljes PCM 3932160 bájt, performance-state 1038 bájt és user Flash 263168 bájt byte-azonos. MIDI output mindkettőnél üres. Ez összesített négy-részes kimeneti/állapot-paritás, nem minden part külön hallható pozitív kontrollja vagy minden performance/bank/arp/restore bizonyítéka. GUI és motorválasztás változatlan. A single alapértelmezett szakasz külön újrafuttatása a korábbi teljes PCM/state/flash/MIDI állományokkal egyezik (PASS); privát eredmények nem kerülnek a repository-ba.
+
+## 2026-11-05 — KS szemantikus natív motor elkülönített fordítási opciója
+
+A #54 mainben (`b48cb03`). A fagyasztott upstream `ab91ba1` összefüggő KS forrásegység külön ksNative/ksLib útvonalra került; az eredeti Blue ks/ksLib fájljai változatlanok. A SILVER_KS_SEMANTIC_CONTROLLER opció alapértéke OFF, ezért a normál fordítás továbbra is a meglévő Blue hybrid motort használja. ON egy koherens natív include/source készletet és az upstream production/comparison forrásszétválasztást választja. A Blue availability API adaptere megőrzi a meglévő GUI hívásait; új kezelőszerv vagy elrendezésváltozás nincs.
+
+Helyi arm64 ON teljes privát latency/input/filter/vocoder/rate/state/offline→realtime regresszió PASS. A ROM nélküli ksSemanticController guard PASS: CPU nélküli fizikai állapot, nincs comparison factory, natív alapérték és immutable/admission védelem. Három forráskiválasztási Python teszt PASS. Külön Windows/macOS native CI job ellenőrzi a natív guardot, kísérleti csomagot nem publikál; a szokásos platformjobok OFF konfigurációjúak. A normál OFF konfiguráció végső fordítása és teljes privát latency/input/filter/vocoder/rate/state/offline→realtime regressziója is PASS (exit 0).
+
+A bevitt upstream proof/comparison segédek jelenléte nem jelenti minden upstream teszt sikeres lefuttatását. ON buildben a régi H8/hybrid preference nem tesz elérhetővé H8 motort; ez explicit validációs fordítás, nem alapértelmezett termékváltás. CPU-előny, teljes bank/arp, mintahang-hűség, DAW/fizikai bemenet és Windows/Intel privát runtime bizonyíték nincs. Eredet/korlát: tools/ksParity/INTEGRATION.md. Blue azonosítók és verzió változatlan; kiadás nincs.
+
+## 2026-11-05 — #55 review: natív KS nyilvános fejlécútvonal
+
+A review ABI/ODR hibát talált: a szemantikus KS forrásokat fordító ksLib még a hybrid könyvtár include gyökerét exportálta. Emiatt a külső használó, például a ksBoardParity_probe, eltérő Board osztálydefiníciót láthatott. ON konfigurációban az exportált gyökér most source/novation/ksNative; OFF esetben továbbra is source/novation/ks. A natív produkciós guard külön, a ksNative könyvtáron kívül fordított fogyasztói regressziót kapott, amely a publikus ksLib/ksBoard.h felől követeli a natív Board API-t. A korábbi, helyi idézőjeles fejléceket használó guard ezt az útvonalhibát nem tudta kimutatni. A korábbi zöld CI nem igazolta a fogyasztói ABI helyességét; a javított fejre friss platformellenőrzés és külön firmware-es elfogadás szükséges. GUI, alapértelmezett motor és kiadás változatlan.
+
+Célzott helyi MSVC ellenőrzés: a ksSemanticHeaders_test.cpp objektum a tényleges ON konfigurációban lefordult (PASS). Ugyanezt a fordítóparancsot a korábbi hybrid include gyökérrel futtatva a natív API hiánya miatt megbukott, ahogy a negatív kontroll elvárja. A generált fordítóparancsok szerint a Processor és a ksBoardParity_probe is a natív include gyökeret örökli. A három forráscsomag-választási teszt és a whitespace-ellenőrzés PASS. Ez nem teljes új helyi pluginbuild vagy firmware-es újrafuttatás; a javított PR-fej platformeredménye külön szükséges.

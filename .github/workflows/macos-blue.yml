@@ -55,3 +55,15 @@ jobs:
             build/CMakeFiles/CMakeConfigureLog.yaml
           if-no-files-found: ignore
           retention-days: 14
+
+  macos_native:
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure opt-in KS semantic validation
+        run: cmake -S . -B native-build -DCMAKE_BUILD_TYPE=Release '-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64' -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 -DSILVER_KS_SEMANTIC_CONTROLLER=ON
+      - name: Build semantic production guard
+        run: cmake --build native-build --config Release --target ksSemanticController_test --parallel 3
+      - name: Run ROM-free semantic production guard
+        run: ctest --test-dir native-build -C Release --output-on-failure --no-tests=error -R '^ks_semantic_controller$'

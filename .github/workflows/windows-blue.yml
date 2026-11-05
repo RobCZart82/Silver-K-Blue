@@ -55,3 +55,15 @@ jobs:
             build/CMakeFiles/CMakeConfigureLog.yaml
           if-no-files-found: ignore
           retention-days: 14
+
+  windows_native:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure opt-in KS semantic validation
+        run: cmake -S . -B native-build -A x64 -DSILVER_KS_SEMANTIC_CONTROLLER=ON
+      - name: Build semantic production guard
+        run: cmake --build native-build --config Release --target ksSemanticController_test --parallel 4
+      - name: Run ROM-free semantic production guard
+        run: ctest --test-dir native-build -C Release --output-on-failure --no-tests=error -R '^ks_semantic_controller$'
