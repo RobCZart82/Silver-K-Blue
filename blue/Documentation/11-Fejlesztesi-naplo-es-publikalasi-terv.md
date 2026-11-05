@@ -836,3 +836,11 @@ Helyi macOS arm64 Release, privát KS firmware és zero-wave fixture. A Blue hyb
 ## 2026-11-05 — A KS Board próba platformfordítása
 
 Az 58-as PR mind az öt ellenőrzés után beolvadt (1db005c). A Windows és a macOS CI most a hibrid és a szemantikus natív konfigurációban is lefordítja a privát KS Board próbát. A helyi arm64 Release fordítás mindkét konfigurációban sikeres. A firmware-es futtatás továbbra is a helyi, privát teszt része.
+
+## 2026-11-05 — KS CPU-mérés macOS-en
+
+Az 59-es PR beolvadt (3be2723). A privát Processor mérő macOS-en is kiolvassa a teljes folyamat és a hívó szál CPU-idejét, a riportban pedig külön rögzíti a vezérlőmotor nevét. A Windows mérés a meglévő rendszerhívásokat használja.
+
+Helyi macOS arm64 Release fordítás mindkét konfigurációban sikeres. Azonos 48 kHz-es, 128 mintás offline terhelést futtattam motoronként háromszor, váltott sorrendben. A 2 másodperces bemelegítés után minden futás 576000 mintakeretet dolgozott fel. Mindegyik adott hangot, a hiányzó keretek száma nulla volt. A teljes folyamat CPU-idejének mediánja 9,719 másodperc a Blue hibrid és 15,655 másodperc a szemantikus natív motorral, azaz ezen a terhelésen körülbelül 61%-kal több. A falióra szerinti medián 4,999 és 7,984 másodperc.
+
+A hanghash ismétlések között is eltért. A mérés azonos host terhelést ad a két motornak, de nem igazolja a teljes belső munkamennyiség vagy a kimenet azonosságát. Az eredmény erre az offline futásra, a használt firmware-re és zero-wave fixture-re korlátozódik. A nyers riportok helyben maradnak.
