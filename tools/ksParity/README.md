@@ -1,0 +1,11 @@
+# Private KS Board parity probe
+
+Build the explicit `ksBoardParity_probe` target. It is excluded from default builds, public CTest and release packages. Arguments: KS OS, **decoded 524288-byte user Flash**, 129024-byte Wave ROM, and a fresh private output prefix. A KS All Data MIDI file is not raw Flash: use the production importer to obtain compatible data. Never publish these fixtures or output files.
+
+The probe boots the Board, settles 8192 frames, sends a note, sustain/note-off/second-note, then sustain-off/all-sounds-off. It captures all 24 output streams over 40960 native frames, requires audible output, and saves canonical current-state SysEx, user Flash and MIDI output. Existing output files are rejected. Compare complete `.pcm`, `.state`, `.flash` and `.midi` files between frozen builds.
+
+The current Blue Board reports its existing hybrid backend. It is **not an original-H8 oracle**. To compare upstream semantic native at commit `ab91ba112f2dd7be5ad21c1a6567290fe7ef20e6`, compile the same source against that frozen ksLib with `KS_SEMANTIC_PROBE=1`. This requires the actual native owner and zero interpreted H8 steps before and after the passage; a backend label alone is insufficient. Keep dependencies, compiler configuration, stimuli and fixtures identical.
+
+Local arm64 Release comparison matched all complete outputs: 3932160 PCM bytes, 270 state bytes, 263168 user-Flash bytes; MIDI output was empty on both sides, so it is not a positive MIDI-output test. Both peaks were 1568304. The private input Flash was projected from 600 programs/100 performances in the user's MIDI data using the production bank/address/global rules. A zero Wave ROM was used; this does not establish sampled-wave fidelity.
+
+This bounded single-program Board passage does not prove all banks, four-part behavior, arp, Device/Processor state restore, DAW behavior, realtime capacity or CPU improvement. Native KS is not integrated into Blue by this tool. Wider reference and product integration checks remain prerequisites. Keep raw logs, PCM, state and Flash outside the repository and public Actions artifacts.

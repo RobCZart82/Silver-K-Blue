@@ -259,3 +259,7 @@ if(SILVER_K_NATIVE_CONTROLLER)
     target_compile_definitions(silverInputDiagnostics_test PRIVATE SILVER_K_NATIVE_CONTROLLER=1)
     target_compile_definitions(kstationDeviceState_test PRIVATE PRIVATE_STATE_NATIVE=1)
 endif()
+
+# Explicit private-fixture comparison tool; never packaged or run by public CTest.
+add_executable(ksBoardParity_probe EXCLUDE_FROM_ALL "${ROOT}/tools/ksParity/probe.cpp")
+target_link_libraries(ksBoardParity_probe PRIVATE ksLib)
