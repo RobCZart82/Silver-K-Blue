@@ -27,7 +27,7 @@ jobs:
       - name: Configure macOS Universal 2 Release
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release '-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64' -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0
       - name: Build VST3, Standalone and ROM-free checks
-        run: cmake --build build --config Release --target kstationControllerDeviceState_test silverK_VST3 silverK_AU silverK_Standalone silver_check silverClock_test silverLatency_test silverEditor_test silverPerformance_test silverEmbeddedSkin_test silverFramework_test silverInputDiagnostics_test silverAudioInput_test ksAudioInput_test silverWorkflow_test silverPersistence_test silverSkin_test silverResamplerRealtime_test --parallel 3
+        run: cmake --build build --config Release --target ksBoardParity_probe kstationControllerDeviceState_test silverK_VST3 silverK_AU silverK_Standalone silver_check silverClock_test silverLatency_test silverEditor_test silverPerformance_test silverEmbeddedSkin_test silverFramework_test silverInputDiagnostics_test silverAudioInput_test ksAudioInput_test silverWorkflow_test silverPersistence_test silverSkin_test silverResamplerRealtime_test --parallel 3
       - name: Run ROM-free checks
         env:
           SILVER_K_DATA: ${{ runner.temp }}/silver-blue-tests
@@ -64,6 +64,6 @@ jobs:
       - name: Configure opt-in KS semantic validation
         run: cmake -S . -B native-build -DCMAKE_BUILD_TYPE=Release '-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64' -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 -DSILVER_KS_SEMANTIC_CONTROLLER=ON
       - name: Build semantic production guard
-        run: cmake --build native-build --config Release --target ksSemanticController_test ksDeviceInput_test ksDrumEdit_test --parallel 3
+        run: cmake --build native-build --config Release --target ksBoardParity_probe ksSemanticController_test ksDeviceInput_test ksDrumEdit_test --parallel 3
       - name: Run ROM-free semantic production guard
         run: ctest --test-dir native-build -C Release --output-on-failure --no-tests=error -R '^ks_semantic_controller$'
