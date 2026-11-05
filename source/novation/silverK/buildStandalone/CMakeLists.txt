@@ -63,7 +63,8 @@ option(SILVER_KS_SEMANTIC_CONTROLLER "Build experimental KS semantic controller 
 if(SILVER_KS_SEMANTIC_CONTROLLER)
 add_library(ksLib STATIC "${ROOT}/source/novation/ksNative/ksLib/ksBoard.cpp" "${ROOT}/source/novation/ksNative/ksLib/ksDSP.cpp" "${ROOT}/source/novation/ksNative/ksLib/ksDevice.cpp" "${ROOT}/source/novation/ksNative/ksLib/ksRom.cpp" "${ROOT}/source/novation/ksNative/ksLib/ksWorkerPlacement.cpp")
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ksNative/ksLib/ksControllerState.cpp" "${ROOT}/source/novation/ksNative/ksLib/ksKeySearchCalls.cpp" "${ROOT}/source/novation/ksNative/ksLib/ksParameterScaleCalls.cpp" "${ROOT}/source/novation/ksNative/ksLib/ksDspWordCalls.cpp" "${ROOT}/source/novation/ksNative/ksLib/ksDspAddressCalls.cpp" "${ROOT}/source/novation/ksNative/ksLib/ksDspFaultCalls.cpp" "${ROOT}/source/novation/ksNative/ksLib/ksDspBootStreamCalls.cpp" "${ROOT}/source/novation/ksNative/ksLib/ksDspBootSetupCalls.cpp")
-target_include_directories(ksLib PUBLIC "${ROOT}/source/novation/ks" "${ROOT}/source/cpu" "${ROOT}/source/framework")
+# Consumers must see the same Board/Device definitions as the library sources.
+target_include_directories(ksLib PUBLIC "${ROOT}/source/novation/ksNative" "${ROOT}/source/cpu" "${ROOT}/source/framework")
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ksNative/ksLib/ksDspWorkers.cpp")
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ksNative/ksLib/ksControllerTrace.cpp")
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ksNative/ksLib/ksDspTransport.cpp" "${ROOT}/source/novation/ksNative/ksLib/ksControllerJobs.cpp")
