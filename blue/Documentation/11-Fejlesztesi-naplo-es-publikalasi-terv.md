@@ -832,3 +832,7 @@ Az átvételi leltár követi a #55–56 beolvasztását és ezt a javított fut
 Az 57-es PR beolvadt (4e875f3). A privát Board probe új cold-channels próbája négy friss példányt indít a Flash-ben előre beállított Performance-ból. A négy példány együtt lefedi mind a 16 MIDI-csatornát. Mindegyik indulás ellenőrzi az aktív részek maszkját és a tárolt csatornakiosztást, majd az első host MIDI előtt mind a négy DAC-kimeneten pontos nullát követel. A részeket egyenként ellenőrzi hallható note-on és kitartott note-off kontrollal, majd pedálfelengedés utáni pontos nullával.
 
 Helyi macOS arm64 Release, privát KS firmware és zero-wave fixture. A Blue hybrid és a szemantikus natív build is teljesítette mind a 16 próbát. A natív próba a tényleges natív tulajdonost és a nulla értelmezett H8 lépést is ellenőrizte. A próba Board szinten indul tárolt Performance-ból. A Processor vagy a DAW indulását és az upstream külön CC-tisztításának hatását nem méri közvetlenül.
+
+## 2026-11-05 — A KS Board próba platformfordítása
+
+Az 58-as PR mind az öt ellenőrzés után beolvadt (1db005c). A Windows és a macOS CI most a hibrid és a szemantikus natív konfigurációban is lefordítja a privát KS Board próbát. A helyi arm64 Release fordítás mindkét konfigurációban sikeres. A firmware-es futtatás továbbra is a helyi, privát teszt része.
