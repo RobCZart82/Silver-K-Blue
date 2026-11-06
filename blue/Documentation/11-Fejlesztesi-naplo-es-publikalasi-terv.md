@@ -893,3 +893,9 @@ Mind a nyolc macOS arm64 Release offline próba hiányzó mintakeret nélkül fu
 A 66-os PR mind az öt ellenőrzés után beolvadt (9495482). A privát Board próba note-release módban 8192 keret várakozás után 48000 Board-keretig tart egy hangot, majd további 8192 keretet rögzít a note-off után. A kezdő programot a Flash-ből tölti be.
 
 Helyi macOS arm64 Release módban mindkét motor sikeresen lefutott. A 64384 keret összes, 24 csatornás PCM mintája (6180864 bájt), a 270 bájtos állapot és a 263168 bájtos Flash egyezett. A MIDI-kimenet üres volt, a csúcs mindkét esetben 836483. A natív próba ellenőrizte a tényleges natív tulajdonost és a nulla értelmezett H8 lépést. Ez a közvetlen Board próba eltérő programbeállítással, saját mintavételi órán futott. A Processorban mért eltérés okát ebből még nem lehet megállapítani.
+
+## 2026-11-06 — KS hangelengedés közvetlen Device próbában
+
+A 67-es PR mind az öt ellenőrzés után beolvadt (17a54d1). A privát Device próba 48 kHz-en, azonos MIDI-időzítéssel 65536 keretet rögzít 128 vagy 512 mintás blokkokban. A Flash kezdőprogramját és a Device saját pufferelését használja. Mindkét motor mindkét blokkmérettel hallható, véges kimenetet adott, hiányzó keret nélkül.
+
+128 mintás blokkoknál az első eltérés az 53105. keretben jelent meg, a teljes felvétel legnagyobb abszolút eltérése 0,000535. 512 mintás blokkoknál mind a négy kimenet teljes felvétele bájtról bájtra egyezett. A blokkméretfüggő eltérés tehát ezen a próbán már a Device szintjén előállt, Processor nélkül. A Processor-próba más kezdőállapota és nagyobb eltérése miatt a két mérés nem igazol azonos kiváltó okot.
