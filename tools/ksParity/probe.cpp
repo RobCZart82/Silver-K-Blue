@@ -83,11 +83,12 @@ void coldChannels(const std::vector<uint8_t>& os, const std::vector<uint8_t>& wa
 // Compare the host-rate Device path without Processor parameter traffic.
 void deviceRelease(const std::vector<uint8_t>& os, const std::vector<uint8_t>& wave,
                    const std::vector<uint8_t>& flash, const std::string& prefix,
-                   unsigned block, unsigned leadFloor, unsigned noteOnDelay, unsigned noteOffDelay)
+                   unsigned block, unsigned leadFloor, unsigned noteOnDelay, unsigned noteOffDelay,
+                   double rate)
 {
  const auto path = prefix + ".pcm";
  check(!std::filesystem::exists(path), "output exists; use a new private prefix");
- ks::Device device(os, wave, flash, 48000, int(block), {}, nullptr, ks::ControllerMode::Native);
+ ks::Device device(os, wave, flash, rate, int(block), {}, nullptr, ks::ControllerMode::Native);
  device.setBufferFloor(leadFloor);
  std::array<std::vector<float>, ks::OutputCount> samples;
  std::array<float*, ks::OutputCount> outputs{};
@@ -118,17 +119,18 @@ void deviceRelease(const std::vector<uint8_t>& os, const std::vector<uint8_t>& w
  pcm.close();
  check(bool(pcm) && peak > 1.e-5f && peak <= 16.f && !device.underruns(),
        "Device capture failed audio or underrun checks");
- std::cout << "PASS Device block=" << block << " leadFloor=" << leadFloor << " noteOnDelay=" << noteOnDelay << " noteOffDelay=" << noteOffDelay << " peak=" << peak
+ std::cout << "PASS Device rate=" << rate << " block=" << block << " leadFloor=" << leadFloor << " noteOnDelay=" << noteOnDelay << " noteOffDelay=" << noteOffDelay << " peak=" << peak
            << " backend=" << device.controllerBackend() << '\n';
 }
-int main(int argc,char**argv){try{check(argc==5 || argc==6,"OS FLASH WAVE PREFIX [single|fourpart|cold-channels|note-release|device-release-128|device-release-512|device-release-128-lead640|device-release-128-delay384|device-release-128-on384|device-release-128-off384]");const std::string scenario=argc==6?argv[5]:"single";check(scenario=="single" || scenario=="fourpart" || scenario=="cold-channels" || scenario=="note-release" || scenario=="device-release-128" || scenario=="device-release-512" || scenario=="device-release-128-lead640" || scenario=="device-release-128-delay384" || scenario=="device-release-128-on384" || scenario=="device-release-128-off384","unknown scenario");ks::Rom rom(argv[1]);check(rom.isValid(),"invalid OS");auto flash=read(argv[2]),wave=read(argv[3]);
+int main(int argc,char**argv){try{check(argc==5 || argc==6,"OS FLASH WAVE PREFIX [single|fourpart|cold-channels|note-release|device-release-128|device-release-512|device-release-128-lead640|device-release-128-delay384|device-release-128-on384|device-release-128-off384|device-release-128-native-rate]");const std::string scenario=argc==6?argv[5]:"single";check(scenario=="single" || scenario=="fourpart" || scenario=="cold-channels" || scenario=="note-release" || scenario=="device-release-128" || scenario=="device-release-512" || scenario=="device-release-128-lead640" || scenario=="device-release-128-delay384" || scenario=="device-release-128-on384" || scenario=="device-release-128-off384" || scenario=="device-release-128-native-rate","unknown scenario");ks::Rom rom(argv[1]);check(rom.isValid(),"invalid OS");auto flash=read(argv[2]),wave=read(argv[3]);
 check(flash.size()==0x80000 && wave.size()==ks::Board::WaveSize,"invalid fixture sizes");
 if(scenario=="cold-channels"){coldChannels(rom.data(),wave,flash);return 0;}
-if(scenario=="device-release-128" || scenario=="device-release-512" || scenario=="device-release-128-lead640" || scenario=="device-release-128-delay384" || scenario=="device-release-128-on384" || scenario=="device-release-128-off384"){
+if(scenario=="device-release-128" || scenario=="device-release-512" || scenario=="device-release-128-lead640" || scenario=="device-release-128-delay384" || scenario=="device-release-128-on384" || scenario=="device-release-128-off384" || scenario=="device-release-128-native-rate"){
  deviceRelease(rom.data(),wave,flash,argv[4],scenario=="device-release-512"?512:128,
                scenario=="device-release-128-lead640"?640:0,
                (scenario=="device-release-128-delay384" || scenario=="device-release-128-on384")?384:0,
-               (scenario=="device-release-128-delay384" || scenario=="device-release-128-off384")?384:0);
+               (scenario=="device-release-128-delay384" || scenario=="device-release-128-off384")?384:0,
+               scenario=="device-release-128-native-rate"?ks::DSP::SampleRate:48000.0);
  return 0;
 }
 for(const auto* suffix:{".pcm",".state",".flash",".midi"})check(!std::filesystem::exists(std::string(argv[4])+suffix),"output exists; use a new private prefix");auto board=std::make_unique<ks::Board>(rom.data(),wave,flash,true,false);check(board->boot(),"boot failed");
