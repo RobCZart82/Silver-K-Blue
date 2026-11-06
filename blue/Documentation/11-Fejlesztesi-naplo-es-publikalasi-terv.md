@@ -909,3 +909,9 @@ A 68-as PR beolvadt (9d71059). A privát Device próba új módja 128 mintás bl
 A 69-es PR mind az öt ellenőrzés után beolvadt (aa48273). A 128 mintás próba új módja megtartja a 256 keretes alapértelmezett Device-előrefutást, és 384 keretet ad mindkét MIDI-esemény időzítéséhez. Így ugyanazokra a keretekre esnek az események, mint a 640 keretes előrefutású próbában.
 
 A két helyi macOS arm64 Release futás véges, hallható kimenetet adott hiányzó keret nélkül. A négycsatornás PCM a két motor között egyezett. Mindkét motor eredménye a saját korábbi 640 keretes próbájával is bájtról bájtra egyezett. A megfigyelt eltérés eltüntetéséhez ezen a teszten elég volt a MIDI-időzítést módosítani. A vezérlőn belüli eltérés pontos oka továbbra is nyitott.
+
+## 2026-11-06 — KS Device kontroll külön note-on és note-off eltolással
+
+A 70-es PR mind az öt ellenőrzés után beolvadt (b70cf87). A 128 mintás Device próbában külön is eltolható a note-on vagy a note-off 384 kerettel, az alapértelmezett audio-előrefutás mellett. Mind a négy macOS arm64 Release futás véges, hallható kimenetet adott hiányzó keret nélkül.
+
+Csak a note-on eltolásával a négycsatornás felvétel egyezett a két motor között. Csak a note-off eltolásával az eltérés megmaradt. Az első különböző bájt a nullától számozott 53495. keretbe esett. A kontrollok a hang hosszát is módosítják. Az eredmény a kezdő esemény és a hang előtörténetének szerepét jelzi ebben a próbában, a belső okot további vizsgálatnak kell azonosítania.
