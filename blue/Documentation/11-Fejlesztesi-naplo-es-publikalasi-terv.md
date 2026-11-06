@@ -921,3 +921,9 @@ Csak a note-on eltolásával a négycsatornás felvétel egyezett a két motor k
 A 71-es PR beolvadt (c28068a). A privát Device próba új módja 128 mintás blokkok mellett a DSP pontos mintavételi frekvenciáját használja (kb. 45340,4 Hz). Azonos keretindexen küldi a MIDI-eseményeket, mint a 48 kHz-es eset, ezért az eltelt idő különbözik.
 
 Mindkét macOS arm64 Release futás véges, hallható kimenetet adott hiányzó keret nélkül. Az első eltérés az 53108. keretben jelent meg, a legnagyobb abszolút mintakülönbség 0,000595. Az eltérés tehát egyező host és DSP mintavételi frekvenciával is előállt. A Device interpolációja és az eseményütemezés továbbra is része a próbának.
+
+## 2026-11-06 — KS Device MIDI-időzítés azonos hanghosszal
+
+A 72-es PR mind az öt ellenőrzés után beolvadt (5d92b45). A natív mintavételi frekvenciájú Device próba külön note-on és note-off eltolást fogad. A helyi macOS arm64 Release sorozatban mindkét eseményt azonos mértékben toltam el, így a hang hossza állandó maradt. Mind a 24 futás véges, hallható kimenetet adott hiányzó keret nélkül.
+
+A két motor teljes felvétele 1, 16 és 64 keretes eltolással egyezett. A vizsgált 0, 2, 3, 4, 8, 32, 128, 256 és 384 keretes eltolásoknál eltért. Egyes esetekben az első eltérés már a note-off előtt megjelent. Az egyezés így a hanghossz módosítása nélkül is változik a MIDI időpontjával. Ez a vizsgált program és induló állapot eredménye, a vezérlőn belüli okot nem azonosítja.

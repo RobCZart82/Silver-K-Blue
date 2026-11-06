@@ -52,3 +52,7 @@ audio lead. The two controls change note duration in opposite directions.
 Use `device-release-128-native-rate` to keep the 128-frame Device passage
 at the exact DSP sample rate. The Device still applies its interpolation
 and buffering path, but there is one DSP frame per host frame.
+
+The native-rate Device case also accepts two optional positional arguments,
+`ON_DELAY OFF_DELAY`, each a decimal frame count from 0 to 4096. Pass both
+or omit both. Equal offsets shift the passage while keeping note duration.
