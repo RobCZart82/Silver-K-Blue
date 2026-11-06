@@ -881,3 +881,9 @@ A négy helyi macOS arm64 Release futás sikeres volt, hiányzó mintakeret nél
 A 64-es PR beolvadt (ee59f41). A privát CPU-mérőben a SILVER_CPU_BLOCK_FRAMES (128 vagy 512) és SILVER_CPU_BUFFER_PROFILE (0 vagy 3) egymástól és a host ütemezésétől függetlenül állítható. A meglévő alapértékek továbbra is 128/0 offline és 512/3 ütemezett módban.
 
 A helyi macOS arm64 Release mátrix mind a 16 futása sikeres volt, hiányzó mintakeret nélkül. Az egyhangos szakasz teljes hanghash-e 512 mintás blokkokkal mindkét profilban egyezett a két motor között, offline és ütemezve is. 128 mintás blokkokkal mindkét ütemezésnél eltért. A 0-s profil első eltérő blokkja 52992-nél kezdődött, a 3-as profilé már 7040-nél, az első note-off előtt. A jelentett késleltetés minden azonos beállítású motorpárban egyezett. Ennél a terhelésnél az ütemezés önmagában nem választotta szét az egyező és eltérő eseteket. Az eltérés oka további vizsgálatot igényel.
+
+## 2026-11-06 — KS egyhangos próba blokkhatáron
+
+A 65-ös PR mind az öt ellenőrzés után beolvadt (b108de0). A SILVER_CPU_ALIGN_RELEASE=1 az egyhangos próbában 4608-ra és 52736-ra állítja a note-on és note-off keretét. Mindkét esemény a 128 és az 512 mintás blokk elejére esik. Ez az eredeti próbához képest a hang kezdetét és hosszát is módosítja.
+
+Mind a nyolc macOS arm64 Release offline próba hiányzó mintakeret nélkül futott. A két motor első eltérő blokkja 128/0 esetén 4992, 128/3 esetén 54784, 512/0 esetén 5120 volt. 512/3 mellett egyezett a teljes hanghash. A különbség tehát blokkhatárra eső MIDI-vel is reprodukálható, két beállításnál már az első note-off előtt. A beállításfüggő eltérés okát ez a próba nem állapítja meg.
