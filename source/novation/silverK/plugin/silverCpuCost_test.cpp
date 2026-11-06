@@ -1,6 +1,7 @@
 #include "silverProcessor.h"
 #include "dsp56kBase/threadtools.h"
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cmath>
 #include <cstring>
@@ -54,12 +55,14 @@ std::vector<Event> passage(bool warm){
     }
     std::stable_sort(result.begin(),result.end(),[](const Event& a,const Event& b){return a.frame<b.frame;});return result;
 }
-struct Result {double wall=0,process=0,caller=0,peak=0;uint64_t missing=0,hash=14695981039346656037ull;int frames=0;std::vector<uint64_t> blockHashes;};
-Result render(silverK::Processor& p,int block,int requestedFrames,const std::vector<Event>& events,bool paced,bool traceBlocks=false){
+constexpr int releaseCaptureStart=52000, releaseCaptureEnd=58000;
+struct Result {double wall=0,process=0,caller=0,peak=0;uint64_t missing=0,hash=14695981039346656037ull;int frames=0;std::vector<uint64_t> blockHashes;std::array<std::vector<float>,4> releaseSamples;};
+Result render(silverK::Processor& p,int block,int requestedFrames,const std::vector<Event>& events,bool paced,bool traceBlocks=false,bool traceRelease=false){
     juce::AudioBuffer<float> audio(4,block);juce::MidiBuffer midi;midi.ensureSize(16384);
     const int blocks=(requestedFrames+block-1)/block;size_t next=0;
     Result result;
     if(traceBlocks)result.blockHashes.reserve(size_t(blocks));
+    if(traceRelease)for(auto& samples:result.releaseSamples) samples.reserve(releaseCaptureEnd-releaseCaptureStart);
     const auto beforeMiss=p.underruns();
     // Only read-only process/thread accounting here. Construction, event
     // allocation, firmware boot, warm-up, report formatting and IO are excluded.
@@ -74,6 +77,14 @@ Result render(silverK::Processor& p,int block,int requestedFrames,const std::vec
             result.hash^=bits;result.hash*=1099511628211ull;
         }
         if(traceBlocks)result.blockHashes.push_back(result.hash);
+        if(traceRelease && cursor<releaseCaptureEnd && cursor+block>releaseCaptureStart){
+            const int first=std::max(0,releaseCaptureStart-cursor);
+            const int end=std::min(block,releaseCaptureEnd-cursor);
+            for(int c=0;c<4;++c){
+                const auto* samples=audio.getReadPointer(c);
+                result.releaseSamples[c].insert(result.releaseSamples[c].end(),samples+first,samples+end);
+            }
+        }
         if(paced)std::this_thread::sleep_until(begin+std::chrono::nanoseconds(int64_t((n+1)*int64_t(block)*1000000000/48000)));
     }
     const auto end=Clock::now();const auto after=cpu();
@@ -104,7 +115,8 @@ int main(int argc,char** argv){try{
     const auto warm=render(p,block,96000,warmEvents,false);check(warm.missing==0,"Offline warm-up lost frames");
     p.setNonRealtime(!paced);
     const bool traceBlocks=juce::SystemStats::getEnvironmentVariable("SILVER_CPU_TRACE_BLOCKS","0")=="1";
-    const auto result=render(p,block,576000,events,paced,traceBlocks);
+    const bool traceRelease=juce::SystemStats::getEnvironmentVariable("SILVER_CPU_TRACE_RELEASE","0")=="1";
+    const auto result=render(p,block,576000,events,paced,traceBlocks,traceRelease);
     const auto runtime=juce::JSON::parse(p.performanceReport());
     auto* root=new juce::DynamicObject;juce::var report(root);
     root->setProperty("schema","silver-k.cpu-cost.v1");root->setProperty("mode",paced?"paced-realtime":"offline-fixed-work");
@@ -121,6 +133,16 @@ int main(int argc,char** argv){try{
         juce::Array<juce::var> hashes;
         for(auto hash:result.blockHashes)hashes.add(juce::String(hash));
         root->setProperty("cumulative_block_hashes",juce::var(hashes));
+    }
+    if(traceRelease){
+        juce::Array<juce::var> channels;
+        for(const auto& samples:result.releaseSamples){
+            juce::Array<juce::var> values;
+            for(float sample:samples)values.add(double(sample));
+            channels.add(juce::var(values));
+        }
+        root->setProperty("release_capture_start_frame",releaseCaptureStart);
+        root->setProperty("release_capture_channels",juce::var(channels));
     }
     root->setProperty("notes","CPU=user+kernel summed across all process threads. Caller CPU includes host callback, hashing, offline queue waits and pacing calls. Background=process-caller, includes H8/DSP workers and any other process threads. No diagnostics session. Equal 576000 delivered frames required; compare hashes within each scenario. Boot/setup and two-second warm-up excluded from measured passage. No real driver/DAW, affinity or OS settings changes.");
     check(juce::File(argv[4]).replaceWithText(juce::JSON::toString(report,false)),"Cannot save report");
