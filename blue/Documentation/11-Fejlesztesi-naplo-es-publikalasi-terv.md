@@ -844,3 +844,14 @@ Az 59-es PR beolvadt (3be2723). A privát Processor mérő macOS-en is kiolvassa
 Helyi macOS arm64 Release fordítás mindkét konfigurációban sikeres. Azonos 48 kHz-es, 128 mintás offline terhelést futtattam motoronként háromszor, váltott sorrendben. A 2 másodperces bemelegítés után minden futás 576000 mintakeretet dolgozott fel. Mindegyik adott hangot, a hiányzó keretek száma nulla volt. A teljes folyamat CPU-idejének mediánja 9,719 másodperc a Blue hibrid és 15,655 másodperc a szemantikus natív motorral, azaz ezen a terhelésen körülbelül 61%-kal több. A falióra szerinti medián 4,999 és 7,984 másodperc.
 
 A hanghash ismétlések között is eltért. A mérés azonos host terhelést ad a két motornak, de nem igazolja a teljes belső munkamennyiség vagy a kimenet azonosságát. Az eredmény erre az offline futásra, a használt firmware-re és zero-wave fixture-re korlátozódik. A nyers riportok helyben maradnak.
+
+
+## 2026-11-06 — KS CPU-mérés ütemezett host terheléssel
+
+A 60-as PR beolvadt (18d8184). A Windows és macOS CI mindkét KS konfigurációban fordítja a privát Processor CPU-mérőt. A firmware-es mérés helyben futott az előző körben lefordított macOS arm64 Release binárisokkal.
+
+Motoronként három, váltott sorrendű futás készült 48 kHz-en, 512 mintás blokkokkal. Mind a hat futás 576000 mintakeretet adott hiány nélkül. A teljes folyamat CPU-idejének mediánja 4,914 másodperc volt a hibrid és 7,843 másodperc a szemantikus natív motorral. Ezen a 12 másodperces szintetikus terhelésen a natív motor körülbelül 60%-kal több CPU-időt használt. A natív hanghash mindhárom ismétlésben egyezett, a hibrid hanghash változott. A két motor csúcsszintje eltért. A mérés a zero-wave fixture és az adott szintetikus host eredménye. A natív alapértelmezés elfogadásához ebből nem következik teljesítményelőny.
+
+A 61-es PR natív Windows buildjén az MSVC duplikált szimbólumot jelzett. A CPU-mérő örökölte a tesztek H8 referenciaobjektumát és kompatibilitási könyvtárát, amely ugyanazt a vezérlő-elérhetőségi függvényt definiálta, mint a szemantikus fogyasztó. A natív mérő most a termék könyvtáraival linkel. A generált macOS linkerparancs igazolja, hogy a referenciaobjektum és a kompatibilitási könyvtár kikerült a natív mérőből. A korábbi mérést a javított binárissal külön ellenőrizni kell.
+
+A linkjavítás utáni újramérésen két hibrid futás szélsőséges, véges csúcsértéket adott, miközben a régi teszt sikeresnek jelölte őket. A mérő ugyanazt a puffert adta vissza bemenetként a következő blokknak, törlés nélkül. Most minden blokk néma bemenettel indul, és a mérő a névleges teljes skála tizenhatszorosát meghaladó csúcsot hibának tekinti. Az eddigi CPU-összevetések előzetesek. A korrigált bemenettel meg kell ismételni a hibrid és natív mérést.

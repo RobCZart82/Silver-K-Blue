@@ -63,6 +63,7 @@ Result render(silverK::Processor& p,int block,int requestedFrames,const std::vec
     // allocation, firmware boot, warm-up, report formatting and IO are excluded.
     const auto before=cpu();const auto begin=Clock::now();
     for(int n=0;n<blocks;++n){
+        audio.clear(); // This host passage supplies silence to the input buses.
         midi.clear();const int cursor=n*block;
         while(next<events.size() && events[next].frame<cursor+block){midi.addEvent(events[next].message,events[next].frame-cursor);++next;}
         p.processBlock(audio,midi);
@@ -115,5 +116,6 @@ int main(int argc,char** argv){try{
     root->setProperty("notes","CPU=user+kernel summed across all process threads. Caller CPU includes host callback, hashing, offline queue waits and pacing calls. Background=process-caller, includes H8/DSP workers and any other process threads. No diagnostics session. Equal 576000 delivered frames required; compare hashes within each scenario. Boot/setup and two-second warm-up excluded from measured passage. No real driver/DAW, affinity or OS settings changes.");
     check(juce::File(argv[4]).replaceWithText(juce::JSON::toString(report,false)),"Cannot save report");
     std::cout<<juce::JSON::toString(report,false)<<'\n';
-    return result.missing==0 && result.peak>1.e-4?0:1;
+    // Reject runaway output while allowing headroom above full scale.
+    return result.missing==0 && result.peak>1.e-4 && result.peak<=16.0?0:1;
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}
