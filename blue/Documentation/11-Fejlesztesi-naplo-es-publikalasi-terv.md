@@ -899,3 +899,7 @@ Helyi macOS arm64 Release módban mindkét motor sikeresen lefutott. A 64384 ker
 A 67-es PR mind az öt ellenőrzés után beolvadt (17a54d1). A privát Device próba 48 kHz-en, azonos MIDI-időzítéssel 65536 keretet rögzít 128 vagy 512 mintás blokkokban. A Flash kezdőprogramját és a Device saját pufferelését használja. Mindkét motor mindkét blokkmérettel hallható, véges kimenetet adott, hiányzó keret nélkül.
 
 128 mintás blokkoknál az első eltérés az 53105. keretben jelent meg, a teljes felvétel legnagyobb abszolút eltérése 0,000535. 512 mintás blokkoknál mind a négy kimenet teljes felvétele bájtról bájtra egyezett. A blokkméretfüggő eltérés tehát ezen a próbán már a Device szintjén előállt, Processor nélkül. A Processor-próba más kezdőállapota és nagyobb eltérése miatt a két mérés nem igazol azonos kiváltó okot.
+
+## 2026-11-06 — KS Device összehasonlítás azonos előrefutással
+
+A 68-as PR beolvadt (9d71059). A privát Device próba új módja 128 mintás blokkokat használ, de az 512 mintás blokkokhoz tartozó 640 keretes előrefutással. Mindkét macOS arm64 Release futás hallható, véges kimenetet adott hiányzó keret nélkül. A két motor mind a négy csatornája bájtról bájtra egyezett. A 128 mintás alapbeállítás korábbi próbáján eltérés volt. Az előrefutás a MIDI-események esedékességét is módosítja, ezért az egyezésből nem következik, hogy önmagában a puffer mérete okozza az eltérést.

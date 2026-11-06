@@ -35,3 +35,7 @@ at 48 kHz. The probe renders 65536 frames offline, sends note-on at frame
 zero underruns. It writes only PREFIX.pcm, with four interleaved native-endian
 float samples per frame. Compare runs with identical private fixtures and
 block sizes. These modes use the starting Flash program and Device defaults.
+
+The `device-release-128-lead640` case keeps 128-frame host blocks and raises
+the Device lead to the default for 512-frame blocks. Compare each backend
+at the same setting. The lead also affects MIDI event scheduling.
