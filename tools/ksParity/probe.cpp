@@ -78,7 +78,7 @@ void coldChannels(const std::vector<uint8_t>& os, const std::vector<uint8_t>& wa
  }
  std::cout << "PASS: cold Performance across four parts and 16 MIDI channels\n";
 }
-int main(int argc,char**argv){try{check(argc==5 || argc==6,"OS FLASH WAVE PREFIX [single|fourpart|cold-channels]");const std::string scenario=argc==6?argv[5]:"single";check(scenario=="single" || scenario=="fourpart" || scenario=="cold-channels","unknown scenario");ks::Rom rom(argv[1]);check(rom.isValid(),"invalid OS");auto flash=read(argv[2]),wave=read(argv[3]);
+int main(int argc,char**argv){try{check(argc==5 || argc==6,"OS FLASH WAVE PREFIX [single|fourpart|cold-channels|note-release]");const std::string scenario=argc==6?argv[5]:"single";check(scenario=="single" || scenario=="fourpart" || scenario=="cold-channels" || scenario=="note-release","unknown scenario");ks::Rom rom(argv[1]);check(rom.isValid(),"invalid OS");auto flash=read(argv[2]),wave=read(argv[3]);
 check(flash.size()==0x80000 && wave.size()==ks::Board::WaveSize,"invalid fixture sizes");
 if(scenario=="cold-channels"){coldChannels(rom.data(),wave,flash);return 0;}
 for(const auto* suffix:{".pcm",".state",".flash",".midi"})check(!std::filesystem::exists(std::string(argv[4])+suffix),"output exists; use a new private prefix");auto board=std::make_unique<ks::Board>(rom.data(),wave,flash,true,false);check(board->boot(),"boot failed");
@@ -100,6 +100,12 @@ if(scenario=="fourpart"){
  for(uint8_t part=0;part<4;++part)send({uint8_t(0xb0|part),120,0});
  render(8192);
  auto current=board->state();check(current.performance && current.activeMask==15,"four-part state not retained");
+}else if(scenario=="note-release"){
+ render(8192);
+ send({0x90,60,100});
+ render(48000);
+ send({0x80,60,0});
+ render(8192);
 }else{
 render(8192);send({0xb0,7,127,91,0,92,0,93,0,0x90,60,100});render(16384);send({0xb0,64,127,0x80,60,0,0x90,67,96});render(8192);send({0xb0,64,0,120,0});render(8192);}
 check(peak>1000 && bool(pcm),"silent or invalid audio");auto state=board->state();save(std::string(argv[4])+".state",ks::stateMessage(state));save(std::string(argv[4])+".flash",board->saveUserFlash());std::vector<uint8_t>midi;uint8_t b;while(board->popMidiOut(b))midi.push_back(b);save(std::string(argv[4])+".midi",midi);
