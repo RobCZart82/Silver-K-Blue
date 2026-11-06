@@ -48,3 +48,7 @@ default audio buffer lead.
 Use `device-release-128-on384` to delay only note-on, or
 `device-release-128-off384` to delay only note-off. Both keep the default
 audio lead. The two controls change note duration in opposite directions.
+
+Use `device-release-128-native-rate` to keep the 128-frame Device passage
+at the exact DSP sample rate. The Device still applies its interpolation
+and buffering path, but there is one DSP frame per host frame.

@@ -915,3 +915,9 @@ A két helyi macOS arm64 Release futás véges, hallható kimenetet adott hiány
 A 70-es PR mind az öt ellenőrzés után beolvadt (b70cf87). A 128 mintás Device próbában külön is eltolható a note-on vagy a note-off 384 kerettel, az alapértelmezett audio-előrefutás mellett. Mind a négy macOS arm64 Release futás véges, hallható kimenetet adott hiányzó keret nélkül.
 
 Csak a note-on eltolásával a négycsatornás felvétel egyezett a két motor között. Csak a note-off eltolásával az eltérés megmaradt. Az első különböző bájt a nullától számozott 53495. keretbe esett. A kontrollok a hang hosszát is módosítják. Az eredmény a kezdő esemény és a hang előtörténetének szerepét jelzi ebben a próbában, a belső okot további vizsgálatnak kell azonosítania.
+
+## 2026-11-06 — KS Device összehasonlítás a DSP mintavételi frekvenciáján
+
+A 71-es PR beolvadt (c28068a). A privát Device próba új módja 128 mintás blokkok mellett a DSP pontos mintavételi frekvenciáját használja (kb. 45340,4 Hz). Azonos keretindexen küldi a MIDI-eseményeket, mint a 48 kHz-es eset, ezért az eltelt idő különbözik.
+
+Mindkét macOS arm64 Release futás véges, hallható kimenetet adott hiányzó keret nélkül. Az első eltérés az 53108. keretben jelent meg, a legnagyobb abszolút mintakülönbség 0,000595. Az eltérés tehát egyező host és DSP mintavételi frekvenciával is előállt. A Device interpolációja és az eseményütemezés továbbra is része a próbának.
