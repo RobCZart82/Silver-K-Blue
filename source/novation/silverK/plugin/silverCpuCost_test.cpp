@@ -54,11 +54,13 @@ std::vector<Event> passage(bool warm){
     }
     std::stable_sort(result.begin(),result.end(),[](const Event& a,const Event& b){return a.frame<b.frame;});return result;
 }
-struct Result {double wall=0,process=0,caller=0,peak=0;uint64_t missing=0,hash=14695981039346656037ull;int frames=0;};
-Result render(silverK::Processor& p,int block,int requestedFrames,const std::vector<Event>& events,bool paced){
+struct Result {double wall=0,process=0,caller=0,peak=0;uint64_t missing=0,hash=14695981039346656037ull;int frames=0;std::vector<uint64_t> blockHashes;};
+Result render(silverK::Processor& p,int block,int requestedFrames,const std::vector<Event>& events,bool paced,bool traceBlocks=false){
     juce::AudioBuffer<float> audio(4,block);juce::MidiBuffer midi;midi.ensureSize(16384);
     const int blocks=(requestedFrames+block-1)/block;size_t next=0;
-    Result result;const auto beforeMiss=p.underruns();
+    Result result;
+    if(traceBlocks)result.blockHashes.reserve(size_t(blocks));
+    const auto beforeMiss=p.underruns();
     // Only read-only process/thread accounting here. Construction, event
     // allocation, firmware boot, warm-up, report formatting and IO are excluded.
     const auto before=cpu();const auto begin=Clock::now();
@@ -71,6 +73,7 @@ Result render(silverK::Processor& p,int block,int requestedFrames,const std::vec
             result.peak=std::max(result.peak,double(std::abs(value)));uint32_t bits=0;std::memcpy(&bits,&value,sizeof(bits));
             result.hash^=bits;result.hash*=1099511628211ull;
         }
+        if(traceBlocks)result.blockHashes.push_back(result.hash);
         if(paced)std::this_thread::sleep_until(begin+std::chrono::nanoseconds(int64_t((n+1)*int64_t(block)*1000000000/48000)));
     }
     const auto end=Clock::now();const auto after=cpu();
@@ -100,7 +103,8 @@ int main(int argc,char** argv){try{
     const auto warmEvents=passage(true),events=passage(false);
     const auto warm=render(p,block,96000,warmEvents,false);check(warm.missing==0,"Offline warm-up lost frames");
     p.setNonRealtime(!paced);
-    const auto result=render(p,block,576000,events,paced);
+    const bool traceBlocks=juce::SystemStats::getEnvironmentVariable("SILVER_CPU_TRACE_BLOCKS","0")=="1";
+    const auto result=render(p,block,576000,events,paced,traceBlocks);
     const auto runtime=juce::JSON::parse(p.performanceReport());
     auto* root=new juce::DynamicObject;juce::var report(root);
     root->setProperty("schema","silver-k.cpu-cost.v1");root->setProperty("mode",paced?"paced-realtime":"offline-fixed-work");
@@ -113,6 +117,11 @@ int main(int argc,char** argv){try{
     root->setProperty("missing_frames",juce::int64(result.missing));root->setProperty("audio_hash",juce::String(result.hash));root->setProperty("peak",result.peak);
     root->setProperty("setup_cpu_seconds",setupEnd.process-setupCpu.process);root->setProperty("setup_wall_seconds",setupWall);
     root->setProperty("warmup_cpu_seconds",warm.process);root->setProperty("warmup_wall_seconds",warm.wall);
+    if(traceBlocks){
+        juce::Array<juce::var> hashes;
+        for(auto hash:result.blockHashes)hashes.add(juce::String(hash));
+        root->setProperty("cumulative_block_hashes",juce::var(hashes));
+    }
     root->setProperty("notes","CPU=user+kernel summed across all process threads. Caller CPU includes host callback, hashing, offline queue waits and pacing calls. Background=process-caller, includes H8/DSP workers and any other process threads. No diagnostics session. Equal 576000 delivered frames required; compare hashes within each scenario. Boot/setup and two-second warm-up excluded from measured passage. No real driver/DAW, affinity or OS settings changes.");
     check(juce::File(argv[4]).replaceWithText(juce::JSON::toString(report,false)),"Cannot save report");
     std::cout<<juce::JSON::toString(report,false)<<'\n';
