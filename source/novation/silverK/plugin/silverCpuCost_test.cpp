@@ -42,13 +42,14 @@ Cpu cpu(){
 #endif
 }
 struct Event {int frame;juce::MidiMessage message;};
-std::vector<Event> passage(bool warm){
+std::vector<Event> passage(bool warm,bool releaseOnly=false){
     std::vector<Event> result;
     auto on=[&](int frame,int note,int velocity){result.push_back({frame,juce::MidiMessage::noteOn(1,note,juce::uint8(velocity))});};
     auto off=[&](int frame,int note){result.push_back({frame,juce::MidiMessage::noteOff(1,note)});};
     if(warm){for(int n=0;n<8;++n){on(4800,36+7*n,90);off(86400,36+7*n);}
         std::stable_sort(result.begin(),result.end(),[](const Event& a,const Event& b){return a.frame<b.frame;});return result;}
     on(4800,60,100);off(52800,60);
+    if(releaseOnly)return result;
     std::array<int,8> held{};held.fill(-1);
     for(int frame=53760,tick=0;frame<576000;frame+=1920,++tick){
         for(unsigned n=0;n<held.size();++n){if(held[n]>=0)off(frame,held[n]);held[n]=36+(tick*7+int(n)*5)%60;on(frame,held[n],64+held[n]%48);}
@@ -111,7 +112,8 @@ int main(int argc,char** argv){try{
     const auto setupEnd=cpu();const double setupWall=std::chrono::duration<double>(Clock::now()-setupStart).count();
     dsp56k::ThreadTools::setCurrentThreadPriority(dsp56k::ThreadPriority::Highest);
     dsp56k::ThreadTools::setCurrentThreadRealtimeParameters(48000,block);
-    const auto warmEvents=passage(true),events=passage(false);
+    const bool releaseOnly=juce::SystemStats::getEnvironmentVariable("SILVER_CPU_RELEASE_ONLY","0")=="1";
+    const auto warmEvents=passage(true),events=passage(false,releaseOnly);
     const auto warm=render(p,block,96000,warmEvents,false);check(warm.missing==0,"Offline warm-up lost frames");
     p.setNonRealtime(!paced);
     const bool traceBlocks=juce::SystemStats::getEnvironmentVariable("SILVER_CPU_TRACE_BLOCKS","0")=="1";
@@ -120,6 +122,7 @@ int main(int argc,char** argv){try{
     const auto runtime=juce::JSON::parse(p.performanceReport());
     auto* root=new juce::DynamicObject;juce::var report(root);
     root->setProperty("schema","silver-k.cpu-cost.v1");root->setProperty("mode",paced?"paced-realtime":"offline-fixed-work");
+    root->setProperty("passage",releaseOnly?"single-note-release":"polyphonic");
     root->setProperty("controller_backend",runtime["controller_backend"]);
     root->setProperty("dsp_execution_backend",runtime["dsp_execution_backend"]);root->setProperty("system",runtime["system"]);root->setProperty("build",runtime["build"]);
     root->setProperty("block_frames",block);root->setProperty("buffer_profile",profile);root->setProperty("latency_frames",p.getLatencySamples());

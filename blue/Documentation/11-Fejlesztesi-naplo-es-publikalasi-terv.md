@@ -869,3 +869,9 @@ Mindkét motorral két offline és két ütemezett macOS arm64 futás készült.
 A 62-es PR beolvadt (e2924e9). A SILVER_CPU_TRACE_RELEASE=1 diagnosztikai opció a privát JSON-riportban megőrzi mind a négy kimenet mintáit az 52000–57999. keret között. A mintákat renderelés közben memóriába gyűjti, és a futás végén írja ki.
 
 Az arm64 Release hibrid és szemantikus natív build offline és ütemezett próbája hiányzó mintakeret nélkül zárult. Offline az első eltérés az 53113. keretben volt. Az első note-off (52800) és az új hangok (53760) közötti szakaszban a maximális abszolút mintakülönbség 0,01127 volt, az új hangok után a vizsgált ablakban 0,08134. Ütemezve az események közötti szakasz egyezett, az első eltérés az 56144. keretben jelent meg, és a vizsgált ablakban a maximális különbség 0,04335 volt. Az indexek nullától indulnak. A két teszt eltérő pufferprofilja miatt az időpontok nem azonos késleltetést képviselnek. A mérés a hangeltérést számszerűsíti, a kiváltó okot külön kell ellenőrizni. A nyers riportok helyben maradnak.
+
+## 2026-11-06 — Egyetlen KS hang elengedése
+
+A 63-as PR mind az öt ellenőrzés után beolvadt (8bbc91b). A SILVER_CPU_RELEASE_ONLY=1 ugyanazt az első hangot és note-off eseményt játssza le, a későbbi hangokat kihagyja. A riport a lejátszott szakasz nevét is megadja.
+
+A négy helyi macOS arm64 Release futás sikeres volt, hiányzó mintakeret nélkül. Offline az első eltérő mintakeret ismét 53113, a rögzített ablak maximális eltérése 0,01127. Ütemezve a teljes 576000 keretes hanghash és a mintaszintű ablak egyezett. A későbbi hangok tehát az offline eltéréshez nem szükségesek. Az ütemezett egyhangos egyezés erre a terhelésre és pufferprofilra vonatkozik. A kiváltó ok még nyitott.
