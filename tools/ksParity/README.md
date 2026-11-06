@@ -44,3 +44,7 @@ The `device-release-128-delay384` case keeps the default 128-frame Device
 lead and adds 384 frames to both MIDI offsets. This produces the same
 scheduled event frames as the 640-frame lead case while keeping the
 default audio buffer lead.
+
+Use `device-release-128-on384` to delay only note-on, or
+`device-release-128-off384` to delay only note-off. Both keep the default
+audio lead. The two controls change note duration in opposite directions.
