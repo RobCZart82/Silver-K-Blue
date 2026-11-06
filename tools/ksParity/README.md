@@ -28,3 +28,10 @@ note 60 for 48000 Board frames and captures 8192 frames after note-off. It
 uses the program loaded from Flash. Compare the PCM and state files from
 the two builds using the same private fixtures. This passage uses the
 Board sample clock directly.
+
+Use `device-release-128` or `device-release-512` for a direct Device comparison
+at 48 kHz. The probe renders 65536 frames offline, sends note-on at frame
+4800 and note-off at frame 52800, and checks for finite audible output and
+zero underruns. It writes only PREFIX.pcm, with four interleaved native-endian
+float samples per frame. Compare runs with identical private fixtures and
+block sizes. These modes use the starting Flash program and Device defaults.
