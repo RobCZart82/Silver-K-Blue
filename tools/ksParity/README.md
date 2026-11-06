@@ -22,3 +22,9 @@ outputs before host MIDI. Each part then needs audible note-on and sustained
 note-off output, followed by exact silence after pedal release. The test sends
 no host program changes, state restores, or all-sounds-off messages. A semantic
 build also checks native ownership and zero interpreted H8 steps.
+
+The optional `note-release` passage settles for 8192 Board frames, holds
+note 60 for 48000 Board frames and captures 8192 frames after note-off. It
+uses the program loaded from Flash. Compare the PCM and state files from
+the two builds using the same private fixtures. This passage uses the
+Board sample clock directly.

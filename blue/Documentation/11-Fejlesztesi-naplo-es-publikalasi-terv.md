@@ -887,3 +887,9 @@ A helyi macOS arm64 Release mátrix mind a 16 futása sikeres volt, hiányzó mi
 A 65-ös PR mind az öt ellenőrzés után beolvadt (b108de0). A SILVER_CPU_ALIGN_RELEASE=1 az egyhangos próbában 4608-ra és 52736-ra állítja a note-on és note-off keretét. Mindkét esemény a 128 és az 512 mintás blokk elejére esik. Ez az eredeti próbához képest a hang kezdetét és hosszát is módosítja.
 
 Mind a nyolc macOS arm64 Release offline próba hiányzó mintakeret nélkül futott. A két motor első eltérő blokkja 128/0 esetén 4992, 128/3 esetén 54784, 512/0 esetén 5120 volt. 512/3 mellett egyezett a teljes hanghash. A különbség tehát blokkhatárra eső MIDI-vel is reprodukálható, két beállításnál már az első note-off előtt. A beállításfüggő eltérés okát ez a próba nem állapítja meg.
+
+## 2026-11-06 — KS hangelengedés közvetlen Board próbában
+
+A 66-os PR mind az öt ellenőrzés után beolvadt (9495482). A privát Board próba note-release módban 8192 keret várakozás után 48000 Board-keretig tart egy hangot, majd további 8192 keretet rögzít a note-off után. A kezdő programot a Flash-ből tölti be.
+
+Helyi macOS arm64 Release módban mindkét motor sikeresen lefutott. A 64384 keret összes, 24 csatornás PCM mintája (6180864 bájt), a 270 bájtos állapot és a 263168 bájtos Flash egyezett. A MIDI-kimenet üres volt, a csúcs mindkét esetben 836483. A natív próba ellenőrizte a tényleges natív tulajdonost és a nulla értelmezett H8 lépést. Ez a közvetlen Board próba eltérő programbeállítással, saját mintavételi órán futott. A Processorban mért eltérés okát ebből még nem lehet megállapítani.
