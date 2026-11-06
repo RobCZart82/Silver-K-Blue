@@ -39,3 +39,8 @@ block sizes. These modes use the starting Flash program and Device defaults.
 The `device-release-128-lead640` case keeps 128-frame host blocks and raises
 the Device lead to the default for 512-frame blocks. Compare each backend
 at the same setting. The lead also affects MIDI event scheduling.
+
+The `device-release-128-delay384` case keeps the default 128-frame Device
+lead and adds 384 frames to both MIDI offsets. This produces the same
+scheduled event frames as the 640-frame lead case while keeping the
+default audio buffer lead.

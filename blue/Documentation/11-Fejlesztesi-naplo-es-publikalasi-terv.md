@@ -903,3 +903,9 @@ A 67-es PR mind az öt ellenőrzés után beolvadt (17a54d1). A privát Device p
 ## 2026-11-06 — KS Device összehasonlítás azonos előrefutással
 
 A 68-as PR beolvadt (9d71059). A privát Device próba új módja 128 mintás blokkokat használ, de az 512 mintás blokkokhoz tartozó 640 keretes előrefutással. Mindkét macOS arm64 Release futás hallható, véges kimenetet adott hiányzó keret nélkül. A két motor mind a négy csatornája bájtról bájtra egyezett. A 128 mintás alapbeállítás korábbi próbáján eltérés volt. Az előrefutás a MIDI-események esedékességét is módosítja, ezért az egyezésből nem következik, hogy önmagában a puffer mérete okozza az eltérést.
+
+## 2026-11-06 — KS Device kontroll azonos MIDI-esedékességgel
+
+A 69-es PR mind az öt ellenőrzés után beolvadt (aa48273). A 128 mintás próba új módja megtartja a 256 keretes alapértelmezett Device-előrefutást, és 384 keretet ad mindkét MIDI-esemény időzítéséhez. Így ugyanazokra a keretekre esnek az események, mint a 640 keretes előrefutású próbában.
+
+A két helyi macOS arm64 Release futás véges, hallható kimenetet adott hiányzó keret nélkül. A négycsatornás PCM a két motor között egyezett. Mindkét motor eredménye a saját korábbi 640 keretes próbájával is bájtról bájtra egyezett. A megfigyelt eltérés eltüntetéséhez ezen a teszten elég volt a MIDI-időzítést módosítani. A vezérlőn belüli eltérés pontos oka továbbra is nyitott.
