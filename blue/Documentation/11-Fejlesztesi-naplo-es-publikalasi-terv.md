@@ -875,3 +875,9 @@ Az arm64 Release hibrid és szemantikus natív build offline és ütemezett pró
 A 63-as PR mind az öt ellenőrzés után beolvadt (8bbc91b). A SILVER_CPU_RELEASE_ONLY=1 ugyanazt az első hangot és note-off eseményt játssza le, a későbbi hangokat kihagyja. A riport a lejátszott szakasz nevét is megadja.
 
 A négy helyi macOS arm64 Release futás sikeres volt, hiányzó mintakeret nélkül. Offline az első eltérő mintakeret ismét 53113, a rögzített ablak maximális eltérése 0,01127. Ütemezve a teljes 576000 keretes hanghash és a mintaszintű ablak egyezett. A későbbi hangok tehát az offline eltéréshez nem szükségesek. Az ütemezett egyhangos egyezés erre a terhelésre és pufferprofilra vonatkozik. A kiváltó ok még nyitott.
+
+## 2026-11-06 — KS egyhangos próba azonos pufferbeállításokkal
+
+A 64-es PR beolvadt (ee59f41). A privát CPU-mérőben a SILVER_CPU_BLOCK_FRAMES (128 vagy 512) és SILVER_CPU_BUFFER_PROFILE (0 vagy 3) egymástól és a host ütemezésétől függetlenül állítható. A meglévő alapértékek továbbra is 128/0 offline és 512/3 ütemezett módban.
+
+A helyi macOS arm64 Release mátrix mind a 16 futása sikeres volt, hiányzó mintakeret nélkül. Az egyhangos szakasz teljes hanghash-e 512 mintás blokkokkal mindkét profilban egyezett a két motor között, offline és ütemezve is. 128 mintás blokkokkal mindkét ütemezésnél eltért. A 0-s profil első eltérő blokkja 52992-nél kezdődött, a 3-as profilé már 7040-nél, az első note-off előtt. A jelentett késleltetés minden azonos beállítású motorpárban egyezett. Ennél a terhelésnél az ütemezés önmagában nem választotta szét az egyező és eltérő eseteket. Az eltérés oka további vizsgálatot igényel.

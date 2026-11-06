@@ -100,7 +100,14 @@ int main(int argc,char** argv){try{
 #endif
     juce::ScopedJuceInitialiser_GUI gui;
     const bool paced=juce::SystemStats::getEnvironmentVariable("SILVER_CPU_PACED","0")=="1";
-    const int block=paced?512:128,profile=paced?3:0;
+    const auto blockOption=juce::SystemStats::getEnvironmentVariable("SILVER_CPU_BLOCK_FRAMES",{});
+    const auto profileOption=juce::SystemStats::getEnvironmentVariable("SILVER_CPU_BUFFER_PROFILE",{});
+    check(blockOption.isEmpty() || blockOption=="128" || blockOption=="512",
+          "SILVER_CPU_BLOCK_FRAMES must be 128 or 512");
+    check(profileOption.isEmpty() || profileOption=="0" || profileOption=="3",
+          "SILVER_CPU_BUFFER_PROFILE must be 0 or 3");
+    const int block=blockOption.isEmpty()?(paced?512:128):blockOption.getIntValue();
+    const int profile=profileOption.isEmpty()?(paced?3:0):profileOption.getIntValue();
     const auto setupCpu=cpu();const auto setupStart=Clock::now();
     silverK::Processor p;p.prepareToPlay(48000,block);p.setNonRealtime(true);
     p.flashFile=juce::File(argv[2]);p.bankFile=juce::File(argv[3]);juce::String error;
