@@ -1,10 +1,25 @@
 #include "silverProcessor.h"
 namespace silverK {
+bool migrateBlueSettings(const juce::File& legacy,const juce::File& target,juce::String& error){
+ juce::InterProcessLock lock("Silver-K-settings-"+juce::String::toHexString(target.getFullPathName().hashCode64()));
+ if(!lock.enter(250)){error="Settings are busy; try again";return false;}
+ struct Unlock{juce::InterProcessLock& lock;~Unlock(){lock.exit();}} unlock{lock};
+ if(target.existsAsFile() || !legacy.existsAsFile())return true;
+ const auto saved=juce::JSON::parse(legacy);
+ if(!saved.isObject()){error="Cannot migrate invalid Silver-K settings";return false;}
+ if(auto result=target.getParentDirectory().createDirectory();result.failed()){error=result.getErrorMessage();return false;}
+ juce::TemporaryFile temp(target);
+ if(!temp.getFile().replaceWithText(juce::JSON::toString(saved)) || !temp.overwriteTargetFileWithTemporary()){
+  error="Cannot migrate Silver-K Blue settings";return false;
+ }
+ return true;
+}
 juce::File Processor::settingsFile()const{
  const auto test=juce::SystemStats::getEnvironmentVariable("SILVER_K_DATA",{});
- return (test.isEmpty()?juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory).getChildFile("The Usual Suspects/Silver-K"):juce::File(test)).getChildFile("settings.json");
+ return (test.isEmpty()?juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory).getChildFile("The Usual Suspects/Silver-K Blue"):juce::File(test)).getChildFile("settings.json");
 }
 bool Processor::updateSettings(const juce::NamedValueSet& edits,juce::String& error)const{
+ if(!settingsWritable){error="Settings initialization failed; reopen Silver-K Blue to retry";return false;}
  // Merge changed keys so closing another instance cannot restore stale defaults.
  static std::mutex settingsMutex;std::lock_guard guard(settingsMutex);
  const auto file=settingsFile();juce::InterProcessLock lock("Silver-K-settings-"+juce::String::toHexString(file.getFullPathName().hashCode64()));
@@ -22,13 +37,18 @@ juce::NamedValueSet Processor::preferenceValues()const{
  juce::NamedValueSet values;values.set("editorScale",editorScale.load());values.set("skinChoice",skinChoice);values.set("blueAutoVersion",1);values.set("customSkin",customSkin);values.set("bufferProfile",buffering.load());values.set("ksControllerMode",ksControllerMode());values.set("ksTwoCoreProcessing",ksTwoCoreProcessing());values.set("editorChannel",int(editorChannelPreference.load()));values.set("browserState",browserState);return values;
 }
 void Processor::savePreferences(){
- if(isFirmwareLoading())return;
+ if(isFirmwareLoading() || !settingsWritable)return;
  std::lock_guard guard(controlMutex);const auto values=preferenceValues();juce::NamedValueSet edits;
  for(int n=0;n<values.size();++n)if(preferenceBaseline[values.getName(n)]!=values.getValueAt(n))edits.set(values.getName(n),values.getValueAt(n));
  if(edits.size()==0)return;juce::String error;if(updateSettings(edits,error))preferenceBaseline=values;else message=error;
 }
 void Processor::initializeDataFolder(){
  const auto test=juce::SystemStats::getEnvironmentVariable("SILVER_K_DATA",{});
+ juce::String migrationError;
+ if(test.isEmpty()){
+  const auto legacy=juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory).getChildFile("The Usual Suspects/Silver-K/settings.json");
+  settingsWritable=migrateBlueSettings(legacy,settingsFile(),migrationError);
+ }
  const auto settings=juce::JSON::parse(settingsFile());const auto saved=settings["dataFolder"].toString();
  const auto fallback=juce::File::getSpecialLocation(juce::File::userDocumentsDirectory).getChildFile("Silver-K");
  dataFolder=saved.isNotEmpty()?juce::File(saved):test.isNotEmpty()?juce::File(test).getChildFile("Silver-K"):fallback;
@@ -49,6 +69,7 @@ void Processor::initializeDataFolder(){
  buffering.store(juce::jlimit(0,3,int(settings.getProperty("bufferProfile",1))));controlChannel.store(uint8_t(int(settings["editorChannel"])&15));editorChannelPreference.store(controlChannel.load());
  juce::String error;setDataFolder(dataFolder,error);if(error.isNotEmpty())message=error;
  preferenceBaseline=preferenceValues();startupFirmware=osFile;startupPending.store(osFile!=juce::File{});
+ if(migrationError.isNotEmpty())message=migrationError;
 }
 bool Processor::setDataFolder(const juce::File& folder,juce::String& error){
  std::lock_guard guard(controlMutex);

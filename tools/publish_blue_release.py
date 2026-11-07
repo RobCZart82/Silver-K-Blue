@@ -54,6 +54,62 @@ def verify_package(path, sha, platform):
                 raise ValueError('Package checksum mismatch: ' + name)
 
 
+def publish_assets(tag, sha, version, notes, assets):
+    """Resume only a matching draft, preserving all verified uploaded assets."""
+    releases = json.loads(run('gh', 'api', '--paginate', '--slurp',
+                              f'repos/{REPO}/releases?per_page=100'))
+    existing = next((release for page in releases for release in page
+                     if release['tag_name'] == tag), None)
+    body = notes.read_text(encoding='utf-8')
+    title = 'Silver-K Blue ' + version
+    if existing is None:
+        run('gh', 'release', 'create', tag, '--repo', REPO, '--target', sha,
+            '--draft', '--title', title, '--notes-file', str(notes))
+        pages = json.loads(run('gh', 'api', '--paginate', '--slurp',
+                               f'repos/{REPO}/releases?per_page=100'))
+        existing = next(release for page in pages for release in page
+                        if release['tag_name'] == tag)
+    if (not existing.get('draft') or existing.get('target_commitish') != sha
+            or existing.get('name') != title or existing.get('body', '').strip() != body.strip()):
+        raise ValueError('Existing release does not match this publication draft')
+    expected = {asset.name: asset for asset in assets}
+    uploaded = existing.get('assets', [])
+    if len({asset['name'] for asset in uploaded}) != len(uploaded):
+        raise ValueError('Duplicate draft asset names')
+    for asset in uploaded:
+        path = expected.get(asset['name'])
+        if path is None:
+            raise ValueError('Unexpected draft asset: ' + asset['name'])
+        if asset.get('state') == 'uploaded':
+            digest = 'sha256:' + hashlib.sha256(path.read_bytes()).hexdigest()
+            if asset.get('digest') != digest or asset.get('size') != path.stat().st_size:
+                raise ValueError('Draft asset differs from verified package: ' + path.name)
+        elif asset.get('state') != 'starter':
+            raise ValueError('Draft asset upload is still in progress: ' + path.name)
+    for asset in uploaded:
+        if asset.get('state') == 'starter':
+            run('gh', 'api', '--method', 'DELETE', f'repos/{REPO}/releases/assets/{asset["id"]}')
+    complete = {asset['name'] for asset in uploaded if asset.get('state') == 'uploaded'}
+    for name, path in expected.items():
+        if name not in complete:
+            run('gh', 'release', 'upload', tag, '--repo', REPO, str(path))
+    # Read back the complete inventory before making the release visible.
+    final = json.loads(run('gh', 'api', f'repos/{REPO}/releases/{existing["id"]}'))
+    if (not final.get('draft') or final.get('tag_name') != tag
+            or final.get('target_commitish') != sha or final.get('name') != title
+            or final.get('body', '').strip() != body.strip()):
+        raise ValueError('Release draft changed during asset upload')
+    inventory = {asset['name']: asset for asset in final.get('assets', [])}
+    if len(final.get('assets', [])) != len(expected) or set(inventory) != set(expected):
+        raise ValueError('Incomplete draft asset inventory')
+    for name, path in expected.items():
+        asset = inventory[name]
+        if (asset.get('state') != 'uploaded' or asset.get('size') != path.stat().st_size
+                or asset.get('digest') != 'sha256:' + hashlib.sha256(path.read_bytes()).hexdigest()):
+            raise ValueError('Uploaded asset verification failed: ' + name)
+    run('gh', 'release', 'edit', tag, '--repo', REPO, '--draft=false', '--latest')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--windows-run', required=True, type=int)
@@ -71,10 +127,6 @@ def main():
     sha = validate_runs(*records)
     subprocess.run(['git', 'merge-base', '--is-ancestor', sha, 'origin/main'], cwd=ROOT, check=True)
     tag = 'blue-v' + args.version
-    # Refuse accidental replacement of an existing release (drafts included).
-    releases = json.loads(run('gh', 'api', '--paginate', '--slurp', f'repos/{REPO}/releases?per_page=100'))
-    if any(r['tag_name'] == tag for page in releases for r in page):
-        raise ValueError('Release already exists; existing assets will not be overwritten')
     with tempfile.TemporaryDirectory(prefix='blue-release-') as temp:
         stage = Path(temp)
         assets = []
@@ -105,11 +157,7 @@ def main():
                 reviewed_notes.rstrip() + '\n\nSource commit: ' + sha + '\n\n'
                 + f'Platform builds: [Windows]({records[0]["html_url"]}), '
                 + f'[macOS]({records[1]["html_url"]}).\n', encoding='utf-8')
-        # Keep partial uploads hidden if publication is interrupted.
-        run('gh', 'release', 'create', tag, '--repo', REPO, '--target', sha, '--draft',
-            '--title', 'Silver-K Blue ' + args.version, '--notes-file', str(notes))
-        run('gh', 'release', 'upload', tag, '--repo', REPO, *(str(p) for p in assets), str(checks))
-        run('gh', 'release', 'edit', tag, '--repo', REPO, '--draft=false', '--latest')
+        publish_assets(tag, sha, args.version, notes, assets + [checks])
         print(f'https://github.com/{REPO}/releases/tag/{tag}')
 
 

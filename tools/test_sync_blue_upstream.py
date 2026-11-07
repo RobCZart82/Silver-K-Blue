@@ -14,7 +14,7 @@ def git(folder, *args):
     return subprocess.check_output(['git', '-C', str(folder), *args], text=True, stderr=subprocess.DEVNULL).strip()
 
 class SyncTests(unittest.TestCase):
-    def scenario(self, conflict=False, change=True, release_change=False, is_private=True):
+    def scenario(self, conflict=False, change=True, release_change=False, is_private=True, human_under_bot=False):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             source, private, upstream = root/'source', root/'private.git', root/'upstream.git'
@@ -74,9 +74,22 @@ class SyncTests(unittest.TestCase):
                     self.assertEqual(git(checkout,'show',branch+':code.txt'),'our local fix')
                 elif change:
                     self.assertEqual(git(checkout,'show',branch+':upstream-fix.txt'),'new upstream fix')
+                if human_under_bot:
+                    git(checkout,'config','user.email','human@example.invalid')
+                    (checkout/'manual.txt').write_text('keep manual fix')
+                    git(checkout,'add','.');git(checkout,'commit','-m','Manual fix')
+                    git(checkout,'config','user.email','41898282+github-actions[bot]@users.noreply.github.com')
+                    (checkout/'bot.txt').write_text('later bot work')
+                    git(checkout,'add','.');git(checkout,'commit','-m','Later bot work')
+                    git(checkout,'push','origin',branch)
+                    expected = git(checkout,'rev-parse','HEAD')
                 git(checkout,'checkout','main')
                 module.main()
+                if human_under_bot:
+                    self.assertEqual(git(checkout,'rev-parse','origin/'+branch),expected)
+                    self.assertEqual(git(checkout,'show','origin/'+branch+':manual.txt'),'keep manual fix')
                 self.assertEqual(prs,[])
+    def test_human_commit_under_bot_is_preserved(self):self.scenario(human_under_bot=True)
     def test_no_update(self):self.scenario(change=False)
     def test_clean_update_preserves_blue_and_main(self):self.scenario()
     def test_conflict_does_not_overwrite_blue(self):self.scenario(conflict=True)

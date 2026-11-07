@@ -44,8 +44,12 @@ def main():
     expected = old[0] if old else ''
     if expected:
         run('git', 'fetch', 'origin', BRANCH)
-        author = run('git', 'log', '-1', '--format=%ae', 'FETCH_HEAD').stdout.strip()
-        if author != '41898282+github-actions[bot]@users.noreply.github.com':
+        # Upstream commits are expected in the proposal. Inspect every remaining
+        # commit, including changes hidden underneath a later bot commit.
+        identities = run('git', 'log', '--format=%ae%n%ce', 'FETCH_HEAD',
+                         '--not', 'origin/' + base, 'upstream/main').stdout.splitlines()
+        if any(identity != '41898282+github-actions[bot]@users.noreply.github.com'
+               for identity in identities):
             print('Proposal branch has human changes; preserve it for manual review instead of resetting it.')
             return
     run('git', 'checkout', '-B', BRANCH, 'origin/' + base)
