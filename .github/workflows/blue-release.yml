@@ -14,6 +14,11 @@ on:
         description: Successful main macOS run ID (same source commit)
         required: true
         type: string
+      notes_file:
+        description: Optional reviewed UTF-8 Markdown release notes path
+        required: false
+        default: blue/Release-notes.md
+        type: string
 permissions:
   contents: read
 concurrency:
@@ -38,4 +43,10 @@ jobs:
           BLUE_VERSION: ${{ inputs.version }}
           WINDOWS_RUN: ${{ inputs.windows_run }}
           MACOS_RUN: ${{ inputs.macos_run }}
-        run: python3 tools/publish_blue_release.py --version "$BLUE_VERSION" --windows-run "$WINDOWS_RUN" --macos-run "$MACOS_RUN"
+          NOTES_FILE: ${{ inputs.notes_file }}
+        run: |
+          notes_args=()
+          if [[ -n "$NOTES_FILE" ]]; then
+            notes_args=(--notes-file "$NOTES_FILE")
+          fi
+          python3 tools/publish_blue_release.py --version "$BLUE_VERSION" --windows-run "$WINDOWS_RUN" --macos-run "$MACOS_RUN" "${notes_args[@]}"
