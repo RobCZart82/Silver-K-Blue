@@ -59,7 +59,11 @@ def main():
     parser.add_argument('--windows-run', required=True, type=int)
     parser.add_argument('--macos-run', required=True, type=int)
     parser.add_argument('--version', required=True)
+    parser.add_argument('--notes-file', type=Path, help='Reviewed release notes in UTF-8 Markdown')
     args = parser.parse_args()
+    reviewed_notes = args.notes_file.read_text(encoding='utf-8') if args.notes_file else None
+    if reviewed_notes is not None and not reviewed_notes.strip():
+        raise ValueError('Reviewed release notes must not be empty')
     if not re.fullmatch(r'\d+\.\d+\.\d+', args.version):
         raise ValueError('Use a new numeric release version, e.g. 1.0.1')
     records = [json.loads(run('gh', 'api', f'repos/{REPO}/actions/runs/{n}'))
@@ -96,6 +100,11 @@ def main():
         checks.write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest() + '  ' + p.name + '\n' for p in assets))
         notes = stage / 'release-notes.md'
         notes.write_text(f'''Silver-K Blue {args.version}\n\nSource commit: `{sha}`. Both platforms use this exact commit.\n\n- Windows x64: VST3 and Standalone.\n- macOS Universal 2 (Apple Silicon and Intel): AU, VST3 and Standalone; ad hoc signed, not notarized.\n- Both Blue skins are embedded. Source ZIP and SHA256SUMS.txt included. Build dependencies are fetched from pinned revisions.\n- Own compatible firmware required; proprietary firmware and factory sounds are not included.\n\nPlatform CI and ROM-free tests passed. Firmware-dependent skipped checks are not passes. Automated checks do not establish all DAW/audio or physical Intel acceptance.\n\nValidation: [Windows]({records[0]['html_url']}), [macOS]({records[1]['html_url']}).\n''')
+        if reviewed_notes is not None:
+            notes.write_text(
+                reviewed_notes.rstrip() + '\n\nSource commit: ' + sha + '\n\n'
+                + f'Platform builds: [Windows]({records[0]["html_url"]}), '
+                + f'[macOS]({records[1]["html_url"]}).\n', encoding='utf-8')
         # Keep partial uploads hidden if publication is interrupted.
         run('gh', 'release', 'create', tag, '--repo', REPO, '--target', sha, '--draft',
             '--title', 'Silver-K Blue ' + args.version, '--notes-file', str(notes))

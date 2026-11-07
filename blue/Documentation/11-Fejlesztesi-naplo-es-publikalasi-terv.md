@@ -927,3 +927,11 @@ Mindkét macOS arm64 Release futás véges, hallható kimenetet adott hiányzó 
 A 72-es PR mind az öt ellenőrzés után beolvadt (5d92b45). A natív mintavételi frekvenciájú Device próba külön note-on és note-off eltolást fogad. A helyi macOS arm64 Release sorozatban mindkét eseményt azonos mértékben toltam el, így a hang hossza állandó maradt. Mind a 24 futás véges, hallható kimenetet adott hiányzó keret nélkül.
 
 A két motor teljes felvétele 1, 16 és 64 keretes eltolással egyezett. A vizsgált 0, 2, 3, 4, 8, 32, 128, 256 és 384 keretes eltolásoknál eltért. Egyes esetekben az első eltérés már a note-off előtt megjelent. Az egyezés így a hanghossz módosítása nélkül is változik a MIDI időpontjával. Ez a vizsgált program és induló állapot eredménye, a vezérlőn belüli okot nem azonosítja.
+
+## 2026-11-07 — az első közös kiadás publikálásának előkészítése
+
+A felhasználó sikeres macOS- és Windows-működési próbáról számolt be, majd kérte a publikálási fejlesztési munkák megkezdését. A visszajelzés nem sorolta fel a hostokat és az egyedi teszteseteket.
+
+A közös publikálófolyamat külön, áttekinthető UTF-8 Markdown kiadási jegyzetet fogad. A workflow alapértelmezett jegyzete a blue/Release-notes.md. A program a tényleges csomagok forráscommitját és platformfutásait automatikusan hozzáfűzi. Üres jegyzetet az első GitHub-művelet előtt elutasít. A közvetlen parancssori használat jegyzet nélkül továbbra is a korábbi generált leírást használja.
+
+Helyi ellenőrzés a publikáló segéd meglévő tesztjeivel, Python szintaktikai ellenőrzéssel és üres jegyzet negatív próbával. A publikáláshoz két sikeres, azonos commitból származó főági platformfutást kell kiválasztani. A javasolt első címke blue-v1.0.0. A publikáló workflow indítása külön kiadási művelet.
