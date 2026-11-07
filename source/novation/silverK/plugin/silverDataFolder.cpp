@@ -19,6 +19,7 @@ juce::File Processor::settingsFile()const{
  return (test.isEmpty()?juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory).getChildFile("The Usual Suspects/Silver-K Blue"):juce::File(test)).getChildFile("settings.json");
 }
 bool Processor::updateSettings(const juce::NamedValueSet& edits,juce::String& error)const{
+ if(!settingsWritable){error="Settings initialization failed; reopen Silver-K Blue to retry";return false;}
  // Merge changed keys so closing another instance cannot restore stale defaults.
  static std::mutex settingsMutex;std::lock_guard guard(settingsMutex);
  const auto file=settingsFile();juce::InterProcessLock lock("Silver-K-settings-"+juce::String::toHexString(file.getFullPathName().hashCode64()));
@@ -36,16 +37,17 @@ juce::NamedValueSet Processor::preferenceValues()const{
  juce::NamedValueSet values;values.set("editorScale",editorScale.load());values.set("skinChoice",skinChoice);values.set("blueAutoVersion",1);values.set("customSkin",customSkin);values.set("bufferProfile",buffering.load());values.set("ksControllerMode",ksControllerMode());values.set("ksTwoCoreProcessing",ksTwoCoreProcessing());values.set("editorChannel",int(editorChannelPreference.load()));values.set("browserState",browserState);return values;
 }
 void Processor::savePreferences(){
- if(isFirmwareLoading())return;
+ if(isFirmwareLoading() || !settingsWritable)return;
  std::lock_guard guard(controlMutex);const auto values=preferenceValues();juce::NamedValueSet edits;
  for(int n=0;n<values.size();++n)if(preferenceBaseline[values.getName(n)]!=values.getValueAt(n))edits.set(values.getName(n),values.getValueAt(n));
  if(edits.size()==0)return;juce::String error;if(updateSettings(edits,error))preferenceBaseline=values;else message=error;
 }
 void Processor::initializeDataFolder(){
  const auto test=juce::SystemStats::getEnvironmentVariable("SILVER_K_DATA",{});
+ juce::String migrationError;
  if(test.isEmpty()){
   const auto legacy=juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory).getChildFile("The Usual Suspects/Silver-K/settings.json");
-  juce::String error;if(!migrateBlueSettings(legacy,settingsFile(),error)){message=error;return;}
+  settingsWritable=migrateBlueSettings(legacy,settingsFile(),migrationError);
  }
  const auto settings=juce::JSON::parse(settingsFile());const auto saved=settings["dataFolder"].toString();
  const auto fallback=juce::File::getSpecialLocation(juce::File::userDocumentsDirectory).getChildFile("Silver-K");
@@ -67,6 +69,7 @@ void Processor::initializeDataFolder(){
  buffering.store(juce::jlimit(0,3,int(settings.getProperty("bufferProfile",1))));controlChannel.store(uint8_t(int(settings["editorChannel"])&15));editorChannelPreference.store(controlChannel.load());
  juce::String error;setDataFolder(dataFolder,error);if(error.isNotEmpty())message=error;
  preferenceBaseline=preferenceValues();startupFirmware=osFile;startupPending.store(osFile!=juce::File{});
+ if(migrationError.isNotEmpty())message=migrationError;
 }
 bool Processor::setDataFolder(const juce::File& folder,juce::String& error){
  std::lock_guard guard(controlMutex);

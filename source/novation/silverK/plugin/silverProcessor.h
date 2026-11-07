@@ -214,6 +214,7 @@ private:
  bool updateSettings(const juce::NamedValueSet&,juce::String&)const;
  juce::NamedValueSet preferenceValues()const;
  juce::NamedValueSet preferenceBaseline;
+ bool settingsWritable=true;
  juce::File settingsFile()const;
  juce::File resolveAsset(const juce::ValueTree&,const char*)const;
  std::vector<juce::File> selectedKSDataFiles()const;
