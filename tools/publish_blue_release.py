@@ -95,6 +95,10 @@ def publish_assets(tag, sha, version, notes, assets):
             run('gh', 'release', 'upload', tag, '--repo', REPO, str(path))
     # Read back the complete inventory before making the release visible.
     final = json.loads(run('gh', 'api', f'repos/{REPO}/releases/{existing["id"]}'))
+    if (not final.get('draft') or final.get('tag_name') != tag
+            or final.get('target_commitish') != sha or final.get('name') != title
+            or final.get('body', '').strip() != body.strip()):
+        raise ValueError('Release draft changed during asset upload')
     inventory = {asset['name']: asset for asset in final.get('assets', [])}
     if len(final.get('assets', [])) != len(expected) or set(inventory) != set(expected):
         raise ValueError('Incomplete draft asset inventory')

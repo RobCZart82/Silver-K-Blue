@@ -947,3 +947,5 @@ Az upstream-frissítő a javaslati ág összes, főágon és upstreamen kívüli
 Célzott regressziók készültek a beállításmigrációra, a megszakadt kiadásfeltöltésre és a botcommit alatti kézi változásra. A 18 Python-teszt sikeres.
 
 A helyi macOS arm64 Release silverPersistence_test fordítása és a silver_persistence_and_rescan CTest sikeres. A migrációs próba ellenőrzi a skin és az adatmappa megőrzését, a régi fájl érintetlenségét, a meglévő Blue beállítás megőrzését és a hibás forrásfájl elutasítását. A publikáló regresszió részleges feltöltést és starter állományt is szimulál. A Windows/macOS/web PR-ellenőrzések külön kapuk.
+
+A #75 felülvizsgálati kiegészítése közvetlenül a publikálás előtt újraellenőrzi a tervezet draft állapotát, címkéjét, célcommitját, címét és leírását. Feltöltés közbeni eltérésnél megáll. Az öt módosítási esetet regressziós teszt fedi le. A teljes Python-sorozat 19 sikeres teszt. A GitHub ellenőrzés és publikálás közötti műveletsor továbbra sem atomikus.

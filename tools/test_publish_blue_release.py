@@ -12,6 +12,25 @@ from publish_blue_release import REPO, validate_runs, verify_package
 
 
 class PublicationTests(unittest.TestCase):
+    def test_reject_draft_changed_during_upload(self):
+        with tempfile.TemporaryDirectory() as temp:
+            notes = Path(temp) / 'notes.md'
+            notes.write_text('Reviewed notes', encoding='utf-8')
+            original = dict(id=123, tag_name='blue-v1.0.0', draft=True,
+                            target_commitish='a'*40, name='Silver-K Blue 1.0.0',
+                            body='Reviewed notes', assets=[])
+            for key, value in (('draft', False), ('tag_name', 'blue-v2.0.0'),
+                               ('target_commitish', 'b'*40), ('name', 'Changed'),
+                               ('body', 'Unreviewed notes')):
+                with self.subTest(key=key):
+                    changed = dict(original, **{key: value})
+                    with patch.object(publication, 'run', side_effect=[
+                            json.dumps([[original]]), json.dumps(changed)]) as run:
+                        with self.assertRaisesRegex(ValueError, 'changed during asset upload'):
+                            publication.publish_assets('blue-v1.0.0', 'a'*40,
+                                                       '1.0.0', notes, [])
+                        self.assertEqual(run.call_count, 2)
+
     def records(self):
         return [dict(status='completed', conclusion='success', head_branch='main',
                      event='push', head_sha='a'*40, repository={'full_name': REPO},
