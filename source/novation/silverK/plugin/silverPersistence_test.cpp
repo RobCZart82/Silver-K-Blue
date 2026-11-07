@@ -281,7 +281,27 @@ public:
 private:
  void timerCallback()override{}
 };
+static void settingsMigration(){
+ const auto root=juce::File::getSpecialLocation(juce::File::tempDirectory).getNonexistentChildFile("blue-settings-migration",{},false);
+ struct Cleanup{juce::File root;~Cleanup(){root.deleteRecursively();}} cleanup{root};
+ const auto legacy=root.getChildFile("Silver-K/settings.json"),blue=root.getChildFile("Silver-K Blue/settings.json");
+ check(legacy.getParentDirectory().createDirectory().wasOk(),"Create legacy settings folder");
+ const juce::String original=R"({"skinChoice":"Silver-K Blue Standard v1.0","editorScale":0.75,"dataFolder":"/existing/assets"})";
+ check(legacy.replaceWithText(original),"Write legacy settings");
+ juce::String error;
+ check(migrateBlueSettings(legacy,blue,error),"Migrate Blue settings");
+ check(juce::JSON::parse(blue)["skinChoice"].toString()=="Silver-K Blue Standard v1.0","Migration lost skin");
+ check(juce::JSON::parse(blue)["dataFolder"].toString()=="/existing/assets","Migration lost data folder");
+ check(legacy.loadFileAsString()==original,"Migration changed legacy settings");
+ check(blue.replaceWithText(R"({"editorScale":1.25})"),"Update Blue settings");
+ check(migrateBlueSettings(legacy,blue,error),"Reopen migrated settings");
+ check(double(juce::JSON::parse(blue)["editorScale"])==1.25,"Migration overwrote Blue settings");
+ check(legacy.loadFileAsString()==original,"Blue settings changed legacy settings");
+ blue.deleteFile();legacy.replaceWithText("invalid");
+ check(!migrateBlueSettings(legacy,blue,error) && !blue.exists(),"Invalid legacy settings accepted");
+}
 int main(int argc,char** argv){
+ settingsMigration();
  std::cout<<std::unitbuf;std::cerr<<std::unitbuf;testArgc=argc;testArgv=argv;
  juce::JUCEApplicationBase::createInstance=[]()->juce::JUCEApplicationBase*{return new PersistenceTestApplication;};
 #if JUCE_WINDOWS

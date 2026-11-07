@@ -1,8 +1,22 @@
 #include "silverProcessor.h"
 namespace silverK {
+bool migrateBlueSettings(const juce::File& legacy,const juce::File& target,juce::String& error){
+ juce::InterProcessLock lock("Silver-K-settings-"+juce::String::toHexString(target.getFullPathName().hashCode64()));
+ if(!lock.enter(250)){error="Settings are busy; try again";return false;}
+ struct Unlock{juce::InterProcessLock& lock;~Unlock(){lock.exit();}} unlock{lock};
+ if(target.existsAsFile() || !legacy.existsAsFile())return true;
+ const auto saved=juce::JSON::parse(legacy);
+ if(!saved.isObject()){error="Cannot migrate invalid Silver-K settings";return false;}
+ if(auto result=target.getParentDirectory().createDirectory();result.failed()){error=result.getErrorMessage();return false;}
+ juce::TemporaryFile temp(target);
+ if(!temp.getFile().replaceWithText(juce::JSON::toString(saved)) || !temp.overwriteTargetFileWithTemporary()){
+  error="Cannot migrate Silver-K Blue settings";return false;
+ }
+ return true;
+}
 juce::File Processor::settingsFile()const{
  const auto test=juce::SystemStats::getEnvironmentVariable("SILVER_K_DATA",{});
- return (test.isEmpty()?juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory).getChildFile("The Usual Suspects/Silver-K"):juce::File(test)).getChildFile("settings.json");
+ return (test.isEmpty()?juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory).getChildFile("The Usual Suspects/Silver-K Blue"):juce::File(test)).getChildFile("settings.json");
 }
 bool Processor::updateSettings(const juce::NamedValueSet& edits,juce::String& error)const{
  // Merge changed keys so closing another instance cannot restore stale defaults.
@@ -29,6 +43,10 @@ void Processor::savePreferences(){
 }
 void Processor::initializeDataFolder(){
  const auto test=juce::SystemStats::getEnvironmentVariable("SILVER_K_DATA",{});
+ if(test.isEmpty()){
+  const auto legacy=juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory).getChildFile("The Usual Suspects/Silver-K/settings.json");
+  juce::String error;if(!migrateBlueSettings(legacy,settingsFile(),error)){message=error;return;}
+ }
  const auto settings=juce::JSON::parse(settingsFile());const auto saved=settings["dataFolder"].toString();
  const auto fallback=juce::File::getSpecialLocation(juce::File::userDocumentsDirectory).getChildFile("Silver-K");
  dataFolder=saved.isNotEmpty()?juce::File(saved):test.isNotEmpty()?juce::File(test).getChildFile("Silver-K"):fallback;

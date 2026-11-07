@@ -9,6 +9,7 @@
 #include "silverMidiLearn.h"
 #include "jucePluginLib/hostAudioWorkgroup.h"
 namespace silverK {
+bool migrateBlueSettings(const juce::File& legacy,const juce::File& target,juce::String& error);
 using namespace ksPlugin;
 struct KEngine;
 class Processor final : public juce::AudioProcessor,private juce::AudioProcessorValueTreeState::Listener,private juce::Timer {

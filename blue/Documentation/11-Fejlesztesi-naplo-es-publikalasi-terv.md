@@ -935,3 +935,15 @@ A felhasználó sikeres macOS- és Windows-működési próbáról számolt be, 
 A közös publikálófolyamat külön, áttekinthető UTF-8 Markdown kiadási jegyzetet fogad. A workflow alapértelmezett jegyzete a blue/Release-notes.md. A program a tényleges csomagok forráscommitját és platformfutásait automatikusan hozzáfűzi. Üres jegyzetet az első GitHub-művelet előtt elutasít. A közvetlen parancssori használat jegyzet nélkül továbbra is a korábbi generált leírást használja.
 
 Helyi ellenőrzés a publikáló segéd meglévő tesztjeivel, Python szintaktikai ellenőrzéssel és üres jegyzet negatív próbával. A publikáláshoz két sikeres, azonos commitból származó főági platformfutást kell kiválasztani. A javasolt első címke blue-v1.0.0. A publikáló workflow indítása külön kiadási művelet.
+
+## 2026-11-07 — repository-audit javításai
+
+A Blue alapértelmezett beállításfájlja a The Usual Suspects/Silver-K Blue/settings.json. Első indításkor a korábbi Silver-K/settings.json érvényes objektumát egyszer, folyamatközi zárral és atomikus fájlcserével másolja át. Meglévő Blue beállítást nem ír felül. A SILVER_K_DATA felülbírálás továbbra is a megadott mappa settings.json fájlját használja. A korábbi adatmappa és felhasználói fájlok elérési útjai megmaradnak.
+
+A kiadásfeltöltő az azonos forráscommitú, című és leírású tervezet megszakadt feltöltését folytatja. A már kész állományokat SHA-256 és méret alapján ellenőrzi, csak a hiányzókat tölti fel. A GitHub által hátrahagyott starter állományokat eltávolítja, majd újratölti. Eltérő vagy publikált kiadást elutasít. A teljes feltöltött fájllistát publikálás előtt ismét ellenőrzi.
+
+Az upstream-frissítő a javaslati ág összes, főágon és upstreamen kívüli commitjának szerzőjét és committerét vizsgálja. Kézi commitot egy későbbi botcommit sem fedhet el.
+
+Célzott regressziók készültek a beállításmigrációra, a megszakadt kiadásfeltöltésre és a botcommit alatti kézi változásra. A 18 Python-teszt sikeres.
+
+A helyi macOS arm64 Release silverPersistence_test fordítása és a silver_persistence_and_rescan CTest sikeres. A migrációs próba ellenőrzi a skin és az adatmappa megőrzését, a régi fájl érintetlenségét, a meglévő Blue beállítás megőrzését és a hibás forrásfájl elutasítását. A publikáló regresszió részleges feltöltést és starter állományt is szimulál. A Windows/macOS/web PR-ellenőrzések külön kapuk.
