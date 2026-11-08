@@ -1,6 +1,6 @@
-# macOS compatibility: JUCE 7 window capture and VST3 processing modes.
+# Platform compatibility: JUCE 7 VST3 processing modes and macOS window capture.
 # Patch a build-local source copy; never modify an external dependency checkout.
-if(APPLE)
+if(APPLE OR WIN32)
     set(SILVER_JUCE_PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/private-juce")
     if(NOT EXISTS "${SILVER_JUCE_PRIVATE}/CMakeLists.txt")
         file(COPY "${JUCE_SOURCE}/" DESTINATION "${SILVER_JUCE_PRIVATE}" PATTERN ".git" EXCLUDE)
@@ -12,19 +12,11 @@ if(APPLE)
     # kRealtime keeps its nonblocking queue-consumer path. This changes no DSP
     # quality, guest clock, queue size, latency, or worker priority.
     set(vst3_source "${JUCE_SOURCE}/modules/juce_audio_plugin_client/juce_audio_plugin_client_VST3.cpp")
-    file(READ "${vst3_source}" vst3_text)
-    set(vst3_original "${vst3_text}")
-    foreach(mode_source newSetup data)
-        string(REPLACE "setNonRealtime (${mode_source}.processMode == Vst::kOffline)"
-            "setNonRealtime (${mode_source}.processMode != Vst::kRealtime)" vst3_text "${vst3_text}")
-        string(FIND "${vst3_text}" "setNonRealtime (${mode_source}.processMode != Vst::kRealtime)" mode_position)
-        if(mode_position EQUAL -1)
-            message(FATAL_ERROR "Unrecognized JUCE VST3 processing-mode adapter")
-        endif()
-    endforeach()
-    if(NOT vst3_text STREQUAL vst3_original)
-        file(WRITE "${vst3_source}" "${vst3_text}")
-    endif()
+    set(SILVER_JUCE_VST3_SOURCE "${vst3_source}")
+    include("${CMAKE_CURRENT_LIST_DIR}/PatchJuceVst3Prefetch.cmake")
+endif()
+
+if(APPLE)
     set(snapshot_source "${JUCE_SOURCE}/modules/juce_gui_basics/native/juce_Windowing_mac.mm")
     file(READ "${snapshot_source}" snapshot_text)
     string(FIND "${snapshot_text}" "CGImageRef screenShot = CGWindowListCreateImage" legacy_position)

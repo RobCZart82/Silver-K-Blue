@@ -38,16 +38,35 @@ build\source\novation\silverK\buildStandalone\silverPlugin\Release\silverWorkflo
 
 `SILVER_TEST_SKIP_K=1` or `SILVER_TEST_SKIP_KS=1` limits the engine. This filter diagnostic explicitly selects the production KS compatibility controller; the test executable also links the original H8 reference, whose default must not be mistaken for production behavior. `SILVER_TEST_FILTER_CASE=0..7` selects one case (0–3 held, 4–7 arp, in the order above). `SILVER_TEST_FILTER_CC_FLOOD=1` repeats cutoff CC105 every host block, including identical values. The long probe is offline by default; `SILVER_TEST_FILTER_REALTIME=1` paces callbacks outside audio processing and records missed frames with block offsets and callback deadline lateness. PASS means a finite, audible capture with no missing frames or C++ callback allocations; timing still needs analysis. This exercises the processor and worker without a physical audio driver; it does not replace a DAW test. All captures and program dumps remain private.
 
-An optional macOS VST3 SDK host checks full-speed Prefetch (mode 1) against Offline (mode 2). Supply a private raw Silver-K processor state selecting an audible generated oscillator program and its locally accessible ROMs:
+An optional Windows/macOS VST3 SDK host checks Prefetch (mode 1) against Offline (mode 2), then exercises the paced Realtime path (mode 0). Supply a private processor state selecting an audible generated oscillator program and locally accessible model firmware. Repeat with a K state and a KS state; the helper reports finite audible output and the saved missing-frame count for every mode.
 
 ```sh
 cmake --build build --target silver_vst3_prefetch_check -j 6
 build/source/novation/silverK/buildStandalone/silverPlugin/silver_vst3_prefetch_check "/path/to/Silver-K Blue.vst3" /path/to/processor.state 1 /tmp/silver-prefetch.f32
 build/source/novation/silverK/buildStandalone/silverPlugin/silver_vst3_prefetch_check "/path/to/Silver-K Blue.vst3" /path/to/processor.state 2 /tmp/silver-offline.f32
+build/source/novation/silverK/buildStandalone/silverPlugin/silver_vst3_prefetch_check "/path/to/Silver-K Blue.vst3" /path/to/processor.state 0 /tmp/silver-realtime.f32
 cmp /tmp/silver-prefetch.f32 /tmp/silver-offline.f32
 ```
 
-Each run requires finite, audible stereo float PCM and zero missed frames. On macOS, Prefetch uses the existing full-speed render path with unchanged DSP quality; the realtime mode retains its nonblocking queue consumer. These full-speed checks do not measure realtime callback performance. Validate that separately in a DAW; retain private state and PCM locally.
+On Windows, run the same helper from PowerShell against both model states:
+
+```powershell
+$check = 'build\source\novation\silverK\buildStandalone\silverPlugin\Release\silver_vst3_prefetch_check.exe'
+$plugin = 'build\source\novation\silverK\buildStandalone\silverPlugin\silverK_artefacts\Release\VST3\Silver-K Blue.vst3'
+foreach ($model in @('K', 'KS')) {
+  $state = "C:\private\Silver-K-Blue\$model-processor.state"
+  & $check $plugin $state 1 "$env:TEMP\$model-prefetch.f32"
+  if ($LASTEXITCODE -ne 0) { throw "$model Prefetch failed" }
+  & $check $plugin $state 2 "$env:TEMP\$model-offline.f32"
+  if ($LASTEXITCODE -ne 0) { throw "$model Offline failed" }
+  & $check $plugin $state 0 "$env:TEMP\$model-realtime.f32"
+  if ($LASTEXITCODE -ne 0) { throw "$model Realtime failed" }
+  cmd /c fc /b "$env:TEMP\$model-prefetch.f32" "$env:TEMP\$model-offline.f32"
+  if ($LASTEXITCODE -ne 0) { throw "$model Prefetch/Offline PCM differs" }
+}
+```
+
+The helper is compiled by Windows and macOS CI, and its source transformation has a ROM-free regression test. CI does not run the audio comparison because firmware and model state are private. Keep model states and PCM local. Prefetch and Offline use the full-speed render path with unchanged DSP quality; Realtime keeps its nonblocking queue consumer. The paced Realtime run checks for audible finite output and missing frames, not every host's callback deadline. Validate callback performance in a DAW separately.
 
 macOS bundles receive an ad hoc signature for local testing. Signing for distribution is a separate step. Deployment target 12.0 is not a claim that all older macOS releases have been tested. Validate Apple Silicon natively, x86_64 under Rosetta, and physical Intel Macs separately.
 
@@ -71,7 +90,7 @@ python tools/check_repository.py
 
 Standalone provides JUCE's Windows audio backends (WASAPI/DirectSound); an optional locally supplied ASIO SDK can be enabled with `-DSilverK_ASIO_SDK_PATH=C:/path/to/asiosdk`. The SDK is not redistributed. The core and firmware/patch logic are shared with macOS; AU and codesigning are conditional on macOS.
 
-For offline builds, pass `-DJUCE_SOURCE=/path/to/JUCE -DDSP_SOURCE=/path/to/dsp56300 -DASMJIT_SOURCE=/path/to/asmjit` using the exact revisions in [`cmake/Dependencies.cmake`](../cmake/Dependencies.cmake). Those must be **source checkouts**, not binary releases. The macOS JUCE compatibility patch applies to a build-local copy only.
+For offline builds, pass `-DJUCE_SOURCE=/path/to/JUCE -DDSP_SOURCE=/path/to/dsp56300 -DASMJIT_SOURCE=/path/to/asmjit` using the exact revisions in [`cmake/Dependencies.cmake`](../cmake/Dependencies.cmake). Those must be **source checkouts**, not binary releases. The Windows/macOS JUCE compatibility patches apply to build-local source copies only.
 
 The ROM-free `silver_resampler_realtime` test streams five minutes of synthetic audio through the K-Station rate pairing and checks that the audio callback does not allocate.
 
