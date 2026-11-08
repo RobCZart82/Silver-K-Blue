@@ -54,8 +54,21 @@ def verify_package(path, sha, platform):
                 raise ValueError('Package checksum mismatch: ' + name)
 
 
+def validate_release_tag(tag, sha):
+    # Query the remote, including the peeled commit of an annotated tag.
+    # Missing tags are created by GitHub from --target when publishing.
+    refs = run('git', 'ls-remote', '--tags', 'origin',
+               'refs/tags/' + tag, 'refs/tags/' + tag + '^{}')
+    targets = dict(line.split()[::-1] for line in refs.splitlines())
+    target = targets.get('refs/tags/' + tag + '^{}',
+                         targets.get('refs/tags/' + tag))
+    if target is not None and target != sha:
+        raise ValueError('Release Git tag does not match the verified source commit')
+
+
 def publish_assets(tag, sha, version, notes, assets):
     """Resume only a matching draft, preserving all verified uploaded assets."""
+    validate_release_tag(tag, sha)
     releases = json.loads(run('gh', 'api', '--paginate', '--slurp',
                               f'repos/{REPO}/releases?per_page=100'))
     existing = next((release for page in releases for release in page
@@ -107,6 +120,7 @@ def publish_assets(tag, sha, version, notes, assets):
         if (asset.get('state') != 'uploaded' or asset.get('size') != path.stat().st_size
                 or asset.get('digest') != 'sha256:' + hashlib.sha256(path.read_bytes()).hexdigest()):
             raise ValueError('Uploaded asset verification failed: ' + name)
+    validate_release_tag(tag, sha)
     run('gh', 'release', 'edit', tag, '--repo', REPO, '--draft=false', '--latest')
 
 

@@ -957,3 +957,9 @@ A helyi macOS arm64 Release silverPersistence_test fordítása és a silver_pers
 A #75 felülvizsgálati kiegészítése közvetlenül a publikálás előtt újraellenőrzi a tervezet draft állapotát, címkéjét, célcommitját, címét és leírását. Feltöltés közbeni eltérésnél megáll. Az öt módosítási esetet regressziós teszt fedi le. A teljes Python-sorozat 19 sikeres teszt. A GitHub ellenőrzés és publikálás közötti műveletsor továbbra sem atomikus.
 
 A #75 automatizált review további hibát jelzett a sikertelen migráció útvonalán. A konstruktor most migrációs hiba esetén is végig inicializálja az adatmappát, az eszközválasztásokat és a preferenciák alapállapotát. Ilyenkor az adott példány beállításírása tiltott, a destruktor sem ment, így a későbbi újranyitás megismételheti a migrációt. A migráció eredeti hibajelzése megmarad. A helyi Release fordítás és a beállításkezelési CTest ismét sikeres.
+
+## 2026-11-08 — FIX-101-02, kiadási Git-címke ellenőrzése
+
+A publikáló a távoli origin címkét a GitHub-módosítások előtt és közvetlenül a publikálás előtt lekérdezi. Könnyű címkénél annak objektumát, annotált címkénél a feloldott célját veti össze a csomagok ellenőrzött forráscommitjával. Eltérés vagy hálózati Git-hiba megszakítja a folyamatot. Hiányzó címkét a GitHub a megadott --target alapján hozhat létre.
+
+Regressziók: hiányzó, egyező/eltérő könnyű és annotált címke; Git-hiba; eltérés az első GitHub-művelet előtt és a publikálás előtti második ellenőrzésnél. A hálózati lekérdezés és a publikálás külön művelet, ezért a párhuzamos módosítás teljes kizárását ez nem garantálja.
