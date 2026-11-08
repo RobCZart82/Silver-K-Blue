@@ -20,6 +20,8 @@ Mac builds are ad hoc signed and not notarized. If macOS blocks a verified build
 
 Use a 64-bit host.
 
+The published 1.0.0 download is a ZIP and uses the manual steps below. A Windows EXE installer is being prepared for 1.0.1; it has not been published or manually accepted yet. The candidate installer offers VST3 and Standalone separately. It is designed to leave the user's settings, presets, firmware and data folder outside its application uninstall paths.
+
 1. Extract the archive to a permanent folder and close the DAW.
 2. Copy the complete VST3 bundle to C:\Program Files\Common Files\VST3\.
 3. Run Standalone from the extracted folder.

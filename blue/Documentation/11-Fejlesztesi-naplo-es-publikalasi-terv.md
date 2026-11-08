@@ -4,7 +4,7 @@ Utolsó frissítés: **2026-11-08**
 
 ## Aktuális terv — 2026-11-08
 
-A #75 auditjavításai mainben (`86f44ba`). Az 1.0.0 kiadás 2026-11-07-én megjelent, forrása `5adc19e`. Következő kiadás 1.0.1: hat auditfeladat (FIX-101-01–06), Windows EXE és macOS PKG telepítő választható komponensekkel (INS-101-WIN/MAC/CI). A feladatok és elfogadási feltételeik az [aktuális fejlesztési tervben](02-Aktualis-fejlesztesi-terv.md) követhetők.
+A #75 auditjavításai mainben (`86f44ba`); #78 javításai és #79 Windows VST3 Prefetch-javítása mainben (`dd99c3a`). A #79 mind az öt kötelező Windows/macOS/web ellenőrzése PASS; privát Windows K/KS firmware-állapotú hangpróba ettől külön még szükséges. Az 1.0.0 kiadás 2026-11-07-én megjelent, forrása `5adc19e`. Következő kiadás 1.0.1: hat auditfeladat (FIX-101-01–06), Windows EXE és macOS PKG telepítő választható komponensekkel (INS-101-WIN/MAC/CI). A Windows Inno Setup csomagolás PR #80-ban kezdődött; macOS PKG és kiadási publikáló-integráció még nincs befejezve. A feladatok és elfogadási feltételeik az [aktuális fejlesztési tervben](02-Aktualis-fejlesztesi-terv.md) követhetők.
 
 A Linux VST3/Standalone támogatás halasztott elővizsgálatként (LINUX-01), célverzió nélkül szerepel. Fizikai saját Linux gép helyett kezdetben CI és virtuális gép használható, a kiadáshoz valós Linux DAW/audio tesztelő szükséges.
 
@@ -976,4 +976,12 @@ A rögzített JUCE 7 VST3 adaptere mindkét helyen csak a `kOffline` módot jel�
 
 A build-helyi JUCE-másolat és módátalakítás most Windows és macOS esetén is létrejön; a macOS ablakrögzítési kompatibilitás továbbra is csak Apple buildben fut. A Prefetch mérő Windows/macOS célként épül. Három ROM nélküli regresszió ellenőrzi a két JUCE kódsort, az ismételt konfiguráció idempotenciáját, az ismeretlen JUCE-forrás biztonságos elutasítását és a Windows/macOS bekötést. A módmérő már a 0/Realtime módot is támogatja, ott a host üteme szerint vár, így mindkét modellen összevethető a Prefetch/Offline PCM és ellenőrizhető a hiányzó minták nélküli realtime kontroll.
 
-Helyben a 3 CMake-átalakítási teszt sikeres; tiszta macOS Universal 2 Release konfiguráció és a `silver_vst3_prefetch_check` cél fordítása sikeres. A fordítás a rögzített DSP/AsmJit és JUCE-források figyelmeztetéseit adta, új fordítási hiba nem volt. A Windows és macOS CI, illetve a privát Windows K/KS runtime próba még függőben van; ez a bejegyzés nem jelent kész kiadási elfogadást.
+Helyben a 3 CMake-átalakítási teszt sikeres; tiszta macOS Universal 2 Release konfiguráció és a `silver_vst3_prefetch_check` cél fordítása sikeres. A fordítás a rögzített DSP/AsmJit és JUCE-források figyelmeztetéseit adta, új fordítási hiba nem volt. A PR #79 kötelező Windows/macOS/web CI-je a következő bejegyzésben rögzítve zöld; a privát Windows K/KS runtime próba továbbra sem futott.
+
+## 2026-11-08 — FIX-101-01 CI lezárása és INS-101-WIN első lépcső
+
+A #79 `3e45d875` PR-fej mind az öt kötelező ellenőrzése sikeres: Windows build 26 perc, Windows natív 11 perc 52 másodperc, macOS Universal 2 build 32 perc 27 másodperc, macOS natív 23 perc 39 másodperc, web 15 másodperc. A squash-merge main commitje `dd99c3a`. A workflowk nem futtatták a firmware-igényes Windows K/KS Prefetch/Offline PCM összevetést; ez a felhasználó privát állapotaival még szükséges, tehát CI zöldje nem helyettesíti.
+
+A #80-ban megkezdődött a Windows x64 Inno Setup 6 telepítő összeállítása. A VST3 és Standalone külön választható; az EXE admin jogosultságot kér, a VST3-at a közös Windows VST3 mappába, a Standalone-ot a Program Files alá telepíti. Az eltávolító a két alkalmazáskomponenst kezeli, a user app-adatokat nem. A CMake/plug-in build metaadat verziója az 1.0.1-es jelölthöz igazodik. CI-artifactként a ZIP mellett az EXE és forráscommit-verzió metaadata készül.
+
+Helyi, ROM nélküli generátorteszt: 3/3 PASS; 64 bites PE payload validáció és Inno szkript komponens-/adatútvonal-állításai ellenőrizve. Ez a macOS rendszeren végzett generátorteszt nem fordította le a Windows telepítőt; a PR Windows CI-ben történő Inno Setup fordítása még kapu, a tiszta telepítés/frissítés/eltávolítás, DAW-felderítés és Standalone indítás kézi ellenőrzése pedig kiadási feltétel. Mac PKG és közös publikáló-integráció még nem kezdődött.
