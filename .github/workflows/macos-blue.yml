@@ -40,6 +40,10 @@ jobs:
         run: ctest --test-dir build -C Release --output-on-failure --no-tests=error -R '^silver_latency_reentry$'
       - name: Package platform products and both Blue skins
         run: python tools/package_blue_windows.py --products build/source/novation/silverK/buildStandalone/silverPlugin/silverK_artefacts/Release --output blue-output --platform macOS-Universal2
+      - name: Test macOS installer definition
+        run: python3 tools/test_blue_macos_installer.py
+      - name: Build selectable macOS Universal 2 installer
+        run: python3 tools/package_blue_macos_installer.py --products build/source/novation/silverK/buildStandalone/silverPlugin/silverK_artefacts/Release --output blue-output --version 1.0.1
       - name: Upload download package
         uses: actions/upload-artifact@v4
         with:
