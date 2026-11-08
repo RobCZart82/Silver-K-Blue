@@ -38,12 +38,12 @@ struct Visitor final:juce::ExtensionsVisitor {
 }
 
 // Private processor state must select an audible generated oscillator program.
-// Run once with mode 1 (kPrefetch) and once with 2 (kOffline), then compare PCM.
-// This intentionally calls the actual SDK at full speed without host pacing.
+// Modes: 0 (kRealtime), 1 (kPrefetch), 2 (kOffline). Compare the two full-speed
+// renders; the realtime run is paced to verify the nonblocking path still works.
 int main(int argc,char** argv){try{
- require(argc==5,"Usage: silver_vst3_prefetch_check bundle processor.state mode[1|2] output.f32");
+ require(argc==5,"Usage: silver_vst3_prefetch_check bundle processor.state mode[0|1|2] output.f32");
  const int mode=std::stoi(argv[3]);
- require(mode==Vst::kPrefetch || mode==Vst::kOffline,"Use prefetch or offline mode");
+ require(mode==Vst::kRealtime || mode==Vst::kPrefetch || mode==Vst::kOffline,"Use realtime, prefetch, or offline mode");
  juce::ScopedJuceInitialiser_GUI gui;
  juce::VST3PluginFormat format;
  juce::OwnedArray<juce::PluginDescription> descriptions;
@@ -90,6 +90,7 @@ int main(int argc,char** argv){try{
  require(bool(out),"PCM output");
  double peak=0;
  uint64_t hash=1469598103934665603ull;
+ const auto renderStart=std::chrono::steady_clock::now();
  for(unsigned n=0;n<192000;n+=256){
   events.present=n==0 || n==144128;
   if(events.present){
@@ -115,6 +116,8 @@ int main(int argc,char** argv){try{
    const auto* bytes=reinterpret_cast<const uint8_t*>(&sample);
    for(unsigned j=0;j<sizeof(sample);++j){hash^=bytes[j];hash*=1099511628211ull;}
   }
+  if(mode==Vst::kRealtime)
+   std::this_thread::sleep_until(renderStart+std::chrono::microseconds(int64_t((n+256)*1000000.0/48000)));
  }
  require(bool(out),"PCM write");
  visitor.audio->setProcessing(false);

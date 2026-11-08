@@ -18,6 +18,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Verify release source selection and upstream tooling
         run: python -m unittest discover -s tools -p "test_*sources.py"
+      - name: Test JUCE VST3 processing-mode patch
+        run: python3 tools/test_juce_vst3_prefetch_patch.py
       - name: Verify upstream update safety
         run: python tools/test_sync_blue_upstream.py
       - name: Test Blue download packaging
@@ -27,7 +29,7 @@ jobs:
       - name: Configure macOS Universal 2 Release
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release '-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64' -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0
       - name: Build VST3, Standalone and ROM-free checks
-        run: cmake --build build --config Release --target ksBoardParity_probe silverCpuCost_test kstationControllerDeviceState_test silverK_VST3 silverK_AU silverK_Standalone silver_check silverClock_test silverLatency_test silverEditor_test silverPerformance_test silverEmbeddedSkin_test silverFramework_test silverInputDiagnostics_test silverAudioInput_test ksAudioInput_test silverWorkflow_test silverPersistence_test silverSkin_test silverResamplerRealtime_test --parallel 3
+        run: cmake --build build --config Release --target ksBoardParity_probe silverCpuCost_test kstationControllerDeviceState_test silverK_VST3 silverK_AU silverK_Standalone silver_check silverClock_test silverLatency_test silverEditor_test silverPerformance_test silverEmbeddedSkin_test silverFramework_test silverInputDiagnostics_test silverAudioInput_test ksAudioInput_test silverWorkflow_test silverPersistence_test silverSkin_test silverResamplerRealtime_test silver_vst3_prefetch_check --parallel 3
       - name: Run ROM-free checks
         env:
           SILVER_K_DATA: ${{ runner.temp }}/silver-blue-tests
