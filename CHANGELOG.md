@@ -1,21 +1,23 @@
 # Silver-K Blue changes
 
-## Unreleased
+## 1.0.1 — Unreleased
 
-- Audit follow-up (pending merge): reject invalid substream writes, make rejected grouped jobs exception-safe, repair container callback types/lifetimes, and validate image dimensions before decoding with a total skin pixel budget.
+- Isolate Blue preferences from upstream Silver-K, with one-time migration of existing valid settings and safe handling of migration failure (#75).
+- Resume matching interrupted release drafts with SHA-256 asset verification and revalidate draft metadata before publication (#75).
+- Preserve manual upstream proposal commits even underneath later bot commits (#75).
+- Verify remote lightweight/annotated release tags against the package source commit (#77).
+- Correct build commands to compile all selected test executables and update release documentation.
+- Planned work and acceptance gates, including Windows EXE and macOS PKG installers, are tracked in [the development plan](blue/Documentation/02-Aktualis-fejlesztesi-terv.md). Installers are still under development.
 
+## 1.0.0 — 2026-11-07
 
-- Prepare English and Hungarian entry points and current installation documentation.
-- Support the intended repository's public or private visibility in upstream update automation, while retaining manual review and preserving main.
-- Include English installation and operation documentation in future download packages.
-- Replace private-only workflow labels and explicitly restrict Release publication to manual dispatch.
-- Record development priorities and remaining publication checks.
+Published from `5adc19eccddc38335b7652be599766823a6d684c`. [Release and downloads](https://github.com/RobCZart82/Silver-K-Blue/releases/tag/blue-v1.0.0).
 
-These changes describe the publication-preparation branch until it is merged. No new binary release has been produced by this documentation update.
-
-### Pending framework fixes
-
-[PR #1](https://github.com/RobCZart82/Silver-K-Blue/pull/1) contains binary/WAV reader validation, FourCC template, multi-worker shutdown, realtime MIDI parsing, SysEx MIDI export, opaque preset parsing and source-packaging fixes. They require successful Windows/macOS checks and merge before being described as released fixes.
+- Unified Windows x64 VST3/Standalone and macOS Universal 2 AU/VST3/Standalone ZIPs with embedded Standard and Retina skins, source and SHA-256 checksums.
+- Integrated framework safety fixes, including binary/WAV input validation, worker shutdown, MIDI/SysEx handling and image dimension/memory limits. The earlier #1 and #3 work is included in this source.
+- English/Hungarian entry points and packaged installation/user guides.
+- External input support and diagnostics, with optional native-controller research kept separate from the default engines.
+- Maintainer reported successful macOS and Windows manual operation. Detailed limits and platform build evidence are recorded in the release notes. macOS is ad hoc signed and not notarized; Windows binaries are unsigned.
 
 ## Embedded-skin test builds — 2026-10-29
 
