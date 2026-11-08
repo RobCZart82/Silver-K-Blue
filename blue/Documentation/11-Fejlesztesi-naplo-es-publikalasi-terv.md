@@ -1,10 +1,16 @@
 # Silver-K Blue — fejlesztési terv és munkanapló
 
-Utolsó frissítés: **2026-11-05**
+Utolsó frissítés: **2026-11-08**
 
-## Aktuális összesítés — 2026-11-02
+## Aktuális terv — 2026-11-08
 
-Ellenőrzött main: `538de73` (#28 beolvasztása után). Az alábbi összesítés az aktuális státusz; a későbbi dátumozott munkabejegyzések a fejlesztés közbeni állapotot őrzik, a bennük szereplő „fejlesztési ág”, „ellenőrizendő” vagy „nem futott” nem írja felül ezt a táblát.
+A #75 auditjavításai mainben (`86f44ba`). Az 1.0.0 kiadás 2026-11-07-én megjelent, forrása `5adc19e`. Következő kiadás 1.0.1: hat auditfeladat (FIX-101-01–06), Windows EXE és macOS PKG telepítő választható komponensekkel (INS-101-WIN/MAC/CI). A feladatok és elfogadási feltételeik az [aktuális fejlesztési tervben](02-Aktualis-fejlesztesi-terv.md) követhetők.
+
+A Linux VST3/Standalone támogatás halasztott elővizsgálatként (LINUX-01), célverzió nélkül szerepel. Fizikai saját Linux gép helyett kezdetben CI és virtuális gép használható, a kiadáshoz valós Linux DAW/audio tesztelő szükséges.
+
+## Történeti összesítés — 2026-11-02
+
+Ellenőrzött main: `538de73` (#28 beolvasztása után). Az alábbi összesítés a 2026-11-02-i státusz; a későbbi dátumozott munkabejegyzések a fejlesztés közbeni állapotot őrzik, a bennük szereplő „fejlesztési ág”, „ellenőrizendő” vagy „nem futott” nem írja felül ezt a táblát.
 
 | Egység | Integráció | Ellenőrzés és határ |
 |---|---|---|
