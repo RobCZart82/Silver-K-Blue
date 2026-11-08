@@ -6,10 +6,12 @@ macOS requirements: Xcode command-line tools with both arm64 and x86_64 SDK supp
 git clone https://github.com/RobCZart82/Silver-K-Blue.git
 cd Silver-K-Blue
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release '-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64' -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0
-cmake --build build --target silverK_Standalone silverK_VST3 silverK_AU silver_check silverClock_test silverResamplerRealtime_test silverWorkflow_test -j 6
+cmake --build build -j 6
 SILVER_K_DATA=/tmp/silver-k-tests ctest --test-dir build --output-on-failure -R '^silver_'
 python3 tools/check_repository.py
 ```
+
+The default build compiles the products and all registered `silver_` test executables selected by the command above. Firmware-dependent tests can report SKIP without private inputs. Optional diagnostic targets marked EXCLUDE_FROM_ALL still require an explicit target.
 
 Products are under `build/source/novation/silverK/buildStandalone/silverPlugin/silverK_artefacts/Release/`. New macOS builds default to Universal 2 (arm64 and x86_64) and deployment target 12.0. The standalone CMake entry points use the same defaults before compiler detection, including when an old cache contains an empty deployment target. Pass `-DCMAKE_OSX_ARCHITECTURES=arm64` or `x86_64` for a single architecture.
 
@@ -61,7 +63,7 @@ Install Visual Studio 2022 or later with **Desktop development with C++**, a Win
 
 ```powershell
 cmake -S . -B build -A x64
-cmake --build build --config Release --target silverK_Standalone silverK_VST3 silver_check silverClock_test silverResamplerRealtime_test silverWorkflow_test --parallel 4
+cmake --build build --config Release --parallel 4
 $env:SILVER_K_DATA = "$env:TEMP/silver-k-tests"
 ctest --test-dir build -C Release --output-on-failure -R '^silver_'
 python tools/check_repository.py

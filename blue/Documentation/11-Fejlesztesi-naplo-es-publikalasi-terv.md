@@ -963,3 +963,9 @@ A #75 automatizált review további hibát jelzett a sikertelen migráció útvo
 A publikáló a távoli origin címkét a GitHub-módosítások előtt és közvetlenül a publikálás előtt lekérdezi. Könnyű címkénél annak objektumát, annotált címkénél a feloldott célját veti össze a csomagok ellenőrzött forráscommitjával. Eltérés vagy hálózati Git-hiba megszakítja a folyamatot. Hiányzó címkét a GitHub a megadott --target alapján hozhat létre.
 
 Regressziók: hiányzó, egyező/eltérő könnyű és annotált címke; Git-hiba; eltérés az első GitHub-művelet előtt és a publikálás előtti második ellenőrzésnél. A hálózati lekérdezés és a publikálás külön művelet, ezért a párhuzamos módosítás teljes kizárását ez nem garantálja.
+
+## 2026-11-08 — FIX-101-03–06, buildutasítások és kiadási dokumentáció
+
+A #77 mind az öt ellenőrzése sikeres volt, a kiadási címke ellenőrzése mainbe került (ffb1025). A következő önálló lépcső a buildútmutató és az aktuális kiadási dokumentáció javítása.
+
+A dokumentált buildparancsok a teljes alapértelmezett célhalmazt építik, így a későbbi silver_ CTest-szűréshez szükséges programok elkészülnek. Az EXCLUDE_FROM_ALL diagnosztikák külön célpontok maradnak. A két README az 1.0.0 valós kiadására mutat, az 1.0.1-et fejlesztési állapotként jelöli. A CHANGELOG elválasztja a kiadott és a következő verzió változásait. A PUBLICATION az aktuális elfogadási, publikálási és helyreállítási lépéseket írja le.
