@@ -24,12 +24,49 @@ class PublicationTests(unittest.TestCase):
                                ('body', 'Unreviewed notes')):
                 with self.subTest(key=key):
                     changed = dict(original, **{key: value})
-                    with patch.object(publication, 'run', side_effect=[
+                    with patch.object(publication, 'validate_release_tag'), patch.object(publication, 'run', side_effect=[
                             json.dumps([[original]]), json.dumps(changed)]) as run:
                         with self.assertRaisesRegex(ValueError, 'changed during asset upload'):
                             publication.publish_assets('blue-v1.0.0', 'a'*40,
                                                        '1.0.0', notes, [])
                         self.assertEqual(run.call_count, 2)
+
+    def test_remote_lightweight_and_annotated_tags(self):
+        tag = 'blue-v1.0.1'
+        ref = 'refs/tags/' + tag
+        for refs in ('', 'a'*40+'\t'+ref,
+                     'b'*40+'\t'+ref+'\n'+'a'*40+'\t'+ref+'^{}'):
+            with self.subTest(refs=refs), patch.object(publication, 'run', return_value=refs):
+                publication.validate_release_tag(tag, 'a'*40)
+        for refs in ('b'*40+'\t'+ref,
+                     'a'*40+'\t'+ref+'\n'+'b'*40+'\t'+ref+'^{}'):
+            with self.subTest(refs=refs), patch.object(publication, 'run', return_value=refs):
+                with self.assertRaisesRegex(ValueError, 'Git tag'):
+                    publication.validate_release_tag(tag, 'a'*40)
+        with patch.object(publication, 'run', side_effect=subprocess.CalledProcessError(1, 'git')):
+            with self.assertRaises(subprocess.CalledProcessError):
+                publication.validate_release_tag(tag, 'a'*40)
+
+    def test_wrong_tag_stops_before_github_mutation(self):
+        with patch.object(publication, 'validate_release_tag', side_effect=ValueError('wrong tag')), patch.object(publication, 'run') as run:
+            with self.assertRaises(ValueError):
+                publication.publish_assets('blue-v1.0.1', 'a'*40, '1.0.1', Path('unused'), [])
+            run.assert_not_called()
+
+    def test_tag_change_before_publication_stops_release_edit(self):
+        with tempfile.TemporaryDirectory() as temp:
+            notes = Path(temp)/'notes.md'
+            notes.write_text('Reviewed notes', encoding='utf-8')
+            draft = dict(id=123, tag_name='blue-v1.0.1', draft=True,
+                         target_commitish='a'*40, name='Silver-K Blue 1.0.1',
+                         body='Reviewed notes', assets=[])
+            with patch.object(publication, 'validate_release_tag',
+                              side_effect=[None, ValueError('tag changed')]) as validate, patch.object(
+                                  publication, 'run', side_effect=[json.dumps([[draft]]), json.dumps(draft)]) as run:
+                with self.assertRaisesRegex(ValueError, 'tag changed'):
+                    publication.publish_assets('blue-v1.0.1', 'a'*40, '1.0.1', notes, [])
+                self.assertEqual(validate.call_count, 2)
+                self.assertEqual(run.call_count, 2)
 
     def records(self):
         return [dict(status='completed', conclusion='success', head_branch='main',
@@ -82,7 +119,7 @@ class PublicationTests(unittest.TestCase):
                 else:
                     self.fail(str(args))
                 return ''
-            with patch.object(publication, 'run', side_effect=fake_run):
+            with patch.object(publication, 'validate_release_tag'), patch.object(publication, 'run', side_effect=fake_run):
                 with self.assertRaises(subprocess.CalledProcessError):
                     publication.publish_assets('blue-v1.0.0', 'a'*40, '1.0.0', notes, assets)
                 release['assets'].append(dict(id=99, name='macos.zip', state='starter', size=0))
