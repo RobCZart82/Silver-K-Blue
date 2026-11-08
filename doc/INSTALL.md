@@ -20,7 +20,9 @@ Mac builds are ad hoc signed and not notarized. If macOS blocks a verified build
 
 Use a 64-bit host.
 
-The published 1.0.0 download is a ZIP and uses the manual steps below. A Windows EXE installer is being prepared for 1.0.1; it has not been published or manually accepted yet. The candidate installer offers VST3 and Standalone separately. It is designed to leave the user's settings, presets, firmware and data folder outside its application uninstall paths.
+The published 1.0.0 download is a ZIP and uses the manual steps below. Windows EXE and macOS PKG installers are being prepared for 1.0.1; neither has been published or manually accepted yet. The candidates offer Windows VST3 and Standalone, and macOS AU, VST3 and Standalone, as selectable components. Both installer candidates are unsigned at present; the macOS app/plugin payloads are ad hoc signed and not notarized. Do not treat CI package creation as installation or DAW-compatibility acceptance. Installer upgrade/removal and preservation of user settings, presets, firmware and data must be confirmed before release.
+
+The macOS PKG candidate installs the Standalone app under `/Applications`, VST3 under `/Library/Audio/Plug-Ins/VST3`, and AU under `/Library/Audio/Plug-Ins/Components`. The shared license and build record go under `/Library/Application Support/The Usual Suspects/Silver-K Blue`. The user's `~/Library/Application Support/The Usual Suspects/Silver-K Blue` data is outside those installer paths. If this candidate is accepted for 1.0.1, remove the app and selected plug-in bundles through Finder (authenticate when prompted); do not remove the user Application Support folder when uninstalling the products. The exact release instructions must be rechecked against the manually tested candidate.
 
 1. Extract the archive to a permanent folder and close the DAW.
 2. Copy the complete VST3 bundle to C:\Program Files\Common Files\VST3\.
