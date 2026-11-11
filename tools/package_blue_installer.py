@@ -94,21 +94,20 @@ Name: "vst3"; Description: "VST3 plug-in"; Types: full custom
 Name: "standalone"; Description: "Standalone application"; Types: full custom
 
 [InstallDelete]
-Type: filesandordirs; Name: "{{commoncf64}}\\VST3\\Silver-K Blue.vst3"; Check: IsPreviousInstall
-Type: filesandordirs; Name: "{{autopf}}\\Silver-K Blue"; Check: IsPreviousInstall
+Type: filesandordirs; Name: "{{commoncf64}}\\VST3\\Silver-K Blue.vst3"; Components: vst3; Check: IsPreviousInstall
 
 [Files]
 Source: "{{#ProductRoot}}\\VST3\\Silver-K Blue.vst3\\*"; DestDir: "{{commoncf64}}\\VST3\\Silver-K Blue.vst3"; Components: vst3; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "{{#ProductRoot}}\\Standalone\\Silver-K Blue.exe"; DestDir: "{{autopf}}\\Silver-K Blue"; Components: standalone; Flags: ignoreversion
+Source: "{{#ProductRoot}}\\Standalone\\Silver-K Blue.exe"; DestDir: "{{app}}"; Components: standalone; Flags: ignoreversion
 Source: {iss_string(ROOT / 'LICENSE.md')}; DestDir: "{{commonappdata}}\\The Usual Suspects\\Silver-K Blue"; Flags: ignoreversion
 Source: {iss_string(ROOT / 'THIRD_PARTY.md')}; DestDir: "{{commonappdata}}\\The Usual Suspects\\Silver-K Blue"; Flags: ignoreversion
 Source: "{{#InstallerOutput}}\\build-info.json"; DestDir: "{{commonappdata}}\\The Usual Suspects\\Silver-K Blue"; Flags: ignoreversion
 
 [Icons]
-Name: "{{group}}\\Silver-K Blue"; Filename: "{{autopf}}\\Silver-K Blue\\Silver-K Blue.exe"; Components: standalone
+Name: "{{group}}\\Silver-K Blue"; Filename: "{{app}}\\Silver-K Blue.exe"; Components: standalone
 
 [Run]
-Filename: "{{autopf}}\\Silver-K Blue\\Silver-K Blue.exe"; Description: "Launch Silver-K Blue"; Components: standalone; Flags: postinstall nowait skipifsilent
+Filename: "{{app}}\\Silver-K Blue.exe"; Description: "Launch Silver-K Blue"; Components: standalone; Flags: postinstall nowait skipifsilent
 
 [Code]
 function IsPreviousInstall: Boolean;
@@ -141,6 +140,10 @@ def build_windows_installer(products, output, version, compiler=None):
     output = Path(output).resolve()
     output.mkdir(parents=True, exist_ok=True)
     script = windows_script(products, output, version)
+    installer = output / f"Silver-K-Blue-{version}-Windows-x64.exe"
+    metadata = output / "Silver-K-Blue-Windows-x64-installer.json"
+    if installer.exists() or metadata.exists():
+        raise FileExistsError("Refusing to overwrite an existing Windows installer or metadata file")
     revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
     build_info = {
         "repository": "https://github.com/RobCZart82/Silver-K-Blue",
@@ -156,7 +159,6 @@ def build_windows_installer(products, output, version, compiler=None):
         iss = Path(temp) / "Silver-K-Blue.iss"
         iss.write_text(script, encoding="utf-8-sig")
         subprocess.run([compiler or find_iscc(), "/Qp", str(iss)], check=True)
-    installer = output / f"Silver-K-Blue-{version}-Windows-x64.exe"
     if not installer.is_file() or installer.stat().st_size == 0:
         raise RuntimeError("Inno Setup did not create the expected installer")
     record = {
@@ -170,7 +172,7 @@ def build_windows_installer(products, output, version, compiler=None):
         "notarized": False,
         "firmwareIncluded": False,
     }
-    (output / "Silver-K-Blue-Windows-x64-installer.json").write_text(
+    metadata.write_text(
         json.dumps(record, indent=2) + "\n", encoding="utf-8"
     )
     return installer
