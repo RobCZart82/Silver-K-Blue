@@ -1,6 +1,6 @@
 # Silver-K Blue — fejlesztési terv és munkanapló
 
-Utolsó frissítés: **2026-11-08**
+Utolsó frissítés: **2026-11-11**
 
 ## Aktuális terv — 2026-11-08
 
@@ -993,3 +993,18 @@ A #80 minden kötelező ellenőrzése zöld lett: Windows build 20 perc 57 máso
 A #81 jelölt `pkgbuild`/`productbuild` csomagolást ad a macOS buildhez. Egy közös, aláíratlan Universal 2 PKG-ben választható az AU, VST3 és Standalone; a komponensek rendre a rendszer AU, VST3 és `/Applications` helyére kerülnek. A telepítő minimális rendszerverziója macOS 12.0, és rendszer-szintű telepítést kér. A csomag sidecar metaadatot, ellenőrzőösszeget, licenceket és build-információt tartalmaz; firmware-t nem. A csomag aláíratlan és nem notarizált, a plugin/app build aláírása ad hoc. A `SILVER_K_DATA` felhasználói adatmappája nem a telepítő payload része.
 
 Helyi, ROM nélküli teszt: a teljes repository Python-eszköztesztje 36/36 PASS; a Mac telepítő külön tesztje 8/8 PASS. Az első Installer smoke során az `installation-check` JavaScript nem kapta meg a választási állapotot (`choices` undefined), ezért a telepítő előnézete meghiúsult. Ezt a korai ellenőrzést eltávolítottuk; a csomag elkészítése után most a tényleges `installer -showChoicesXML` kimenetét ellenőrizzük, amely a három választható terméket és a rejtett, kötelező támogatási komponenst igazolta. A natív `pkgbuild` és `productbuild` eszközökkel szintetikus app/bővítmény-payloadból sikeres PKG smoke build készült. A füstpróbában a valódi `lipo`/`codesign` termékellenőrzés szándékosan mockolt volt, ezért ez nem igazolja a tényleges Universal 2 build payloadot; ezt a macOS CI ellenőrzi. A telepítés és AU/VST3 hostfelderítés kézi kiadás előtti kapu marad. A csomagpublikáló jelenleg ZIP-eket validál, ezért a PKG még nem jelenik meg kiadási assetként; a publikáló bővítése külön későbbi lépés. Nincs release publikálás ebben a PR-ben.
+
+## 2026-11-11 — Repository-audit és Windows telepítőjavítás
+
+Vizsgálati alap: main 9aeaf1dca19d16cbaf1b1db523097566023209b3. A #56–81 integrációit, a natív buildútvonalakat, a beállításmigráció és paraméter-visszajelzés változásait, a JUCE Prefetch-patchet, a csomagolást/publikálást és a telepítőket áttekintettük. Ez célzott kód- és integrációs audit, nem minden natív vezérlőeljárás soronkénti helyességbizonyítása. Az 1.0.0 már megjelent; meglévő asset/tag nem módosult.
+
+Három igazolt Windows installer-probléma javítva a fejlesztési ágon:
+- A célmappaválasztást a Standalone payload, shortcut és postinstall launch figyelmen kívül hagyta. Mindhárom most az Inno Setup app konstansát követi.
+- A korábbi InstallDelete az alkalmazás teljes Program Files mappáját törölte, beleértve az uninstall-adatokat és oda helyezett további fájlokat; a VST3-at pedig komponensválasztástól függetlenül törölte. Az alkalmazásmappa rekurzív törlése megszűnt; az EXE rendes fájlfrissítéssel cserélődik. A régi VST3 bundle tisztítása kiválasztott vst3 komponensre korlátozott. A nem kijelölt komponens megmarad; eltávolítását az uninstaller végzi.
+- A Windows csomagoló újrafuttatáskor felülírhatta ugyanazon kimeneti telepítőt/metaadatot. Ezek meglétekor most a fordító meghívása és build-info írása előtt hibával megáll.
+
+Hat célzott Windows generátor-/payload-/megőrzési teszt PASS. A normál main bizonyítéka külön: Windows run 42513013079 és macOS run 42513012881 normál és natív job PASS; mindkét normál jobban 14/14 ROM nélküli CTest PASS, silver_latency_reentry SKIP. Web run 42513012847: 25 PASS, 1 SKIP, 0 FAIL. Ez a módosított fej CI-jét nem helyettesíti. Repository adatellenőrzés 2922 követett fájlra PASS; 30 Python-forrás szintaxisa PASS. Az első teljes helyi Python-futásban két CMake-patchteszt nem indult el, mert cmake nem volt a PATH-on; a helyes CMake útvonallal a három patchteszt külön PASS.
+
+Inno Setup nincs ezen a helyi gépen, ezért a valódi EXE-fordítás a Windows CI feladata. Új teljes helyi C++/firmware-/DAW-/telepítési próba nem történt. GUI/skin és motor működése változatlan. További fejlesztési lépés a telepítő-assetek eredetét és hash-ét ellenőrző publikálási integráció; ez a meglévő terv szerint még nyitott. Kiadáspublikálás nem történt.
+
+A CMake útvonalával megismételt teljes helyi Python unit suite: 39/39 PASS (116.579 s). Az Inno Setup dokumentáció szerint az InstallDelete a telepítés elején fut, és a Components mező korlátozza a végrehajtást; a javítás ennek megfelelően a VST3-bejegyzésre tesz komponensfeltételt. Hivatkozás: https://jrsoftware.org/ishelp/topic_installdeletesection.htm és https://jrsoftware.org/ishelp/topic_componentstasksparams.htm . Ez generátorszintű bizonyíték, nem helyettesíti a Windows CI valódi fordítását és a kézi telepítőtesztet.

@@ -2,6 +2,7 @@
 
 ## 1.0.1 — Unreleased
 
+- Honor the chosen Windows Standalone installation directory, preserve the application folder and unselected VST3 during upgrades, and refuse to overwrite existing installer outputs.
 - Isolate Blue preferences from upstream Silver-K, with one-time migration of existing valid settings and safe handling of migration failure (#75).
 - Resume matching interrupted release drafts with SHA-256 asset verification and revalidate draft metadata before publication (#75).
 - Preserve manual upstream proposal commits even underneath later bot commits (#75).

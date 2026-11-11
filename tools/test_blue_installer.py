@@ -4,8 +4,9 @@ import struct
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
-from package_blue_installer import windows_script
+from package_blue_installer import windows_script, build_windows_installer
 
 
 def fake_pe(path):
@@ -49,6 +50,46 @@ class WindowsInstallerDefinitionTests(unittest.TestCase):
             products = self.products(root)
             with self.assertRaises(ValueError):
                 windows_script(products, root / "output", "1.0.1-beta")
+
+    def test_standalone_uses_chosen_directory_for_payload_shortcut_and_launch(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            text = windows_script(self.products(root), root / "output", "1.0.1")
+            self.assertIn('DestDir: "{app}"; Components: standalone', text)
+            self.assertEqual(text.count('Filename: "{app}\\Silver-K Blue.exe"'), 2)
+            # The default may name Program Files; payload/launch must honor {app}.
+            self.assertEqual(text.count(r"{autopf}\Silver-K Blue"), 1)
+
+    def test_upgrade_cleanup_preserves_app_folder_and_unselected_vst3(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            text = windows_script(self.products(root), root / "output", "1.0.1")
+            cleanup = text.split('[InstallDelete]\n', 1)[1].split('\n[Files]', 1)[0]
+            entries = [line for line in cleanup.splitlines() if line.startswith('Type:')]
+            self.assertEqual(len(entries), 1)
+            self.assertIn(r'Name: "{commoncf64}\VST3\Silver-K Blue.vst3"', entries[0])
+            self.assertIn('Components: vst3;', entries[0])
+            self.assertNotIn('{app}', cleanup)
+            self.assertNotIn('{autopf}', cleanup)
+
+    def test_builder_refuses_to_replace_existing_installer_evidence(self):
+        for filename in ('Silver-K-Blue-1.0.1-Windows-x64.exe',
+                         'Silver-K-Blue-Windows-x64-installer.json'):
+            with self.subTest(filename=filename), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                products = self.products(root)
+                output = root / 'output'
+                output.mkdir()
+                existing = output / filename
+                existing.write_bytes(b'existing evidence')
+                with patch('package_blue_installer.subprocess.run') as compile_installer, \
+                     patch('package_blue_installer.subprocess.check_output') as revision:
+                    with self.assertRaises(FileExistsError):
+                        build_windows_installer(products, output, '1.0.1')
+                    compile_installer.assert_not_called()
+                    revision.assert_not_called()
+                self.assertEqual(existing.read_bytes(), b'existing evidence')
+                self.assertFalse((output / 'build-info.json').exists())
 
     def test_rejects_non_x64_product_payload(self):
         with tempfile.TemporaryDirectory() as temp:
