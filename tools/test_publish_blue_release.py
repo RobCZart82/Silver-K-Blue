@@ -7,11 +7,119 @@ import unittest
 import zipfile
 from unittest.mock import patch
 import subprocess
+import sys
 import publish_blue_release as publication
 from publish_blue_release import REPO, validate_runs, verify_package
 
 
 class PublicationTests(unittest.TestCase):
+    def installer_fixture(self, root, platform):
+        root.mkdir(parents=True, exist_ok=True)
+        info = dict(commit='a'*40, platform=platform, repository='https://github.com/'+REPO,
+                    skinsEmbedded=True, firmwareIncluded=False)
+        data = json.dumps(info).encode()
+        with zipfile.ZipFile(root/'platform.zip', 'w') as bundle:
+            bundle.writestr('root/build-info.json', data)
+            bundle.writestr('root/SHA256SUMS.json', json.dumps({'build-info.json': hashlib.sha256(data).hexdigest()}))
+        suffix = '.exe' if platform == 'Windows-x64' else '.pkg'
+        binary = root/f'Silver-K-Blue-1.0.1-{platform}{suffix}'
+        binary.write_bytes(b'installer regression fixture')
+        record = dict(info, version='1.0.1', installer=binary.name, signature='unsigned',
+                      notarized=False, sha256=hashlib.sha256(binary.read_bytes()).hexdigest())
+        if platform == 'macOS-Universal2':
+            record['payloadSignature'] = 'ad-hoc'
+        metadata = root/f'Silver-K-Blue-{platform}-installer.json'
+        metadata.write_text(json.dumps(record), encoding='utf-8')
+        return binary, metadata, record
+
+    def test_installer_assets_and_metadata_validation(self):
+        for platform in ('Windows-x64', 'macOS-Universal2'):
+            with self.subTest(platform=platform), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                binary, metadata, record = self.installer_fixture(root, platform)
+                self.assertEqual(publication.platform_assets(root, 'a'*40, platform, '1.0.1'),
+                                 [root/'platform.zip', binary, metadata])
+                for field, value in (('commit', 'b'*40), ('version', '1.0.2'),
+                                     ('platform', 'other'), ('repository', 'other'),
+                                     ('installer', '../unexpected.exe'), ('signature', 'signed'),
+                                     ('firmwareIncluded', True), ('notarized', True),
+                                     ('sha256', '0'*64)):
+                    with self.subTest(field=field):
+                        metadata.write_text(json.dumps(dict(record, **{field: value})))
+                        with self.assertRaises(ValueError):
+                            publication.platform_assets(root, 'a'*40, platform, '1.0.1')
+                metadata.write_text(json.dumps(record))
+                binary.write_bytes(b'tampered installer')
+                with self.assertRaisesRegex(ValueError, 'checksum'):
+                    publication.platform_assets(root, 'a'*40, platform, '1.0.1')
+
+    def test_installer_missing_empty_extra_or_wrong_version_is_rejected(self):
+        for platform in ('Windows-x64', 'macOS-Universal2'):
+            for fault in ('missing', 'empty', 'extra', 'version', 'sidecar', 'payload-signature'):
+                with self.subTest(platform=platform, fault=fault), tempfile.TemporaryDirectory() as temp:
+                    root = Path(temp)
+                    binary, metadata, record = self.installer_fixture(root, platform)
+                    if fault == 'missing': binary.unlink()
+                    elif fault == 'empty': binary.write_bytes(b'')
+                    elif fault == 'extra': (root/'other.pkg').write_bytes(b'extra')
+                    elif fault == 'version': binary.rename(root/binary.name.replace('1.0.1', '1.0.2'))
+                    elif fault == 'sidecar': metadata.unlink()
+                    elif platform == 'macOS-Universal2':
+                        record.pop('payloadSignature')
+                        metadata.write_text(json.dumps(record))
+                    else: continue
+                    with self.assertRaises(ValueError):
+                        publication.platform_assets(root, 'a'*40, platform, '1.0.1')
+
+    def test_duplicate_publication_names_fail_before_github_access(self):
+        with patch.object(publication, 'run') as run:
+            with self.assertRaisesRegex(ValueError, 'Duplicate publication'):
+                publication.publish_assets('blue-v1.0.1', 'a'*40, '1.0.1', Path('notes'),
+                                           [Path('win/shared.json'), Path('mac/shared.json')])
+            run.assert_not_called()
+
+    def test_main_assembles_installers_sidecars_source_and_complete_checksums(self):
+        records = [dict(id=1, run_number=1, html_url='https://example.test/windows'),
+                   dict(id=2, run_number=2, html_url='https://example.test/macos')]
+        def fake_run(*args):
+            if args[:2] == ('gh', 'api'):
+                return json.dumps(records[int(args[-1].split('/')[-1])-1])
+            if args[:3] == ('gh', 'run', 'download'):
+                root = Path(args[-1])
+                platform = root.name
+                self.installer_fixture(root, platform)
+                (root/'platform.zip').rename(root/(platform+'.zip'))
+                return ''
+            self.fail(str(args))
+        def archive(command, **kwargs):
+            if command[:2] == ['git', 'archive']:
+                target = Path(command[command.index('-o')+1])
+                with zipfile.ZipFile(target, 'w') as bundle:
+                    for name in ('CMakeLists.txt', 'tools/embed_blue_skins.py',
+                                 'blue/Artwork/Silver-K-Blue-icon.png',
+                                 'blue/Skins/Silver-K Blue Standard v1.0/skin.json',
+                                 'blue/Skins/Silver-K Blue Retina 4K v1.0/skin.json'):
+                        bundle.writestr('Silver-K-Blue-source/'+name, b'fixture')
+        def assembled(tag, sha, version, notes, assets):
+            self.assertEqual(len(assets), 8)
+            names = {p.name for p in assets}
+            self.assertEqual(len(names), 8)
+            self.assertIn('Silver-K-Blue-1.0.1-Windows-x64.exe', names)
+            self.assertIn('Silver-K-Blue-1.0.1-macOS-Universal2.pkg', names)
+            self.assertIn('Silver-K-Blue-Windows-x64-installer.json', names)
+            self.assertIn('Silver-K-Blue-macOS-Universal2-installer.json', names)
+            sums = dict(line.split('  ', 1)[::-1] for line in assets[-1].read_text().splitlines())
+            self.assertEqual(set(sums), names-{'SHA256SUMS.txt'})
+            for asset in assets[:-1]:
+                self.assertEqual(sums[asset.name], hashlib.sha256(asset.read_bytes()).hexdigest())
+        with patch.object(sys, 'argv', ['publish', '--version', '1.0.1', '--windows-run', '1', '--macos-run', '2']), \
+             patch.object(publication, 'run', side_effect=fake_run), \
+             patch.object(publication, 'validate_runs', return_value='a'*40), \
+             patch.object(publication.subprocess, 'run', side_effect=archive), \
+             patch.object(publication, 'publish_assets', side_effect=assembled) as publish:
+            publication.main()
+            publish.assert_called_once()
+
     def test_reject_draft_changed_during_upload(self):
         with tempfile.TemporaryDirectory() as temp:
             notes = Path(temp) / 'notes.md'
