@@ -1,8 +1,16 @@
 # Silver-K Blue — fejlesztési terv és munkanapló
 
-Utolsó frissítés: **2026-11-11**
+Utolsó frissítés: **2026-11-12**
 
-## Aktuális terv — 2026-11-08
+## Aktuális javítási állapot — 2026-11-12
+
+Alap: main `2852f06e413ad4c3d55cd845730d549657305786` (#82 beolvasztva). E main normál/natív Windows és macOS, valamint web CI-je PASS; a helyi audit teljes Python suite-ja 39/39 PASS volt. A firmware-es CI-latenciateszt továbbra is SKIP, nem használati elfogadás.
+
+A jelenlegi javítási ág rendezi a KS bemeneti diagnosztika dokumentációját, a 14 ROM nélküli platformteszt számát és a #81 main/CI-státuszát. A kiadáspublikáló mindkét platform ZIP-je mellett a Windows EXE-t, macOS PKG-t és a két provenance JSON-t is ellenőrzi és a leltárba veszi. A telepítők verziójának, forráscommitjának, repository-jának, platformjának, fájlnevének, aláírási nyilatkozatának, firmware-kizárásának és SHA-256 értékének egyeznie kell. Hiányzó/üres/többlet telepítő vagy eltérő adat esetén nincs publikálás. Régi, csak ZIP-et tartalmazó artifactokat ez a publikáló nem fogad el.
+
+Nyolc asset készül: két ZIP, EXE, PKG, két installer JSON, forrás-ZIP és a másik hét fájlt lefedő SHA256SUMS.txt. A korábbi draft-/tag-/asset-egyezési védelmek megmaradnak. A módosított fej platform-CI-je és main-integrációja még szükséges. Kézi telepítés/frissítés/eltávolítás, firmware/DAW és Prefetch/Offline elfogadás továbbra is nyitott; ezek dokumentációból vagy szimulált publikálási tesztből nem minősíthetők PASS-nak. Tényleges GitHub release, tag, asset vagy kiadásjegyzet nem módosult.
+
+## Történeti tervpillanatkép — 2026-11-08
 
 A #75 auditjavításai mainben (`86f44ba`); #78 javításai és #79 Windows VST3 Prefetch-javítása mainben (`dd99c3a`). A #79 mind az öt kötelező Windows/macOS/web ellenőrzése PASS; privát Windows K/KS firmware-állapotú hangpróba ettől külön még szükséges. A #80 Windows installer-előkészítése beolvadt (`1ecd7cb`), mind az öt kötelező Windows/macOS/web ellenőrzése PASS; a Windows telepítő Inno Setup fordítása sikeres. Kézi telepítéses/DAW-próba és a magán K/KS runtime hangvizsgálat változatlanul külön elfogadási kapu. Az 1.0.0 kiadás 2026-11-07-én megjelent, forrása `5adc19e`. Következő kiadás 1.0.1: hat auditfeladat (FIX-101-01–06), Windows EXE és macOS PKG telepítő választható komponensekkel (INS-101-WIN/MAC/CI). A macOS PKG csomagolás PR #81-ben indult; a publikáló-integráció még nincs befejezve. A feladatok és elfogadási feltételeik az [aktuális fejlesztési tervben](02-Aktualis-fejlesztesi-terv.md) követhetők.
 
@@ -1008,3 +1016,9 @@ Hat célzott Windows generátor-/payload-/megőrzési teszt PASS. A normál main
 Inno Setup nincs ezen a helyi gépen, ezért a valódi EXE-fordítás a Windows CI feladata. Új teljes helyi C++/firmware-/DAW-/telepítési próba nem történt. GUI/skin és motor működése változatlan. További fejlesztési lépés a telepítő-assetek eredetét és hash-ét ellenőrző publikálási integráció; ez a meglévő terv szerint még nyitott. Kiadáspublikálás nem történt.
 
 A CMake útvonalával megismételt teljes helyi Python unit suite: 39/39 PASS (116.579 s). Az Inno Setup dokumentáció szerint az InstallDelete a telepítés elején fut, és a Components mező korlátozza a végrehajtást; a javítás ennek megfelelően a VST3-bejegyzésre tesz komponensfeltételt. Hivatkozás: https://jrsoftware.org/ishelp/topic_installdeletesection.htm és https://jrsoftware.org/ishelp/topic_componentstasksparams.htm . Ez generátorszintű bizonyíték, nem helyettesíti a Windows CI valódi fordítását és a kézi telepítőtesztet.
+
+### 2026-11-12 — Publikáló regressziós bizonyíték
+
+A módosított ág teljes Python unit suite-ja 43/43 PASS (43.231 s), a publikáló célzott tesztje 11/11 PASS. A két platformon külön tesztelt hibás commit/verzió/repository/platform/fájlnév/aláírási nyilatkozat/firmware-/notarizálásjelző/hash elutasítása, hiányzó/üres/többlet/rossz verziójú telepítő és hiányzó sidecar, valamint a duplikált assetnév GitHub-hozzáférés előtti elutasítása. A szimulált main-összeállítás mind a nyolc egyedi assetet és a hét teljes SHA-256 bejegyzést ellenőrizte. A GitHub-hívások és a forrásarchívum-készítés ebben a tesztben mockoltak; a teszt kiírt release-URL-je nem publikálási bizonyíték.
+
+UTF-8, módosított Python-fájlok szintaxisa, helyi Markdown-hivatkozások és git diff --check PASS. Tényleges artifactletöltés, GitHub draft/asset/tag-módosítás vagy publikálás nem történt. A deklarált aláírási mezők összevetése nem helyettesít tanúsítvány-ellenőrzést: a jelenlegi CI telepítői unsigned/ad-hoc állapotát kell tükrözniük, új aláírási modell külön kód- és elfogadási változtatást igényel. A végleges PR-fej Windows/macOS/web CI-je külön ellenőrizendő.

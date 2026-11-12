@@ -54,6 +54,34 @@ def verify_package(path, sha, platform):
                 raise ValueError('Package checksum mismatch: ' + name)
 
 
+def platform_assets(folder, sha, platform, version):
+    """Validate one platform ZIP plus its installer and provenance sidecar."""
+    folder = Path(folder)
+    suffix = {'Windows-x64': '.exe', 'macOS-Universal2': '.pkg'}[platform]
+    packages = list(folder.glob('*.zip'))
+    if len(packages) != 1:
+        raise ValueError('Expected one platform ZIP')
+    verify_package(packages[0], sha, platform)
+    installer = folder / f'Silver-K-Blue-{version}-{platform}{suffix}'
+    metadata = folder / f'Silver-K-Blue-{platform}-installer.json'
+    binaries = list(folder.glob('*.exe')) + list(folder.glob('*.pkg'))
+    if binaries != [installer] or not installer.is_file() or installer.is_symlink() or installer.stat().st_size == 0:
+        raise ValueError('Expected exactly the requested platform/version installer')
+    if not metadata.is_file() or metadata.is_symlink():
+        raise ValueError('Missing installer provenance sidecar')
+    record = json.loads(metadata.read_text(encoding='utf-8'))
+    expected = dict(repository='https://github.com/' + REPO, commit=sha,
+                    platform=platform, version=version, installer=installer.name,
+                    signature='unsigned', notarized=False, firmwareIncluded=False)
+    if (not isinstance(record, dict) or any(record.get(key) != value for key, value in expected.items())
+            or record.get('firmwareIncluded') is not False or record.get('notarized') is not False
+            or (platform == 'macOS-Universal2' and record.get('payloadSignature') != 'ad-hoc')):
+        raise ValueError('Installer provenance mismatch')
+    if record.get('sha256') != hashlib.sha256(installer.read_bytes()).hexdigest():
+        raise ValueError('Installer checksum mismatch')
+    return [packages[0], installer, metadata]
+
+
 def validate_release_tag(tag, sha):
     # Query the remote, including the peeled commit of an annotated tag.
     # Missing tags are created by GitHub from --target when publishing.
@@ -68,6 +96,8 @@ def validate_release_tag(tag, sha):
 
 def publish_assets(tag, sha, version, notes, assets):
     """Resume only a matching draft, preserving all verified uploaded assets."""
+    if len({asset.name for asset in assets}) != len(assets):
+        raise ValueError('Duplicate publication asset names')
     validate_release_tag(tag, sha)
     releases = json.loads(run('gh', 'api', '--paginate', '--slurp',
                               f'repos/{REPO}/releases?per_page=100'))
@@ -148,11 +178,7 @@ def main():
             dest = stage / platform
             run('gh', 'run', 'download', str(record['id']), '--repo', REPO,
                 '--name', f'Silver-K-Blue-{artifact}-{record["run_number"]}', '--dir', str(dest))
-            packages = list(dest.glob('*.zip'))
-            if len(packages) != 1:
-                raise ValueError('Expected one platform ZIP')
-            verify_package(packages[0], sha, platform)
-            assets.append(packages[0])
+            assets.extend(platform_assets(dest, sha, platform, args.version))
         source = stage / f'Silver-K-Blue-{args.version}-Source.zip'
         subprocess.run(['git', 'archive', '--format=zip', '--prefix=Silver-K-Blue-source/',
                         '-o', str(source), sha], cwd=ROOT, check=True)
@@ -165,7 +191,7 @@ def main():
         checks = stage / 'SHA256SUMS.txt'
         checks.write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest() + '  ' + p.name + '\n' for p in assets))
         notes = stage / 'release-notes.md'
-        notes.write_text(f'''Silver-K Blue {args.version}\n\nSource commit: `{sha}`. Both platforms use this exact commit.\n\n- Windows x64: VST3 and Standalone.\n- macOS Universal 2 (Apple Silicon and Intel): AU, VST3 and Standalone; ad hoc signed, not notarized.\n- Both Blue skins are embedded. Source ZIP and SHA256SUMS.txt included. Build dependencies are fetched from pinned revisions.\n- Own compatible firmware required; proprietary firmware and factory sounds are not included.\n\nPlatform CI and ROM-free tests passed. Firmware-dependent skipped checks are not passes. Automated checks do not establish all DAW/audio or physical Intel acceptance.\n\nValidation: [Windows]({records[0]['html_url']}), [macOS]({records[1]['html_url']}).\n''')
+        notes.write_text(f'''Silver-K Blue {args.version}\n\nSource commit: `{sha}`. Both platforms use this exact commit.\n\n- Windows x64: VST3 and Standalone.\n- macOS Universal 2 (Apple Silicon and Intel): AU, VST3 and Standalone; ad hoc signed, not notarized.\n- Selectable Windows EXE and macOS PKG installers with provenance JSON included. Installers are unsigned; macOS payloads are ad hoc signed, not notarized.\n- Both Blue skins are embedded. Source ZIP and complete SHA256SUMS.txt included. Build dependencies are fetched from pinned revisions.\n- Own compatible firmware required; proprietary firmware and factory sounds are not included.\n\nPlatform CI and ROM-free tests passed. Firmware-dependent skipped checks are not passes. Automated checks do not establish all DAW/audio or physical Intel acceptance.\n\nValidation: [Windows]({records[0]['html_url']}), [macOS]({records[1]['html_url']}).\n''')
         if reviewed_notes is not None:
             notes.write_text(
                 reviewed_notes.rstrip() + '\n\nSource commit: ' + sha + '\n\n'

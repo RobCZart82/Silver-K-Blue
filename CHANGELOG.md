@@ -2,6 +2,8 @@
 
 ## 1.0.1 — Unreleased
 
+- Include verified Windows/macOS installers and provenance sidecars in unified releases, with version/source/platform/hash gates and complete checksums.
+
 - Honor the chosen Windows Standalone installation directory, preserve the application folder and unselected VST3 during upgrades, and refuse to overwrite existing installer outputs.
 - Isolate Blue preferences from upstream Silver-K, with one-time migration of existing valid settings and safe handling of migration failure (#75).
 - Resume matching interrupted release drafts with SHA-256 asset verification and revalidate draft metadata before publication (#75).
