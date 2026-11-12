@@ -4,7 +4,7 @@
 
 ## 1.0.1 hibajavító kiadás — elfogadott terv, 2026-11-08
 
-2026-11-11-i forrásaudit alapja: main `9aeaf1dca19d16cbaf1b1db523097566023209b3` (#81 is beolvadt). A Windows telepítő célmappa- és frissítési törléskezelésének javítása külön fejlesztési ágon készült; beolvasztás és a végleges fej CI-je még szükséges. A Standalone a felhasználó választotta `{app}` mappát követi; a frissítés nem törli rekurzívan az alkalmazásmappát, és csak kiválasztott VST3-nál takarítja a VST3-csomagot. A meglevő telepítő/metaadat felülírását elutasítja. A kézi tiszta telepítés/frissítés/eltávolítás kapuja továbbra is nyitott.
+2026-11-12-i egyeztetési alap: main `2852f06e413ad4c3d55cd845730d549657305786` (#82 is beolvadt). A Windows telepítő célmappa- és frissítési törléskezelésének javítása mainben; a main Windows/macOS normál és natív, valamint web CI-je sikeres, a tényleges EXE/PKG összeállítás is PASS. A Standalone a felhasználó választotta `{app}` mappát követi; a frissítés nem törli rekurzívan az alkalmazásmappát, és csak kiválasztott VST3-nál takarítja a VST3-csomagot. A meglevő telepítő/metaadat felülírását elutasítja. A kézi tiszta telepítés/frissítés/eltávolítás kapuja továbbra is nyitott.
 
 Tervezési alap: main `1ecd7cb` (#80), amelyen a #75/#78/#79 audit- és buildjavításai, valamint a Windows telepítő első CI-lépése vannak. A #79 mind az öt Windows/macOS/web kötelező ellenőrzése PASS. A Windows Prefetch/Offline hangpróba még privát firmware-állapottal végzendő. Az [1.0.0 kiadás](https://github.com/RobCZart82/Silver-K-Blue/releases/tag/blue-v1.0.0) 2026-11-07-én megjelent, forrása `5adc19e`. A #75 és #79 javításai az 1.0.1-be kerülnek. Az alábbi tételek a még nyitott vagy kézi elfogadást igénylő munkát mutatják.
 
