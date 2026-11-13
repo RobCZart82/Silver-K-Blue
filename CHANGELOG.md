@@ -2,6 +2,8 @@
 
 ## 1.0.1 — Unreleased
 
+- Add release verification without publication, a read-only Actions workflow and a preserved JSON inventory report.
+
 - Include verified Windows/macOS installers and provenance sidecars in unified releases, with version/source/platform/hash gates and complete checksums.
 
 - Honor the chosen Windows Standalone installation directory, preserve the application folder and unselected VST3 during upgrades, and refuse to overwrite existing installer outputs.

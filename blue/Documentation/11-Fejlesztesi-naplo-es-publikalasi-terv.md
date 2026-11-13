@@ -1,8 +1,8 @@
 # Silver-K Blue — fejlesztési terv és munkanapló
 
-Utolsó frissítés: **2026-11-12**
+Utolsó frissítés: **2026-11-13**
 
-## Aktuális javítási állapot — 2026-11-12
+## Történeti javítási pillanatkép — 2026-11-12
 
 Alap: main `2852f06e413ad4c3d55cd845730d549657305786` (#82 beolvasztva). E main normál/natív Windows és macOS, valamint web CI-je PASS; a helyi audit teljes Python suite-ja 39/39 PASS volt. A firmware-es CI-latenciateszt továbbra is SKIP, nem használati elfogadás.
 
@@ -1022,3 +1022,15 @@ A CMake útvonalával megismételt teljes helyi Python unit suite: 39/39 PASS (1
 A módosított ág teljes Python unit suite-ja 43/43 PASS (43.231 s), a publikáló célzott tesztje 11/11 PASS. A két platformon külön tesztelt hibás commit/verzió/repository/platform/fájlnév/aláírási nyilatkozat/firmware-/notarizálásjelző/hash elutasítása, hiányzó/üres/többlet/rossz verziójú telepítő és hiányzó sidecar, valamint a duplikált assetnév GitHub-hozzáférés előtti elutasítása. A szimulált main-összeállítás mind a nyolc egyedi assetet és a hét teljes SHA-256 bejegyzést ellenőrizte. A GitHub-hívások és a forrásarchívum-készítés ebben a tesztben mockoltak; a teszt kiírt release-URL-je nem publikálási bizonyíték.
 
 UTF-8, módosított Python-fájlok szintaxisa, helyi Markdown-hivatkozások és git diff --check PASS. Tényleges artifactletöltés, GitHub draft/asset/tag-módosítás vagy publikálás nem történt. A deklarált aláírási mezők összevetése nem helyettesít tanúsítvány-ellenőrzést: a jelenlegi CI telepítői unsigned/ad-hoc állapotát kell tükrözniük, új aláírási modell külön kód- és elfogadási változtatást igényel. A végleges PR-fej Windows/macOS/web CI-je külön ellenőrizendő.
+
+## 2026-11-13 — Publikálás nélküli kiadásellenőrzés és valódi artifactpróba
+
+Alap: main 4b998e881dca418a89026ac291e0103b1ba5a0e8, #83 beolvasztva. A main Windows run 43299797545, macOS run 43299797390 és web run 43299797360 sikeres; a #83 review-beszélgetéslistája üres.
+
+A valódi Windows platformartifact (13981809817, 296218292 bájt) helyi vizsgálata PASS a main platform_assets ellenőrzőjével: ZIP CRC, teljes belső fájlleltár/hash, EXE/sidecar verzió 1.0.1, platform és source SHA egyezés. A ZIP SHA-256: 1094c71da948a65f0c2c3825d380b6ec933ac4e094a62414ede287017230110f. Az EXE SHA-256: 64e5901c01440c7867ee3ffe619e24ec0fe4b3ee7f72d6197ac0ecc11db42cc7. A sidecar SHA-256: 9744008517b5a76465522f0b838659f800a91835720da2d325af1633e941a0e3. Ez statikus csomagellenőrzés, nem telepítés vagy DAW-futás.
+
+A macOS artifact (13983637483, 1091659663 bájt) letöltését a csatlakozó 536870912 bájtos korlátja elutasította. Helyi teljes macOS artifactvizsgálat NEM FUTOTT, a main macOS buildjének sikere ettől külön bizonyíték. A korlát kezeléséhez a jelenlegi fejlesztési ág read-only jogosultságú blue-verify.yml workflow-t ad: a GitHub futtatója az eredeti két artifactot tölti le, és a közös publikáló --verify-only módjával ellenőrzi/összeállítja, kiadás-/tag-/asset-módosítás nélkül.
+
+A --verification-report új JSON-állományba rögzíti a verziót, pontos commitot, két run ID-t, nyolc asset nevét/méretét/SHA-256 értékét és a published=false jelzőt. Meglevő jelentést nem ír felül; --verify-only nélkül a report kapcsoló hibát ad GitHub-hozzáférés előtt. A normál publikálás külön útvonalként megmarad. A szimulált végponttól végpontig teszt mindkét módot ellenőrzi; verify-only esetben sem release publikáló, sem GitHub-módosító hívás nem történhet.
+
+Helyi teljes Python suite 44/44 PASS (57.687 s), célzott publikálóteszt 12/12 PASS. UTF-8, módosított Python-szintaxis, helyi Markdown-hivatkozások és whitespace PASS. Az új workflow tényleges artifactvizsgálata még nem futott; beolvasztás után kézzel indítható a két rögzített main runnal vagy frissebb, azonos SHA-jú main futásokkal. A workflow-eredmény nem helyettesít kézi telepítő-, firmware-/DAW-, Prefetch/Offline vagy fizikai platformelfogadást. Sem GUI/motorváltozás, sem kiadáspublikálás nem történt.

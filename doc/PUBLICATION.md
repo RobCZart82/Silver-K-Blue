@@ -11,6 +11,18 @@ Current published release is [1.0.0](https://github.com/RobCZart82/Silver-K-Blue
 5. Verify package provenance, complete asset inventories, checksums and the actual signing/notarization status. Retain artwork/source provenance review in [PROVENANCE.md](../blue/Artwork/PROVENANCE.md).
 6. Dispatch the main-branch Publish unified Silver-K Blue release workflow with a new numeric version, both main run IDs and the reviewed Markdown notes path.
 
+## Verification without publication
+
+Run **Verify unified Blue release assets without publishing** (`blue-verify.yml`) with the candidate version and successful main Windows/macOS run IDs. Its token has only `contents: read` and `actions: read`. It downloads the original CI artifacts, runs the same package/installer checks and source assembly, then uploads `verification/report.json` as a workflow artifact. The report records both run IDs, exact commit, version, all eight asset sizes/hashes and `published: false`.
+
+The equivalent local command requires authenticated `gh`, Git and access to both full artifacts:
+
+```sh
+python3 tools/publish_blue_release.py --version 1.0.1 --windows-run WINDOWS_RUN_ID --macos-run MACOS_RUN_ID --verify-only --verification-report work/verification/report.json
+```
+
+Use a fresh report path; existing reports are preserved. `--verification-report` without `--verify-only` is rejected. Verification never calls release creation/upload/edit or tag mutation. The temporary assembled assets are removed after validation; the report is retained. This checks candidate packaging, not firmware/DAW/installer operation or final release-tag/draft acceptance. Actual publication still requires the separate publishing workflow and its normal gates.
+
 ## Publication and recovery
 
 The publisher requires one portable ZIP, one installer and its provenance JSON from each platform run. Installer filenames, version, repository, exact source commit, platform, firmware exclusion, signature declarations and SHA-256 must match. Current Windows installers are unsigned; macOS installers are unsigned with ad hoc signed payloads and no notarization. Missing, empty, extra or mismatched installers stop publication. ZIP-only historical artifacts cannot be used with this publisher.

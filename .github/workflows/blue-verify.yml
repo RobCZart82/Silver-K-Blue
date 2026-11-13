@@ -1,0 +1,43 @@
+name: Verify unified Blue release assets without publishing
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Candidate version matching both installers
+        required: true
+        type: string
+      windows_run:
+        description: Successful main Windows run ID
+        required: true
+        type: string
+      macos_run:
+        description: Successful main macOS run ID at the same source commit
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Test release validation helpers
+        run: python3 tools/test_publish_blue_release.py
+      - name: Validate original CI artifacts and assemble inventory
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BLUE_VERSION: ${{ inputs.version }}
+          WINDOWS_RUN: ${{ inputs.windows_run }}
+          MACOS_RUN: ${{ inputs.macos_run }}
+        run: python3 tools/publish_blue_release.py --version "$BLUE_VERSION" --windows-run "$WINDOWS_RUN" --macos-run "$MACOS_RUN" --verify-only --verification-report verification/report.json
+      - name: Preserve successful verification evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: Blue-release-verification-${{ github.run_id }}
+          path: verification/report.json
+          if-no-files-found: error
+          retention-days: 30
