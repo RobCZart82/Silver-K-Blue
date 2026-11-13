@@ -112,13 +112,48 @@ class PublicationTests(unittest.TestCase):
             self.assertEqual(set(sums), names-{'SHA256SUMS.txt'})
             for asset in assets[:-1]:
                 self.assertEqual(sums[asset.name], hashlib.sha256(asset.read_bytes()).hexdigest())
-        with patch.object(sys, 'argv', ['publish', '--version', '1.0.1', '--windows-run', '1', '--macos-run', '2']), \
-             patch.object(publication, 'run', side_effect=fake_run), \
-             patch.object(publication, 'validate_runs', return_value='a'*40), \
-             patch.object(publication.subprocess, 'run', side_effect=archive), \
-             patch.object(publication, 'publish_assets', side_effect=assembled) as publish:
-            publication.main()
-            publish.assert_called_once()
+        for verify in (False, True):
+            with self.subTest(verify_only=verify), tempfile.TemporaryDirectory() as temp:
+                report = Path(temp)/'verification/report.json'
+                argv = ['publish', '--version', '1.0.1', '--windows-run', '1', '--macos-run', '2']
+                if verify:
+                    argv += ['--verify-only', '--verification-report', str(report)]
+                with patch.object(sys, 'argv', argv), \
+                     patch.object(publication, 'run', side_effect=fake_run) as github, \
+                     patch.object(publication, 'validate_runs', return_value='a'*40), \
+                     patch.object(publication.subprocess, 'run', side_effect=archive), \
+                     patch.object(publication, 'publish_assets', side_effect=assembled) as publish, \
+                     patch('builtins.print'):
+                    publication.main()
+                    if verify:
+                        publish.assert_not_called()
+                        self.assertTrue(all(call.args[:2] == ('gh', 'api') or call.args[:3] == ('gh', 'run', 'download')
+                                            for call in github.call_args_list))
+                        result = json.loads(report.read_text())
+                        self.assertIs(result['published'], False)
+                        self.assertEqual(result['commit'], 'a'*40)
+                        self.assertEqual((result['windows_run'], result['macos_run']), (1, 2))
+                        self.assertEqual(len(result['assets']), 8)
+                        self.assertEqual(len({x['name'] for x in result['assets']}), 8)
+                        self.assertTrue(all(x['size'] > 0 and len(x['sha256']) == 64 for x in result['assets']))
+                    else:
+                        publish.assert_called_once()
+
+    def test_report_arguments_fail_before_github_access(self):
+        with tempfile.TemporaryDirectory() as temp:
+            report = Path(temp)/'existing.json'
+            report.write_text('preserved evidence')
+            for extra, error in ((['--verification-report', str(report)], ValueError),
+                                 (['--verify-only', '--verification-report', str(report)], FileExistsError)):
+                with self.subTest(extra=extra), patch.object(sys, 'argv',
+                        ['publish', '--version', '1.0.1', '--windows-run', '1', '--macos-run', '2'] + extra), \
+                     patch.object(publication, 'run') as github, \
+                     patch.object(publication, 'publish_assets') as publish:
+                    with self.assertRaises(error):
+                        publication.main()
+                    github.assert_not_called()
+                    publish.assert_not_called()
+                    self.assertEqual(report.read_text(), 'preserved evidence')
 
     def test_reject_draft_changed_during_upload(self):
         with tempfile.TemporaryDirectory() as temp:

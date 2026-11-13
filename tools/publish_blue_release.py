@@ -160,7 +160,15 @@ def main():
     parser.add_argument('--macos-run', required=True, type=int)
     parser.add_argument('--version', required=True)
     parser.add_argument('--notes-file', type=Path, help='Reviewed release notes in UTF-8 Markdown')
+    parser.add_argument('--verify-only', action='store_true',
+                        help='Validate and assemble assets without changing GitHub releases or tags')
+    parser.add_argument('--verification-report', type=Path,
+                        help='Write a JSON verification report (requires --verify-only)')
     args = parser.parse_args()
+    if args.verification_report and not args.verify_only:
+        raise ValueError('--verification-report requires --verify-only')
+    if args.verification_report and args.verification_report.exists():
+        raise FileExistsError('Refusing to replace an existing verification report')
     reviewed_notes = args.notes_file.read_text(encoding='utf-8') if args.notes_file else None
     if reviewed_notes is not None and not reviewed_notes.strip():
         raise ValueError('Reviewed release notes must not be empty')
@@ -197,6 +205,19 @@ def main():
                 reviewed_notes.rstrip() + '\n\nSource commit: ' + sha + '\n\n'
                 + f'Platform builds: [Windows]({records[0]["html_url"]}), '
                 + f'[macOS]({records[1]["html_url"]}).\n', encoding='utf-8')
+        if args.verify_only:
+            report = dict(repository=REPO, commit=sha, version=args.version,
+                          published=False, windows_run=args.windows_run, macos_run=args.macos_run,
+                          assets=[dict(name=p.name, size=p.stat().st_size,
+                                       sha256=hashlib.sha256(p.read_bytes()).hexdigest())
+                                  for p in assets + [checks]])
+            result = json.dumps(report, indent=2) + '\n'
+            if args.verification_report:
+                args.verification_report.parent.mkdir(parents=True, exist_ok=True)
+                with args.verification_report.open('x', encoding='utf-8') as stream:
+                    stream.write(result)
+            print(result, end='')
+            return
         publish_assets(tag, sha, args.version, notes, assets + [checks])
         print(f'https://github.com/{REPO}/releases/tag/{tag}')
 
