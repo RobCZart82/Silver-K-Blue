@@ -1,14 +1,22 @@
 # Silver-K Blue — fejlesztési terv és munkanapló
 
-Utolsó frissítés: **2026-11-13**
+Utolsó frissítés: **2026-11-14**
+
+## Aktuális állapot — 2026-11-14
+
+Main: `3a2dc034fd5e4f4e85d5cb4ef3d443806e66b8c3` (#84 beolvadt); nincs nyitott fejlesztési PR. A Windows, macOS és web platformworkflow, benne a két platform natív jobja is PASS ezen a commiton: [Windows](https://github.com/RobCZart82/Silver-K-Blue/actions/runs/43411611683), [macOS](https://github.com/RobCZart82/Silver-K-Blue/actions/runs/43411611544), [web](https://github.com/RobCZart82/Silver-K-Blue/actions/runs/43411611608).
+
+A csak olvasási jogosultságú [verify-only futás](https://github.com/RobCZart82/Silver-K-Blue/actions/runs/43574545945) sikeres. A Windows `43411611683` és macOS `43411611544` artifact ugyanarról a `3a2dc034fd5e4f4e85d5cb4ef3d443806e66b8c3` forrásról készült; a workflow mindkettőt letöltötte, ellenőrizte a csomagokat és a metaadatokat, majd nyolc assetből álló leltárt és SHA-256 értékeket rögzített. A letölthető `Blue-release-verification-43574545945` jelentés `published: false`. A workflow nem módosított release-t, git taget vagy kiadási assetet; a GitHubon továbbra is az 1.0.0 a legutolsó publikált kiadás.
+
+Az 1.0.1 még nem fogadható el kiadásra: a Windows EXE és macOS PKG telepítése, frissítése, eltávolítása, a választható összetevők, a személyes adatok megőrzése, a Standalone indítása, valamint a VST3/AU valós DAW-felderítése kézi próbát igényel. A privát K és KS firmware-állapotú Windows Prefetch/Offline PCM-próba szintén hátravan; a firmware nélküli CI ezt SKIP-ként jelöli. Az installer csomagok jelenleg aláíratlanok; a macOS PKG nem notarizált, ezt a kiadási leírásban közölni kell.
 
 ## Történeti javítási pillanatkép — 2026-11-12
 
 Alap: main `2852f06e413ad4c3d55cd845730d549657305786` (#82 beolvasztva). E main normál/natív Windows és macOS, valamint web CI-je PASS; a helyi audit teljes Python suite-ja 39/39 PASS volt. A firmware-es CI-latenciateszt továbbra is SKIP, nem használati elfogadás.
 
-A jelenlegi javítási ág rendezi a KS bemeneti diagnosztika dokumentációját, a 14 ROM nélküli platformteszt számát és a #81 main/CI-státuszát. A kiadáspublikáló mindkét platform ZIP-je mellett a Windows EXE-t, macOS PKG-t és a két provenance JSON-t is ellenőrzi és a leltárba veszi. A telepítők verziójának, forráscommitjának, repository-jának, platformjának, fájlnevének, aláírási nyilatkozatának, firmware-kizárásának és SHA-256 értékének egyeznie kell. Hiányzó/üres/többlet telepítő vagy eltérő adat esetén nincs publikálás. Régi, csak ZIP-et tartalmazó artifactokat ez a publikáló nem fogad el.
+Akkori javítási ág rendezte a KS bemeneti diagnosztika dokumentációját, a 14 ROM nélküli platformteszt számát és a #81 main/CI-státuszát. A kiadáspublikáló mindkét platform ZIP-je mellett a Windows EXE-t, macOS PKG-t és a két provenance JSON-t is ellenőrzi és a leltárba veszi. A telepítők verziójának, forráscommitjának, repository-jának, platformjának, fájlnevének, aláírási nyilatkozatának, firmware-kizárásának és SHA-256 értékének egyeznie kell. Hiányzó/üres/többlet telepítő vagy eltérő adat esetén nincs publikálás. Régi, csak ZIP-et tartalmazó artifactokat ez a publikáló nem fogad el.
 
-Nyolc asset készül: két ZIP, EXE, PKG, két installer JSON, forrás-ZIP és a másik hét fájlt lefedő SHA256SUMS.txt. A korábbi draft-/tag-/asset-egyezési védelmek megmaradnak. A módosított fej platform-CI-je és main-integrációja még szükséges. Kézi telepítés/frissítés/eltávolítás, firmware/DAW és Prefetch/Offline elfogadás továbbra is nyitott; ezek dokumentációból vagy szimulált publikálási tesztből nem minősíthetők PASS-nak. Tényleges GitHub release, tag, asset vagy kiadásjegyzet nem módosult.
+Nyolc asset készül: két ZIP, EXE, PKG, két installer JSON, forrás-ZIP és a másik hét fájlt lefedő SHA256SUMS.txt. A korábbi draft-/tag-/asset-egyezési védelmek megmaradnak. Akkor a módosított fej platform-CI-je és main-integrációja még szükséges volt. Kézi telepítés/frissítés/eltávolítás, firmware/DAW és Prefetch/Offline elfogadás továbbra is nyitott; ezek dokumentációból vagy szimulált publikálási tesztből nem minősíthetők PASS-nak. Tényleges GitHub release, tag, asset vagy kiadásjegyzet nem módosult.
 
 ## Történeti tervpillanatkép — 2026-11-08
 
