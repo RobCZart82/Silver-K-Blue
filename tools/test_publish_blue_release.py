@@ -13,6 +13,16 @@ from publish_blue_release import REPO, validate_runs, verify_package
 
 
 class PublicationTests(unittest.TestCase):
+    def test_version_order(self):
+        from publish_blue_release import validate_version_order
+        releases = [dict(tag_name='blue-v1.9.9', draft=False, prerelease=False),
+                    dict(tag_name='blue-v9.0.0', draft=True),
+                    dict(tag_name='blue-v8.0.0', prerelease=True)]
+        validate_version_order('1.10.0', releases)
+        for version in ('0.9.9', '1.9.9', '01.09.09'):
+            with self.assertRaises(ValueError):
+                validate_version_order(version, releases)
+
     def installer_fixture(self, root, platform):
         root.mkdir(parents=True, exist_ok=True)
         info = dict(commit='a'*40, platform=platform, repository='https://github.com/'+REPO,

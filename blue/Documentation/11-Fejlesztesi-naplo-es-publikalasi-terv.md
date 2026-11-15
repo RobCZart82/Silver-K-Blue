@@ -1042,3 +1042,10 @@ A macOS artifact (13983637483, 1091659663 bájt) letöltését a csatlakozó 536
 A --verification-report új JSON-állományba rögzíti a verziót, pontos commitot, két run ID-t, nyolc asset nevét/méretét/SHA-256 értékét és a published=false jelzőt. Meglevő jelentést nem ír felül; --verify-only nélkül a report kapcsoló hibát ad GitHub-hozzáférés előtt. A normál publikálás külön útvonalként megmarad. A szimulált végponttól végpontig teszt mindkét módot ellenőrzi; verify-only esetben sem release publikáló, sem GitHub-módosító hívás nem történhet.
 
 Helyi teljes Python suite 44/44 PASS (57.687 s), célzott publikálóteszt 12/12 PASS. UTF-8, módosított Python-szintaxis, helyi Markdown-hivatkozások és whitespace PASS. Az új workflow tényleges artifactvizsgálata még nem futott; beolvasztás után kézzel indítható a két rögzített main runnal vagy frissebb, azonos SHA-jú main futásokkal. A workflow-eredmény nem helyettesít kézi telepítő-, firmware-/DAW-, Prefetch/Offline vagy fizikai platformelfogadást. Sem GUI/motorváltozás, sem kiadáspublikálás nem történt.
+
+
+## 2026-11-15 — Kiadási verziósorrend auditjavítása
+
+A publikáló a GitHubon megjelent stabil Blue kiadások numerikus verziójához hasonlítja a jelöltet, és azonos vagy kisebb verziót elutasít a draft létrehozása előtt és közvetlenül publikálás előtt is. A draftok és előzetes kiadások nem akadályozzák a stabil kiadást. Célzott publikáló teszt: 13/13 PASS.
+
+A kézi installer/DAW és privát firmware-es elfogadás továbbra is szükséges. A régi fix/user-testing-feedback ág külön integrációs feladat: a mainhez képesti eltéréseket és GUI-elrendezést át kell vizsgálni; ez a kiadási javítás nem olvasztja be azt automatikusan.
