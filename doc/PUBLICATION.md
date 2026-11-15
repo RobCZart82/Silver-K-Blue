@@ -25,6 +25,8 @@ Use a fresh report path; existing reports are preserved. `--verification-report`
 
 ## Publication and recovery
 
+The candidate numeric version must exceed every published stable `blue-vX.Y.Z` release. This is checked before draft creation and again before publication; drafts and prereleases do not set this floor.
+
 The publisher requires one portable ZIP, one installer and its provenance JSON from each platform run. Installer filenames, version, repository, exact source commit, platform, firmware exclusion, signature declarations and SHA-256 must match. Current Windows installers are unsigned; macOS installers are unsigned with ad hoc signed payloads and no notarization. Missing, empty, extra or mismatched installers stop publication. ZIP-only historical artifacts cannot be used with this publisher.
 
 It assembles eight assets: two portable ZIPs, Windows EXE, macOS PKG, two installer JSON sidecars, source ZIP and SHA256SUMS.txt. The checksum list covers all seven payload/metadata files. The publisher verifies platform runs and package contents, assembles source and checksums, and creates a draft before uploading. A matching interrupted draft can be resumed. Different metadata, mismatching assets, published releases or a remote Git tag pointing at another source commit are rejected. Annotated tags are resolved to their target.

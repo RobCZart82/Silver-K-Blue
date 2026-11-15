@@ -94,6 +94,16 @@ def validate_release_tag(tag, sha):
         raise ValueError('Release Git tag does not match the verified source commit')
 
 
+def validate_version_order(version, releases):
+    candidate = tuple(map(int, version.split('.')))
+    for release in releases:
+        if release.get('draft') or release.get('prerelease'):
+            continue
+        match = re.fullmatch(r'blue-v([0-9]+)\.([0-9]+)\.([0-9]+)', release.get('tag_name', ''))
+        if match and candidate <= tuple(map(int, match.groups())):
+            raise ValueError('Release version must exceed every published stable Blue version')
+
+
 def publish_assets(tag, sha, version, notes, assets):
     """Resume only a matching draft, preserving all verified uploaded assets."""
     if len({asset.name for asset in assets}) != len(assets):
@@ -101,6 +111,7 @@ def publish_assets(tag, sha, version, notes, assets):
     validate_release_tag(tag, sha)
     releases = json.loads(run('gh', 'api', '--paginate', '--slurp',
                               f'repos/{REPO}/releases?per_page=100'))
+    validate_version_order(version, [release for page in releases for release in page])
     existing = next((release for page in releases for release in page
                      if release['tag_name'] == tag), None)
     body = notes.read_text(encoding='utf-8')
@@ -151,6 +162,9 @@ def publish_assets(tag, sha, version, notes, assets):
                 or asset.get('digest') != 'sha256:' + hashlib.sha256(path.read_bytes()).hexdigest()):
             raise ValueError('Uploaded asset verification failed: ' + name)
     validate_release_tag(tag, sha)
+    current = json.loads(run('gh', 'api', '--paginate', '--slurp',
+                             f'repos/{REPO}/releases?per_page=100'))
+    validate_version_order(version, [release for page in current for release in page])
     run('gh', 'release', 'edit', tag, '--repo', REPO, '--draft=false', '--latest')
 
 
