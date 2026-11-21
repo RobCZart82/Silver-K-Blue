@@ -1049,3 +1049,7 @@ Helyi teljes Python suite 44/44 PASS (57.687 s), célzott publikálóteszt 12/12
 A publikáló a GitHubon megjelent stabil Blue kiadások numerikus verziójához hasonlítja a jelöltet, és azonos vagy kisebb verziót elutasít a draft létrehozása előtt és közvetlenül publikálás előtt is. A draftok és előzetes kiadások nem akadályozzák a stabil kiadást. Célzott publikáló teszt: 13/13 PASS.
 
 A kézi installer/DAW és privát firmware-es elfogadás továbbra is szükséges. A régi fix/user-testing-feedback ág külön integrációs feladat: a mainhez képesti eltéréseket és GUI-elrendezést át kell vizsgálni; ez a kiadási javítás nem olvasztja be azt automatikusan.
+
+## 2026-11-21 — Az 1.0.1 kiadás előkészítése
+
+A [publikálás nélküli csomagellenőrzés](https://github.com/RobCZart82/Silver-K-Blue/actions/runs/44127018389) sikeres a #86 utáni `f1958a0` main commiton. A kézi visszajelzés szerint a Windows és macOS telepítők és a plugin működtek. A visszajelzésben a pontos build, a komponensenkénti próba, a Standalone, a frissítés, az eltávolítás, az adatmegőrzés és a Windows K/KS offline hangpróba eredménye nincs részletezve.
