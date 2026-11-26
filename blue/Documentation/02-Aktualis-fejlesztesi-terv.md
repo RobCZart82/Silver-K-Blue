@@ -24,6 +24,27 @@ A telepítők minden kiválasztott termékébe beépítve kerül a Standard és 
 
 Egyszerre egy fejlesztési PR. A beolvasztást a legfrissebb commit sikeres Windows/macOS/web ellenőrzései és a feloldott review-szálak kapuzzák. Az 1.0.1 elfogadásához a telepítőkből végzett kézi próba és a privát firmware-t igénylő Prefetch/Offline PCM-próba is szükséges. A jelenlegi publikus kiadás 1.0.0; a 1.0.1 publikálása nem történt meg.
 
+## 2026-11-26 — Elfogadott upstream 0.8.5b átvételi ütemterv
+
+Forrás: [Silver-K 0.8b](https://github.com/temaniak/Silver-K/releases/tag/v0.8b) (november 24.), [0.8.5b](https://github.com/temaniak/Silver-K/releases/tag/v0.8.5b) (november 26.), upstream main `1b28443`, karbantartási commit [affc0f0](https://github.com/temaniak/Silver-K/commit/affc0f0). Az előző upstream vizsgálathoz képest 530 fájl változott. A verziók tervezett célverziók, az átvétel és az elfogadás külön igazolandó.
+
+| Célverzió / azonosító | Prioritás | Feladat | Elfogadás |
+|---|---|---|---|
+| 1.0.1 | Kiadási kapu | Meglévő hibajavítások és EXE/PKG lezárása | A 83e547d main Windows/macOS/web CI és [csomagellenőrzése](https://github.com/RobCZart82/Silver-K-Blue/actions/runs/45217794115) PASS. A kézi telepítő- és pluginpróba pozitív; a fennmaradó részletes elfogadás és publikálás még nyitott. |
+| 1.0.2 — UP085-01 | P1 | Arpeggiátor Host mód: élő MIDI DAW Stop mellett, BPM fallback, Play rácshoz igazítás, Key Sync első lépés | K és KS, Stop/Play, rácspont és Key Sync, eltérő blokkméretek; meglévő motorokkal reprodukált regresszió |
+| 1.0.2 — UP085-02 | P1 | MIDI-csatornák és preset paraméter-visszajelzés | Bejövő csatorna megőrzése, KS Performance aktív part, eltérő csatornás preset, host automation, Standalone; meglévő Setup és projektkompatibilitás megtartása |
+| 1.0.2 — UP085-03 | P1 | Preset Browser Rescan, zárolt cache, kézzel csatolt könyvtárak | Hozzáadott/törölt forrás és bank, manuális könyvtár, zárolt cache; saját tagok és kedvencek megőrzése |
+| 1.0.2 — UP085-04 | P2 | Transport, MIDI loop, seek és clock source váltás | K/KS MIDI és audio teszt ciklus-, klip- és transporthatárokon, kitartott hangokkal; belső és host clock |
+| 1.0.2 — UP085-05 | P2 | Knob/slider bemeneti kezelés, macOS képernyőszél | A vezérlők logikai viselkedésének javítása a Standard/Retina/Legacy geometriájának és grafikájának megtartásával |
+| 1.1.0 — UP085-06 | Magas | Új natív K/KS command vezérlők és DSP integráció elővizsgálata | Elkülönített backend, referenciahang/állapot/MIDI/arp/CPU összevetés, meglévő motorok és projektek kompatibilitása; alapértelmezett váltás külön elfogadással |
+| 1.1.0 — UP085-07 | Közepes | Fejlettebb presetkezelés, mentés és KS Performance Part | Mentés/visszatöltés sound/part/performance szinten, bank és firmware modellváltás; meglévő Blue felületen vizsgálandó |
+| 1.1.0 — UP085-08 | Közepes | Wave ROM és Drum Map automatikus előkészítés | Saját fájlok, hiányzó/hibás adatok, indulás és felhasználói adatmegőrzés; gyári tartalom nem csomagolható |
+| 1.1.0 — UP085-09 | Vizsgálat | Windows Software/OpenGL renderer beállítás megőrzése | Előbb meglévő Blue renderút és kompatibilitás felmérése; editor újranyitás, plugin reload |
+| Későbbi — LINUX-01 | Halasztott | Linux x64 VST3/Standalone elővizsgálata | A lentebb rögzített platformterv szerint; LV2 külön döntés |
+| Későbbi — UP085-10 | Halasztott | KS Drum Sequencer és Drum Edit bővítés | Új funkció és felületi illesztés külön egyeztetése; KS+ preset és időzítési kompatibilitás |
+
+**Megvalósítási sorrend:** 1.0.1 lezárása; UP085-01–05 kódszintű eltéréseinek feltárása, reprodukció és célzott javítása egyenként; UP085-06–09 elővizsgálata és integrációja; Linux és Drum Sequencer később. A 0.8b új architektúrájához kötött javításokat a Blue meglévő vezérlőihez kell adaptálni. A teljes upstream merge és SoulTrain grafikai átvétele nem része ennek a tervnek. Standard/Retina/Legacy elrendezés, Blue azonosítók, saját adatútvonalak és a telepítők megőrzendők. Egyidejűleg egy fejlesztési PR; minden lépcsőn helyi célzott ellenőrzés, Windows/macOS/web kötelező CI, napló és forráscommit, majd zöld állapotban main integráció.
+
 ## Halasztott terv — Linux támogatás
 
 **LINUX-01, elővizsgálat, célverzió nélkül.** Az 1.0.1 után felmérendő a Linux x86_64 VST3 és Standalone támogatás. Kezdeti javaslat egy rögzített Ubuntu LTS buildalap; az architektúra, minimális rendszerkövetelmény és csomagformátum az elővizsgálat eredménye alapján véglegesítendő.
