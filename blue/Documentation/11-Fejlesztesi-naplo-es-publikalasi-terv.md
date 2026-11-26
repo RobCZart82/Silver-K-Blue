@@ -1053,3 +1053,7 @@ A kézi installer/DAW és privát firmware-es elfogadás továbbra is szüksége
 ## 2026-11-21 — Az 1.0.1 kiadás előkészítése
 
 A [publikálás nélküli csomagellenőrzés](https://github.com/RobCZart82/Silver-K-Blue/actions/runs/44127018389) sikeres a #86 utáni `f1958a0` main commiton. A kézi visszajelzés szerint a Windows és macOS telepítők és a plugin működtek. A visszajelzésben a pontos build, a komponensenkénti próba, a Standalone, a frissítés, az eltávolítás, az adatmegőrzés és a Windows K/KS offline hangpróba eredménye nincs részletezve.
+
+## 2026-11-26 — Upstream 0.8.5b átvételi terv elfogadása
+
+Az upstream 0.8b és 0.8.5b megjelent. A 9079f67–1b28443 összehasonlítás 530 fájl változása, a karbantartási javítások az affc0f0 commitban találhatók. A felhasználó elfogadta a verziósorrendet: 1.0.1 lezárása, 1.0.2 célzott arp/MIDI/preset/transport/vezérlőhibák, 1.1.0 natív motor és KS/preset fejlesztések, később Linux és Drum Sequencer. Az egyedi feladatok és elfogadási feltételek az [aktuális fejlesztési tervben](02-Aktualis-fejlesztesi-terv.md) UP085-01–10 alatt szerepelnek. Ez a naplóbejegyzés a jóváhagyott tervet rögzíti, kódátvétel és kiadási verzióváltás még nem történt.
